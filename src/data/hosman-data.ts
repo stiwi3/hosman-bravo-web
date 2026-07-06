@@ -1,6 +1,10 @@
 // Datos editables de Hosman Bravo
 // Actualiza este archivo para cambiar el contenido del sitio
 
+// Prefijo de rutas cuando el sitio se publica en un subdirectorio
+// (ej: stiwi3.github.io/hosman-bravo-web). Vacío en desarrollo local.
+const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
 export const hosmanData = {
   // Información personal
   artist: {
@@ -86,37 +90,37 @@ export const hosmanData = {
   // Imágenes del sitio (rutas en /public)
   images: {
     logo: {
-      imagotipoDorado: '/images/logo/imagotipo-dorado.png',
-      imagotipoBlanco: '/images/logo/imagotipo-blanco.png',
-      isotipoDorado: '/images/logo/isotipo-dorado.png',
-      isotipoBlanco: '/images/logo/isotipo-blanco.png',
-      logotipoDorado: '/images/logo/logotipo-dorado.png',
-      logotipoBlanco: '/images/logo/logotipo-blanco.png'
+      imagotipoDorado: `${bp}/images/logo/imagotipo-dorado.png`,
+      imagotipoBlanco: `${bp}/images/logo/imagotipo-blanco.png`,
+      isotipoDorado: `${bp}/images/logo/isotipo-dorado.png`,
+      isotipoBlanco: `${bp}/images/logo/isotipo-blanco.png`,
+      logotipoDorado: `${bp}/images/logo/logotipo-dorado.png`,
+      logotipoBlanco: `${bp}/images/logo/logotipo-blanco.png`
     },
-    hero: '/images/show-01.jpg',
-    about: '/images/hosman-donjuan.jpg',
-    aboutSecondary: '/images/hosman-bandolero.jpg',
+    hero: `${bp}/images/show-01.jpg`,
+    about: `${bp}/images/hosman-donjuan.jpg`,
+    aboutSecondary: `${bp}/images/hosman-bandolero.jpg`,
     shows: [
-      '/images/show-01.jpg',
-      '/images/show-02.jpg',
-      '/images/show-03.jpg',
-      '/images/show-04.jpg'
+      `${bp}/images/show-01.jpg`,
+      `${bp}/images/show-02.jpg`,
+      `${bp}/images/show-03.jpg`,
+      `${bp}/images/show-04.jpg`
     ],
     galeria: [
-      '/images/galeria/galeria-01.jpg',
-      '/images/galeria/galeria-02.jpg',
-      '/images/galeria/galeria-03.jpg',
-      '/images/galeria/galeria-04.jpg',
-      '/images/galeria/galeria-05.jpg',
-      '/images/galeria/galeria-06.jpg',
-      '/images/galeria/galeria-07.jpg',
-      '/images/galeria/galeria-08.jpg',
-      '/images/galeria/galeria-09.jpg',
-      '/images/galeria/galeria-10.jpg',
-      '/images/galeria/galeria-11.jpg',
-      '/images/galeria/galeria-12.jpg',
-      '/images/galeria/galeria-13.jpg',
-      '/images/galeria/galeria-14.jpg'
+      `${bp}/images/galeria/galeria-01.jpg`,
+      `${bp}/images/galeria/galeria-02.jpg`,
+      `${bp}/images/galeria/galeria-03.jpg`,
+      `${bp}/images/galeria/galeria-04.jpg`,
+      `${bp}/images/galeria/galeria-05.jpg`,
+      `${bp}/images/galeria/galeria-06.jpg`,
+      `${bp}/images/galeria/galeria-07.jpg`,
+      `${bp}/images/galeria/galeria-08.jpg`,
+      `${bp}/images/galeria/galeria-09.jpg`,
+      `${bp}/images/galeria/galeria-10.jpg`,
+      `${bp}/images/galeria/galeria-11.jpg`,
+      `${bp}/images/galeria/galeria-12.jpg`,
+      `${bp}/images/galeria/galeria-13.jpg`,
+      `${bp}/images/galeria/galeria-14.jpg`
     ]
   },
 
