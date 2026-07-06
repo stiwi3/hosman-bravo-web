@@ -73,3 +73,15 @@ scripts/
 Dockerfile
 Dockerfile.dev
 docker-compose.yml
+.dockerignore
+.nvmrc
+CLAUDE.md
+
+# GitHub templates from the original template repo (not needed)
+.github/FUNDING.yml
+.github/ISSUE_TEMPLATE/
+.github/PULL_REQUEST_TEMPLATE.md
+.github/copilot-instructions.md
+.github/copilot-setup-steps.yml
+.github/skills/
+.github/workflows/ci.yml
