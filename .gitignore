@@ -76,6 +76,7 @@ docker-compose.yml
 .dockerignore
 .nvmrc
 CLAUDE.md
+PROGRESS.md
 
 # GitHub templates from the original template repo (not needed)
 .github/FUNDING.yml
