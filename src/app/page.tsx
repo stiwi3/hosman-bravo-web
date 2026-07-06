@@ -93,7 +93,7 @@ export default function Home() {
               alt="Hosman Bravo en show en vivo"
               fill
               priority
-              className="object-cover object-top opacity-50"
+              className="object-cover object-[50%_22%] opacity-50"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/60"></div>
 
