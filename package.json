@@ -1,27 +1,25 @@
 {
-  "name": "ai-website-clone-template",
+  "name": "hosman-bravo-web",
   "version": "0.3.1",
   "private": true,
-  "description": "Clone any website into a clean, modern Next.js codebase using AI coding agents",
-  "author": "JCodesMore",
+  "description": "Sitio web oficial de Hosman Bravo — cantautor colombiano de música popular y espectáculo ecuestre de alta escuela",
+  "author": "Hosman Bravo",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JCodesMore/ai-website-cloner-template.git"
+    "url": "https://github.com/stiwi3/hosman-bravo-web.git"
   },
-  "homepage": "https://github.com/JCodesMore/ai-website-cloner-template",
+  "homepage": "https://stiwi3.github.io/hosman-bravo-web/",
   "bugs": {
-    "url": "https://github.com/JCodesMore/ai-website-cloner-template/issues"
+    "url": "https://github.com/stiwi3/hosman-bravo-web/issues"
   },
   "keywords": [
-    "claude-code",
-    "website-clone",
-    "reverse-engineering",
+    "hosman-bravo",
+    "musica-popular",
+    "espectaculo-ecuestre",
+    "medellin",
     "nextjs",
-    "ai",
-    "template",
-    "tailwindcss",
-    "shadcn-ui"
+    "tailwindcss"
   ],
   "engines": {
     "node": ">=24"
