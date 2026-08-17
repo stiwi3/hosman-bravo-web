@@ -90,37 +90,74 @@ export default function Home() {
       {currentPage === 'home' && (
         <>
           <section className="relative min-h-screen flex items-center justify-center">
-            {/* Vídeo de fondo del show.
-                El original es 3:4 vertical: el punto focal se sitúa algo por
-                encima del centro para que, al recortar en pantallas anchas,
-                queden dentro Hosman y la cabeza del caballo. */}
-            <video
-              src={`${data.basePath}/videos/Hero.mp4`}
-              poster={data.images.hero}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              aria-label="Hosman Bravo montado a caballo durante su espectáculo"
-              className="absolute inset-0 h-full w-full object-cover object-[50%_38%] opacity-50"
+            {/* CAPA 1 — fondo de la escena: negro con brasa roja muy apagada.
+                Es la continuación de los laterales del vídeo hacia los bordes. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[#050304]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/60"></div>
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(ellipse_46%_58%_at_50%_46%,rgba(104,27,32,0.42),transparent_72%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(ellipse_78%_46%_at_50%_100%,rgba(82,20,25,0.34),transparent_70%)]"
+            />
 
-            {/* HUMO INTERACTIVO — por encima del vídeo, por debajo del texto */}
+            {/* CAPA 2 — el vídeo, centrado y con su proporción intacta.
+                El contenedor tiene exactamente el aspecto 3:4 del original, de
+                modo que la altura manda en escritorio y la anchura en móvil, y
+                el vídeo nunca se deforma ni se recorta.
+                La máscara desvanece sus cuatro bordes: como los extremos de la
+                toma ya son negro profundo, el rectángulo deja de percibirse. */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="relative aspect-[3/4] w-full md:h-full md:w-auto"
+                style={{
+                  maskImage:
+                    'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 9%, #000 26%, #000 74%, rgba(0,0,0,0.55) 91%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 5%, #000 16%, #000 86%, rgba(0,0,0,0.5) 96%, transparent 100%)',
+                  WebkitMaskImage:
+                    'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 9%, #000 26%, #000 74%, rgba(0,0,0,0.55) 91%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 5%, #000 16%, #000 86%, rgba(0,0,0,0.5) 96%, transparent 100%)',
+                  maskComposite: 'intersect',
+                  WebkitMaskComposite: 'source-in',
+                }}
+              >
+                <video
+                  src={`${data.basePath}/videos/Hero.mp4`}
+                  poster={data.images.hero}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-label="Hosman Bravo montado a caballo durante su espectáculo"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Velo que iguala el brillo del vídeo con el del fondo, para que
+                el corte entre ambos no se lea por diferencia de luminosidad. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(5,3,4,0.92)_0%,rgba(5,3,4,0.28)_26%,transparent_52%,transparent_74%,rgba(5,3,4,0.55)_100%)]"
+            />
+
+            {/* CAPA 3 — humo, a lo ancho de todo el hero: cruza el límite entre
+                el vídeo y el fondo, que es lo que termina de unirlos. */}
             <div className="pointer-events-none absolute inset-0 z-[5]">
               <InteractiveSmoke reducedMotion={reducedMotion} />
             </div>
 
-            {/* HEADLINE */}
-            <div className="relative z-10 text-center px-4 pt-16">
-              <h1 className="text-6xl sm:text-8xl lg:text-9xl font-black leading-none tracking-wide text-red-600 mix-blend-screen drop-shadow-lg">
-                HOSMAN<br />BRAVO
-              </h1>
-              <p className="text-sm md:text-base tracking-[0.4em] mt-6 text-amber-400 font-bold">
+            {/* El rótulo "HOSMAN BRAVO" ya viene en el propio vídeo, así que
+                aquí solo queda el subtítulo. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 px-6 text-center sm:bottom-28">
+              <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
+              <p className="text-xs font-bold tracking-[0.4em] text-amber-400 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:text-sm">
                 {data.artist.tagline.toUpperCase()}
               </p>
-              <p className="text-xs tracking-widest mt-2 text-gray-300">
+              <p className="mt-3 text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
                 MÚSICA POPULAR · DOMA DE ALTA ESCUELA · SHOWS EN VIVO
               </p>
             </div>

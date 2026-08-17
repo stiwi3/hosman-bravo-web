@@ -6,19 +6,8 @@
  * viene ya dada por la densidad advectada.
  */
 
-import { DEBUG_DENSITY_SHADER, RENDER_SHADER, VERTEX_SHADER } from './fluidShaders';
+import { RENDER_SHADER, VERTEX_SHADER } from './fluidShaders';
 import { compileShader, Program, type Fbo, type GLContext } from './webglUtils';
-
-/**
- * TEMPORAL — diagnóstico.
- *
- * Con `true`, el lienzo muestra la textura de densidad en crudo (magenta sobre
- * negro, opaco) en lugar del humo definitivo. Sirve para comprobar que la
- * simulación llega a pantalla.
- *
- * Ponerlo a `false` devuelve el render artístico normal.
- */
-export const DEBUG_FLUID = true;
 
 export interface RenderOptions {
   opacity: number;
@@ -31,8 +20,6 @@ export class SmokeRenderer {
   private readonly ctx: GLContext;
   private readonly draw: (target: Fbo | null) => void;
   private readonly program: Program;
-  /** TEMPORAL — programa de diagnóstico. */
-  private readonly debugProgram: Program | null;
   private options: RenderOptions;
   private aspect = 1;
 
@@ -44,9 +31,9 @@ export class SmokeRenderer {
     this.ctx = ctx;
     this.draw = draw;
     this.options = {
-      opacity: options.opacity ?? 0.62,
-      clearCenter: options.clearCenter ?? [0.5, 0.58],
-      clearRadius: options.clearRadius ?? 0.34,
+      opacity: options.opacity ?? 0.9,
+      clearCenter: options.clearCenter ?? [0.5, 0.6],
+      clearRadius: options.clearRadius ?? 0.3,
     };
 
     const { gl } = ctx;
@@ -55,17 +42,6 @@ export class SmokeRenderer {
     if (!vertex || !fragment) throw new Error('No se pudo compilar el render del humo');
     this.program = new Program(gl, vertex, fragment);
     gl.deleteShader(fragment);
-
-    // TEMPORAL — programa de diagnóstico.
-    let debugProgram: Program | null = null;
-    if (DEBUG_FLUID) {
-      const debugFragment = compileShader(gl, gl.FRAGMENT_SHADER, DEBUG_DENSITY_SHADER);
-      if (debugFragment) {
-        debugProgram = new Program(gl, vertex, debugFragment);
-        gl.deleteShader(debugFragment);
-      }
-    }
-    this.debugProgram = debugProgram;
     gl.deleteShader(vertex);
   }
 
@@ -79,25 +55,6 @@ export class SmokeRenderer {
 
   render(density: Fbo, time: number) {
     const { gl } = this.ctx;
-
-    // TEMPORAL — diagnóstico: densidad en crudo, opaca y sin mezcla.
-    if (DEBUG_FLUID && this.debugProgram) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-      gl.disable(gl.BLEND);
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      this.debugProgram.bind();
-      gl.uniform2f(
-        this.debugProgram.uniform('uTexelSize'),
-        density.texelSizeX,
-        density.texelSizeY
-      );
-      gl.uniform1i(this.debugProgram.uniform('uDensity'), density.attach(0));
-      this.draw(null);
-      return;
-    }
-
     const p = this.program;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -126,6 +83,5 @@ export class SmokeRenderer {
 
   dispose() {
     this.program.dispose();
-    this.debugProgram?.dispose();
   }
 }

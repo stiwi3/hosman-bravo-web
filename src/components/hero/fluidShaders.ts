@@ -310,63 +310,49 @@ void main() {
   vec2 p = vec2(vUv.x * uAspect, vUv.y);
 
   // Capa principal: la densidad tal cual sale de la simulación.
-  float main = texture2D(uDensity, vUv).x;
+  float core = texture2D(uDensity, vUv).x;
 
-  // Bruma de fondo: la misma densidad, desplazada y suavizada, se mueve algo
-  // distinto y queda por detrás.
-  float haze = texture2D(uDensity, vUv + vec2(0.012, -0.010)).x;
+  // Bruma de fondo: la misma densidad, desplazada, se lee como un plano algo
+  // más atrás.
+  float haze = texture2D(uDensity, vUv + vec2(0.014, -0.011)).x;
 
   // Filamentos: el ruido modula los bordes de la densidad, nunca la crea.
   float detail = fbm(p * 7.0 + vec2(0.0, -uTime * 0.06));
-  float wisps = main * smoothstep(0.25, 0.85, detail);
+  float wisps = core * smoothstep(0.2, 0.8, detail);
 
-  float density = main * 0.72 + haze * 0.3 + wisps * 0.32;
-  density = smoothstep(0.06, 0.85, density);
+  float density = core * 0.85 + haze * 0.34 + wisps * 0.3;
 
-  // Zona despejada alrededor del rostro.
-  vec2 toCenter = (p - vec2(uClearCenter.x * uAspect, uClearCenter.y)) / uClearRadius;
-  float clearMask = smoothstep(0.5, 1.35, length(toCenter));
+  // Ley de Beer-Lambert: el humo fino ya tiña algo y el denso sature sin
+  // llegar nunca a opaco. Sustituye al smoothstep anterior, que recortaba
+  // por abajo casi toda la densidad y dejaba la capa invisible.
+  float alpha = 1.0 - exp(-density * 3.4);
 
-  // Los bordes del lienzo se desvanecen para que no se vea el marco.
-  float edge = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x)
-             * smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.94, vUv.y);
+  // Rostro: caída larga, sin borde perceptible. Elíptica, porque la cara
+  // ocupa una zona más alta que ancha.
+  vec2 toFace = (p - vec2(uClearCenter.x * uAspect, uClearCenter.y))
+                / vec2(uClearRadius * 1.05, uClearRadius * 1.35);
+  float face = mix(0.34, 1.0, smoothstep(0.35, 1.25, length(toFace)));
 
-  float alpha = density * clearMask * edge * uOpacity;
-  alpha = clamp(alpha, 0.0, 1.0);
+  // Solo se atenúa el borde superior, y muy poco: el humo vive en los
+  // laterales y la base, así que ahí no puede recortarse nada.
+  float top = smoothstep(1.0, 0.86, vUv.y);
 
-  // Gris cálido en los jirones, rojo muy profundo en lo denso. Sin brillos ni
-  // reacción al cursor: la interacción se lee en el movimiento, no en el color.
-  vec3 ash   = vec3(0.23, 0.205, 0.20);
-  vec3 deep  = vec3(0.30, 0.075, 0.075);
-  vec3 color = mix(ash, deep, smoothstep(0.2, 0.9, density));
+  alpha = clamp(alpha * face * top * uOpacity, 0.0, 1.0);
 
+  // Paleta: ceniza cálida en los jirones, rojo de brasa apagada en lo denso.
+  // Todos los tonos quedan por encima del fondo del hero, que es casi negro;
+  // si no, el humo sería más oscuro que la escena y no se vería.
+  vec3 ash    = vec3(0.157, 0.129, 0.141);  // #282124
+  vec3 deep   = vec3(0.322, 0.078, 0.098);  // #521419
+  vec3 mid    = vec3(0.408, 0.106, 0.125);  // #681b20
+  vec3 bright = vec3(0.486, 0.145, 0.161);  // #7c2529
+
+  vec3 color = mix(ash, deep, smoothstep(0.03, 0.22, density));
+  color = mix(color, mid, smoothstep(0.18, 0.5, density));
+  color = mix(color, bright, smoothstep(0.45, 0.95, density));
+
+  // Sin reacción de color al cursor: la interacción se lee en el movimiento.
   gl_FragColor = vec4(color * alpha, alpha);
-}
-`;
-
-/**
- * TEMPORAL — modo de diagnóstico.
- *
- * Pinta la textura de densidad en crudo: sin máscaras, sin capas, sin color
- * artístico y sin transparencia. Sirve para comprobar que la densidad que
- * calcula la simulación llega efectivamente al lienzo.
- *
- * negro = sin densidad · magenta → blanco = densidad creciente
- */
-export const DEBUG_DENSITY_SHADER = `
-precision highp float;
-precision highp sampler2D;
-varying vec2 vUv;
-uniform sampler2D uDensity;
-
-void main() {
-  float d = texture2D(uDensity, vUv).x;
-  // Rampa muy marcada: incluso densidades bajas deben verse.
-  vec3 color = vec3(d * 3.0, d * 0.6, d * 2.2);
-  color += vec3(1.0) * smoothstep(0.5, 1.2, d);
-  // Rejilla tenue: confirma que el quad cubre todo el lienzo.
-  float grid = (mod(vUv.x, 0.1) < 0.004 || mod(vUv.y, 0.1) < 0.004) ? 0.12 : 0.0;
-  gl_FragColor = vec4(clamp(color + grid, 0.0, 1.0), 1.0);
 }
 `;
 

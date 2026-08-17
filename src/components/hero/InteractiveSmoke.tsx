@@ -210,7 +210,7 @@ export function InteractiveSmoke({ reducedMotion = false, className }: Interacti
     // La preferencia de movimiento se aplica sin recrear el contexto WebGL.
     const applyMotion = (reduced: boolean) => {
       simulation.setMotionScale(reduced ? 0.18 : 1);
-      renderer.setOpacity(reduced ? 0.4 : 0.62);
+      renderer.setOpacity(reduced ? 0.6 : 0.9);
       if (reduced) {
         hasPointer = false;
         pointer = null;
