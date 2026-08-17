@@ -220,7 +220,11 @@ void main() {
   vec2 closest = a + ab * t;
   float dist = length(p - closest);
 
-  float fall = exp(-dist * dist / uRadius);
+  // La gaussiana sola deja una cola larga que se nota lejos del cursor;
+  // el smoothstep la corta a poco más de dos radios.
+  float reach = sqrt(uRadius) * 2.2;
+  float fall = exp(-dist * dist / uRadius) * smoothstep(reach, 0.0, dist);
+
   vec2 velocity = texture2D(uTarget, vUv).xy + uForce * fall;
   gl_FragColor = vec4(velocity, 0.0, 1.0);
 }
@@ -353,6 +357,42 @@ void main() {
 
   // Sin reacción de color al cursor: la interacción se lee en el movimiento.
   gl_FragColor = vec4(color * alpha, alpha);
+}
+`;
+
+/**
+ * El cursor aparta el humo: retira densidad a lo largo del segmento recorrido,
+ * con el mismo radio localizado que la inyección de fuerza. No borra, solo
+ * abre un canal que el propio fluido y los emisores vuelven a llenar.
+ */
+export const DENSITY_ERASE_SHADER = `
+precision highp float;
+precision highp sampler2D;
+varying vec2 vUv;
+uniform sampler2D uTarget;
+uniform vec2 uPointA;
+uniform vec2 uPointB;
+uniform float uRadius;
+uniform float uAmount;
+uniform float uAspect;
+
+void main() {
+  float density = texture2D(uTarget, vUv).x;
+
+  vec2 p = vec2(vUv.x * uAspect, vUv.y);
+  vec2 a = vec2(uPointA.x * uAspect, uPointA.y);
+  vec2 b = vec2(uPointB.x * uAspect, uPointB.y);
+
+  vec2 ab = b - a;
+  float len2 = max(dot(ab, ab), 1e-6);
+  float t = clamp(dot(p - a, ab) / len2, 0.0, 1.0);
+  float dist = length(p - (a + ab * t));
+
+  float reach = sqrt(uRadius) * 2.2;
+  float fall = exp(-dist * dist / uRadius) * smoothstep(reach, 0.0, dist);
+
+  // Proporcional a la densidad presente: donde no hay humo no pasa nada.
+  gl_FragColor = vec4(max(density - density * fall * uAmount, 0.0), 0.0, 0.0, 1.0);
 }
 `;
 

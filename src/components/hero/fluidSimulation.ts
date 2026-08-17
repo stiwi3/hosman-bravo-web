@@ -13,7 +13,9 @@
 import {
   ADVECTION_SHADER,
   AMBIENT_SHADER,
+  CLEAR_SHADER,
   CURL_SHADER,
+  DENSITY_ERASE_SHADER,
   DIVERGENCE_SHADER,
   EMITTER_SHADER,
   GRADIENT_SUBTRACT_SHADER,
@@ -48,6 +50,18 @@ export interface SimulationConfig {
   emission: number;
   /** Fuerza de las corrientes ambientales. */
   ambient: number;
+  /**
+   * Cuánta presión del fotograma anterior se conserva.
+   * La proyección de presión es elíptica: propaga por naturaleza. Guardar el
+   * campo íntegro acelera la convergencia pero acumula la perturbación del
+   * cursor y acaba moviendo toda la escena. Con <1 la ayuda se mantiene y la
+   * acumulación se corta.
+   */
+  pressureRetention: number;
+  /** Radio del área que el cursor afecta, en la gaussiana exp(-d²/r). */
+  splatRadius: number;
+  /** Proporción de densidad que el cursor aparta a su paso. */
+  eraseAmount: number;
 }
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -57,8 +71,11 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   curl: 22,
   velocityDissipation: 0.28,
   densityDissipation: 0.22,
-  emission: 1.1,
+  emission: 1.28,
   ambient: 16,
+  pressureRetention: 0.72,
+  splatRadius: 0.0025,
+  eraseAmount: 0.3,
 };
 
 export interface PointerSample {
@@ -80,8 +97,10 @@ interface Programs {
   pressure: Program;
   gradientSubtract: Program;
   splat: Program;
+  densityErase: Program;
   emitter: Program;
   ambient: Program;
+  clear: Program;
 }
 
 type DrawFn = (target: Fbo | null) => void;
@@ -100,6 +119,8 @@ export class FluidSimulation {
 
   private aspect = 1;
   private elapsed = 0;
+  /** Trayecto del cursor pendiente de apartar densidad en este fotograma. */
+  private pendingErase: { pointer: PointerSample; strength: number } | null = null;
   /** Escala global del movimiento; se reduce con `prefers-reduced-motion`. */
   private motionScale = 1;
 
@@ -128,8 +149,10 @@ export class FluidSimulation {
       pressure: make(PRESSURE_SHADER),
       gradientSubtract: make(GRADIENT_SUBTRACT_SHADER),
       splat: make(SPLAT_VELOCITY_SHADER),
+      densityErase: make(DENSITY_ERASE_SHADER),
       emitter: make(EMITTER_SHADER),
       ambient: make(AMBIENT_SHADER),
+      clear: make(CLEAR_SHADER),
     };
     gl.deleteShader(vertex);
   }
@@ -230,10 +253,12 @@ export class FluidSimulation {
           (pointer.dx / speed) * gain,
           (pointer.dy / speed) * gain
         );
-        gl.uniform1f(p.splat.uniform('uRadius'), 0.009);
+        gl.uniform1f(p.splat.uniform('uRadius'), this.config.splatRadius);
         gl.uniform1f(p.splat.uniform('uAspect'), this.aspect);
         this.draw(this.velocity.write);
         this.velocity.swap();
+
+        this.pendingErase = { pointer, strength: Math.min(speed * 26, 1) };
       }
     }
 
@@ -259,7 +284,16 @@ export class FluidSimulation {
     gl.uniform1i(p.divergence.uniform('uVelocity'), this.velocity.read.attach(0));
     this.draw(this.divergenceFbo);
 
-    // La presión previa se conserva parcialmente: converge antes.
+    // Se atenúa la presión heredada antes de iterar. Sin esto, el campo
+    // acumula la perturbación del cursor fotograma tras fotograma y una
+    // pulsación local acaba moviendo toda la escena.
+    p.clear.bind();
+    this.bindTexel(p.clear, this.pressure.read);
+    gl.uniform1i(p.clear.uniform('uTexture'), this.pressure.read.attach(0));
+    gl.uniform1f(p.clear.uniform('uValue'), this.config.pressureRetention);
+    this.draw(this.pressure.write);
+    this.pressure.swap();
+
     p.pressure.bind();
     this.bindTexel(p.pressure, this.pressure.read);
     gl.uniform1i(p.pressure.uniform('uDivergence'), this.divergenceFbo.attach(0));
@@ -291,6 +325,23 @@ export class FluidSimulation {
     gl.uniform1f(p.advection.uniform('uDissipation'), this.config.densityDissipation);
     this.draw(this.density.write);
     this.density.swap();
+
+    // 6b. El cursor aparta el humo a su paso: abre un canal a lo largo del
+    //     trayecto, que la advección y los emisores vuelven a cerrar solos.
+    if (this.pendingErase) {
+      const { pointer: pe, strength } = this.pendingErase;
+      p.densityErase.bind();
+      this.bindTexel(p.densityErase, this.density.read);
+      gl.uniform1i(p.densityErase.uniform('uTarget'), this.density.read.attach(0));
+      gl.uniform2f(p.densityErase.uniform('uPointA'), pe.prevX, pe.prevY);
+      gl.uniform2f(p.densityErase.uniform('uPointB'), pe.x, pe.y);
+      gl.uniform1f(p.densityErase.uniform('uRadius'), this.config.splatRadius);
+      gl.uniform1f(p.densityErase.uniform('uAmount'), this.config.eraseAmount * strength);
+      gl.uniform1f(p.densityErase.uniform('uAspect'), this.aspect);
+      this.draw(this.density.write);
+      this.density.swap();
+      this.pendingErase = null;
+    }
 
     // 7. Aporte lento de materia nueva desde bordes y base.
     p.emitter.bind();
