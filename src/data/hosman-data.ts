@@ -6,6 +6,10 @@
 const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const hosmanData = {
+  // Prefijo de despliegue para assets que no son imágenes (vídeos, descargas).
+  // Las rutas de `images` ya lo llevan aplicado.
+  basePath: bp,
+
   // Información personal
   artist: {
     name: 'HOSMAN BRAVO',

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
 
 type PageType = 'home' | 'galeria' | 'about' | 'contact';
@@ -15,6 +17,7 @@ const navItems: { id: PageType; label: string }[] = [
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
+  const reducedMotion = useReducedMotion();
 
   const data = hosmanData;
 
@@ -87,15 +90,27 @@ export default function Home() {
       {currentPage === 'home' && (
         <>
           <section className="relative min-h-screen flex items-center justify-center">
-            {/* Foto de fondo del show */}
-            <Image
-              src={data.images.hero}
-              alt="Hosman Bravo en show en vivo"
-              fill
-              priority
-              className="object-cover object-[50%_22%] opacity-50"
+            {/* Vídeo de fondo del show.
+                El original es 3:4 vertical: el punto focal se sitúa algo por
+                encima del centro para que, al recortar en pantallas anchas,
+                queden dentro Hosman y la cabeza del caballo. */}
+            <video
+              src={`${data.basePath}/videos/Hero.mp4`}
+              poster={data.images.hero}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Hosman Bravo montado a caballo durante su espectáculo"
+              className="absolute inset-0 h-full w-full object-cover object-[50%_38%] opacity-50"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/60"></div>
+
+            {/* HUMO INTERACTIVO — por encima del vídeo, por debajo del texto */}
+            <div className="pointer-events-none absolute inset-0 z-[5]">
+              <InteractiveSmoke reducedMotion={reducedMotion} />
+            </div>
 
             {/* HEADLINE */}
             <div className="relative z-10 text-center px-4 pt-16">
