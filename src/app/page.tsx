@@ -160,7 +160,9 @@ export default function Home() {
                 anchura y el desplazamiento vertical de abajo. */}
             <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center">
               <div className="relative aspect-[3/4] w-full md:h-full md:w-auto">
-                <div className="absolute left-1/2 w-[78%] -translate-x-1/2 top-[69.3%]">
+                {/* El rótulo y su bajada van juntos en la misma caja, de modo
+                    que se desplazan solidariamente si hay que reajustar. */}
+                <div className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2">
                   <Image
                     src={data.images.heroLetters}
                     alt=""
@@ -168,21 +170,21 @@ export default function Home() {
                     width={2172}
                     height={724}
                     priority
-                    sizes="(min-width: 768px) 59vh, 78vw"
+                    sizes="(min-width: 768px) 47vh, 62vw"
                     className="h-auto w-full"
                   />
+                  {/* Margen negativo para descontar el borde transparente que
+                      el propio PNG lleva bajo el artwork (22,4% de su alto). */}
+                  <p className="-mt-[4%] text-center text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
+                    MÚSICA POPULAR · SHOWS EN VIVO
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* El rótulo "HOSMAN BRAVO" ya viene en el propio vídeo, así que
                 aquí solo queda el subtítulo. */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 px-6 text-center sm:bottom-28">
-              <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
-              <p className="text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
-                MÚSICA POPULAR · SHOWS EN VIVO
-              </p>
-            </div>
+            <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
 
             {/* ICONOS SOCIALES ABAJO IZQUIERDA */}
             <div className="absolute bottom-6 left-6 flex gap-2 z-20">
