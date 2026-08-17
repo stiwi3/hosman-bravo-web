@@ -14,6 +14,14 @@ export interface RenderOptions {
   /** Centro de la zona a mantener despejada (UV, origen abajo-izquierda). */
   clearCenter: [number, number];
   clearRadius: number;
+  /**
+   * Zona del rótulo, en UV del lienzo completo. El humo se aclara ahí para
+   * que el artwork respire, sin llegar a desaparecer.
+   */
+  brandCenter: [number, number];
+  brandSize: [number, number];
+  /** Humo que queda en el centro de esa zona (1 = sin cambio). */
+  brandRelief: number;
 }
 
 export class SmokeRenderer {
@@ -34,6 +42,11 @@ export class SmokeRenderer {
       opacity: options.opacity ?? 0.9,
       clearCenter: options.clearCenter ?? [0.5, 0.6],
       clearRadius: options.clearRadius ?? 0.3,
+      // Ajustados al artwork del PNG: ocupa la franja central del vídeo, algo
+      // por encima de la mitad y bastante apaisado.
+      brandCenter: options.brandCenter ?? [0.5, 0.51],
+      brandSize: options.brandSize ?? [0.2, 0.13],
+      brandRelief: options.brandRelief ?? 0.55,
     };
 
     const { gl } = ctx;
@@ -78,6 +91,13 @@ export class SmokeRenderer {
       this.options.clearCenter[1]
     );
     gl.uniform1f(p.uniform('uClearRadius'), this.options.clearRadius);
+    gl.uniform2f(
+      p.uniform('uBrandCenter'),
+      this.options.brandCenter[0],
+      this.options.brandCenter[1]
+    );
+    gl.uniform2f(p.uniform('uBrandSize'), this.options.brandSize[0], this.options.brandSize[1]);
+    gl.uniform1f(p.uniform('uBrandRelief'), this.options.brandRelief);
     this.draw(null);
   }
 

@@ -150,15 +150,37 @@ export default function Home() {
               <InteractiveSmoke reducedMotion={reducedMotion} />
             </div>
 
+            {/* CAPA 4 — rótulo, por delante del humo para que no se vele.
+                Va dentro de una caja 3:4 idéntica a la del vídeo, de modo que
+                las medidas en porcentaje se refieren siempre al encuadre y no
+                al viewport: la alineación se mantiene sola en todos los
+                tamaños, sin offsets por breakpoint.
+                El PNG es una tira 3:1 cuyo contenido ocupa el 98,3% de su
+                ancho y está centrado en el 44,4% de su alto; de ahí salen la
+                anchura y el desplazamiento vertical de abajo. */}
+            <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center">
+              <div className="relative aspect-[3/4] w-full md:h-full md:w-auto">
+                <div className="absolute left-1/2 w-[78%] -translate-x-1/2 top-[69.3%]">
+                  <Image
+                    src={data.images.heroLetters}
+                    alt=""
+                    aria-hidden="true"
+                    width={2172}
+                    height={724}
+                    priority
+                    sizes="(min-width: 768px) 59vh, 78vw"
+                    className="h-auto w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* El rótulo "HOSMAN BRAVO" ya viene en el propio vídeo, así que
                 aquí solo queda el subtítulo. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 px-6 text-center sm:bottom-28">
               <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
-              <p className="text-xs font-bold tracking-[0.4em] text-amber-400 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:text-sm">
-                {data.artist.tagline.toUpperCase()}
-              </p>
-              <p className="mt-3 text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
-                MÚSICA POPULAR · DOMA DE ALTA ESCUELA · SHOWS EN VIVO
+              <p className="text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
+                MÚSICA POPULAR · SHOWS EN VIVO
               </p>
             </div>
 

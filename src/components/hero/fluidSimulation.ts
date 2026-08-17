@@ -71,10 +71,11 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   curl: 22,
   velocityDissipation: 0.28,
   densityDissipation: 0.22,
-  emission: 1.28,
+  emission: 1.76,
   ambient: 16,
   pressureRetention: 0.72,
-  splatRadius: 0.0025,
+  // El radio efectivo es la raíz de este valor: 0.0281 de la anchura.
+  splatRadius: 0.00079,
   eraseAmount: 0.3,
 };
 

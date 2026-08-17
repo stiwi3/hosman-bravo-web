@@ -308,6 +308,9 @@ uniform float uAspect;
 uniform float uOpacity;
 uniform vec2 uClearCenter;
 uniform float uClearRadius;
+uniform vec2 uBrandCenter;
+uniform vec2 uBrandSize;
+uniform float uBrandRelief;
 ${NOISE_CHUNK}
 
 void main() {
@@ -341,7 +344,15 @@ void main() {
   // laterales y la base, así que ahí no puede recortarse nada.
   float top = smoothstep(1.0, 0.86, vUv.y);
 
-  alpha = clamp(alpha * face * top * uOpacity, 0.0, 1.0);
+  // Detrás del rótulo se aclara el humo, sin llegar a vaciarlo. La zona es
+  // elíptica y la caída larga, para que no se lea como un recorte.
+  vec2 toBrand = (p - vec2(uBrandCenter.x * uAspect, uBrandCenter.y))
+                 / vec2(uBrandSize.x * uAspect, uBrandSize.y);
+  // El ruido desdibuja el contorno de la máscara y evita el borde geométrico.
+  float wobble = fbm(p * 3.6 + vec2(0.0, -uTime * 0.03)) * 0.28;
+  float brand = mix(uBrandRelief, 1.0, smoothstep(0.25, 1.15 + wobble, length(toBrand)));
+
+  alpha = clamp(alpha * face * top * brand * uOpacity, 0.0, 1.0);
 
   // Paleta: ceniza cálida en los jirones, rojo de brasa apagada en lo denso.
   // Todos los tonos quedan por encima del fondo del hero, que es casi negro;

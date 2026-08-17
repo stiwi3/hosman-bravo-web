@@ -102,6 +102,8 @@ export const hosmanData = {
       logotipoBlanco: `${bp}/images/logo/logotipo-blanco.png`
     },
     hero: `${bp}/images/show-01.jpg`,
+    // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).
+    heroLetters: `${bp}/images/Letras sin fondo.png`,
     about: `${bp}/images/hosman-donjuan.jpg`,
     aboutSecondary: `${bp}/images/hosman-bandolero.jpg`,
     shows: [
