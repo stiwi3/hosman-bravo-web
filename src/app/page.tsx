@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
+import { MusicPlatforms } from '@/components/MusicPlatforms';
+import { SocialLinks } from '@/components/SocialLinks';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
 
@@ -55,34 +57,12 @@ export default function Home() {
           ))}
         </nav>
 
-        {/* TOP RIGHT INFO */}
-        <div className="text-right text-xs tracking-tight hidden md:block">
-          <div className="mb-1 text-gray-400">MÚSICA POPULAR · ALTA ESCUELA</div>
-          <a
-            href={data.socialLinks.spotify}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline font-bold text-amber-400 hover:text-amber-300 transition text-xs block"
-          >
-            ESCÚCHAME EN SPOTIFY
-          </a>
-          <div className="flex gap-2 justify-end mt-3">
-            {[
-              { href: data.socialLinks.instagram, label: 'IG' },
-              { href: data.socialLinks.tiktok, label: 'TK' },
-              { href: data.socialLinks.youtube, label: 'YT' }
-            ].map(({ href, label }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs hover:border-amber-400 hover:text-amber-400 transition"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
+        {/* PLATAFORMAS DE MÚSICA
+            En pantallas estrechas se despega de la cabecera y baja a una
+            rejilla de 4×2, para no cruzarse con la navegación central. */}
+        <div className="absolute right-4 top-[74px] md:static md:right-auto md:top-auto md:text-right">
+          {/* Sobre estos iconos irá el reproductor en la siguiente fase. */}
+          <MusicPlatforms />
         </div>
       </header>
 
@@ -186,24 +166,9 @@ export default function Home() {
                 aquí solo queda el subtítulo. */}
             <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
 
-            {/* ICONOS SOCIALES ABAJO IZQUIERDA */}
-            <div className="absolute bottom-6 left-6 flex gap-2 z-20">
-              {[
-                { href: data.socialLinks.tiktok, label: 'TT' },
-                { href: data.socialLinks.instagram, label: 'IG' },
-                { href: data.socialLinks.youtube, label: 'YT' },
-                { href: data.socialLinks.facebook, label: 'FB' }
-              ].map(({ href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-8 h-8 rounded-full border border-white/40 flex items-center justify-center text-xs hover:border-amber-400 hover:text-amber-400 transition bg-black/40"
-                >
-                  {label}
-                </a>
-              ))}
+            {/* REDES SOCIALES — esquina inferior izquierda */}
+            <div className="absolute bottom-8 left-8 z-20 md:bottom-10 md:left-10">
+              <SocialLinks />
             </div>
 
             {/* BADGE DERECHA */}

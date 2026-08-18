@@ -63,9 +63,67 @@ export const hosmanData = {
     tiktok: 'https://www.tiktok.com/@hosman_bravo',
     youtube: 'https://www.youtube.com/@hosmanbravo',
     facebook: 'https://www.facebook.com/hosman.bravo/',
+    whatsapp:
+      'https://api.whatsapp.com/send/?phone=573225129515&text&type=phone_number&app_absent=0',
     spotify: 'https://open.spotify.com/intl-es/artist/5IZ9yQEhRQ3rTq76sm93R3',
     soundcloud: 'https://soundcloud.com/hosmanbravo'
   },
+
+  // Canción de entrada: suena al pulsar el acceso y alimentará al reproductor.
+  // El nombre del archivo lleva tilde, así que la ruta va codificada para que
+  // resuelva igual en el export estático de GitHub Pages.
+  featuredTrack: {
+    // Pendientes de confirmar; se dejan vacíos en lugar de inventarlos.
+    title: '',
+    audio: `${bp}/audio/Canci%C3%B3n-entrada.mp3`,
+    youtubeUrl: '',
+    spotifyUrl: ''
+  },
+
+  // Plataformas de streaming, en orden de importancia.
+  // El campo `icon` corresponde a un componente de PlatformIcons.tsx.
+  musicPlatforms: [
+    {
+      name: 'Spotify',
+      icon: 'spotify',
+      url: 'https://open.spotify.com/intl-es/artist/5IZ9yQEhRQ3rTq76sm93R3?si=1HDm4sFvRyyLYh7r4oGpAA'
+    },
+    {
+      name: 'Apple Music',
+      icon: 'appleMusic',
+      url: 'https://music.apple.com/us/artist/hosman-bravo/1635792181'
+    },
+    {
+      name: 'YouTube Music',
+      icon: 'youtubeMusic',
+      url: 'https://music.youtube.com/@hosmanbravo?si=cxOu4FUOmtNmHCwA'
+    },
+    {
+      name: 'Amazon Music',
+      icon: 'amazonMusic',
+      url: 'https://amazon.es/music/player/artists/B0B7F282KC/hosman-bravo?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_GuaMd3i9M4lCmCCttYIOb6T2d'
+    },
+    {
+      name: 'Deezer',
+      icon: 'deezer',
+      url: 'https://www.deezer.com/es/artist/177325857'
+    },
+    {
+      name: 'Tidal',
+      icon: 'tidal',
+      url: 'https://tidal.com/artist/33378552/u'
+    },
+    {
+      name: 'SoundCloud',
+      icon: 'soundCloud',
+      url: 'https://soundcloud.com/hosmanbravo'
+    },
+    {
+      name: 'Audiomack',
+      icon: 'audiomack',
+      url: 'https://audiomack.com/hosman-bravo'
+    }
+  ] as const,
 
   // Información de contacto
   contact: {

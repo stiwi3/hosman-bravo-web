@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AudioProvider } from "@/components/audio/AudioProvider";
+import { EntryScreen } from "@/components/audio/EntryScreen";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,7 +30,14 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* El proveedor envuelve a la página entera: así la canción sigue
+            sonando aunque después naveguemos entre secciones. */}
+        <AudioProvider>
+          <EntryScreen />
+          {children}
+        </AudioProvider>
+      </body>
     </html>
   );
 }
