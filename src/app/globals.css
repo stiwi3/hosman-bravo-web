@@ -146,6 +146,60 @@ a, button {
   transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
 }
 
+/* Ecualizador del reproductor: barras que respiran mientras suena la música.
+   Sin animación queda una línea baja, así que pausar deja el indicador plano. */
+@keyframes hb-equalizer {
+  0%,
+  100% {
+    transform: scaleY(0.22);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Cuero oscuro para los botones del reproductor.
+   Dos tramas de líneas finas cruzadas en ángulos distintos crean un grano
+   irregular, y un tinte burdeos por arriba le da profundidad. Todo en CSS:
+   ninguna imagen que descargar. */
+.hb-leather {
+  background-color: #140a0c;
+  background-image:
+    repeating-linear-gradient(
+      52deg,
+      rgba(255, 255, 255, 0.016) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(-38deg, rgba(0, 0, 0, 0.26) 0 2px, transparent 2px 6px),
+    radial-gradient(125% 150% at 28% -10%, rgba(122, 32, 38, 0.34), transparent 70%);
+  box-shadow:
+    inset 0 1px 0 rgba(214, 175, 96, 0.09),
+    inset 0 -6px 12px -8px rgba(0, 0, 0, 0.9);
+}
+
+/* Filo dorado que aparece al pasar por encima, sin llegar a brillar. */
+.hb-leather:hover {
+  background-color: #1b0e11;
+  box-shadow:
+    inset 0 1px 0 rgba(214, 175, 96, 0.18),
+    inset 0 -6px 12px -8px rgba(0, 0, 0, 0.85),
+    0 0 16px -4px rgba(196, 150, 66, 0.38);
+}
+
+/* Respiración del botón de reproducción: un anillo dorado que se expande y
+   se desvanece mientras suena. Muy tenue, sin llegar a resplandor. */
+@keyframes hb-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.22);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(212, 175, 55, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -163,3 +217,80 @@ a, button {
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(150, 20, 27);
 }
+
+/* ---------------------------------------------------------------------------
+   MENÚ DE CUERO (LeatherMenu)
+
+   El menú es una agenda ecuestre construida por capas de HTML: cuerpo, lomo,
+   cabecera y solapa son piezas independientes de cuero. Lo que vive aquí y no
+   en estilos inline son las dos cosas que exigen pseudo-elementos: la costura
+   (dos trazos superpuestos) y el grano del material (mezclas de fusión).
+--------------------------------------------------------------------------- */
+
+/* Material de la pieza.
+
+   La fotografía de cuero es el material, no un velo sobre un degradado. Dos
+   errores medidos la destruían antes:
+
+   1. `background-size: 340px` sobre una imagen de 1536px la reducía 4,5×, y los
+      poros caían por debajo del píxel. Se perdía el 67% del grano. Va a escala
+      1:1 (`background-size: auto`): así el grano de la foto y el de la pantalla
+      son el mismo, que es lo que hace que se lea como cuero.
+   2. `mix-blend-mode: soft-light` sobre una base casi negra no puede producir
+      grano: en `Cr = Cb − (1−2Cs)·Cb·(1−Cb)`, con Cb≈0,06 el factor Cb(1−Cb)
+      vale 0,056, así que la textura no movía el píxel más de ±14 de 255 ni
+      siendo blanca. Ahora la capa es opaca y sin fusión.
+
+   Cada pieza desplaza `--lm-tex-pos` a una zona distinta de la foto: es lo que
+   evita que se repita el mismo poro y da la variación orgánica entre piezas. */
+.lm-grain {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: var(--lm-leather);
+  background-size: auto;
+  background-position: var(--lm-tex-pos, 0 0);
+  filter: brightness(var(--lm-tex-brightness, 1.55)) contrast(1.04);
+  pointer-events: none;
+}
+
+/* Canto de la pieza.
+
+   El grosor no es una sombra: es cuero que se curva. Esta capa recorta un marco
+   del ancho del canto (dos máscaras, una recortada a `content-box` y otra a
+   `border-box`, restadas con `mask-composite: exclude`) y lo rellena con la
+   misma fotografía desplazada, de modo que el grano del canto no repite el de
+   la cara. Encima, y solo dentro del marco, va la luz direccional que le da la
+   curvatura: realce arriba a la izquierda, caída abajo a la derecha. */
+.lm-bevel {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--lm-bevel-width, 7px);
+  /* El realce del canto va bajo: el cuero es mate y apenas devuelve luz. Con
+     valores altos (se probó 0,5) el borde se vuelve satinado y delata el CSS.
+     El volumen lo da sobre todo la caída oscura, no el brillo. */
+  background-image:
+    linear-gradient(
+      158deg,
+      rgba(246, 236, 220, 0.15) 0%,
+      rgba(246, 236, 220, 0.045) 24%,
+      rgba(0, 0, 0, 0.4) 58%,
+      rgba(0, 0, 0, 0.82) 100%
+    ),
+    var(--lm-leather);
+  background-size: auto, auto;
+  background-position: 0 0, var(--lm-bevel-pos, -700px -80px);
+  filter: brightness(var(--lm-bevel-brightness, 1.5)) contrast(1.06);
+  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-clip: content-box, border-box;
+  -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-clip: content-box, border-box;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Las secciones no tienen entrada propia: aparecen con la misma pieza de
+   cuero, como si ya estuvieran escritas en ella. Una entrada renglón a renglón
+   sugiere una lista cargándose y rompe la sensación de objeto físico. */

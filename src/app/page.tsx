@@ -5,13 +5,17 @@ import Image from 'next/image';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
 import { MusicPlatforms } from '@/components/MusicPlatforms';
 import { SocialLinks } from '@/components/SocialLinks';
+import { TrackPlayer } from '@/components/audio/TrackPlayer';
+import { LeatherMenu } from '@/components/LeatherMenu';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
 
-type PageType = 'home' | 'galeria' | 'about' | 'contact';
+type PageType = 'home' | 'show' | 'playlist' | 'galeria' | 'about' | 'contact';
 
 const navItems: { id: PageType; label: string }[] = [
   { id: 'home', label: 'INICIO' },
+  { id: 'show', label: 'EL SHOW' },
+  { id: 'playlist', label: 'PLAYLIST' },
   { id: 'galeria', label: 'GALERÍA' },
   { id: 'about', label: 'SOBRE MÍ' },
   { id: 'contact', label: 'CONTACTO' }
@@ -27,22 +31,7 @@ export default function Home() {
     <main className="bg-black text-white font-sans overflow-x-hidden min-h-screen">
       {/* HEADER FIJO */}
       <header className="fixed top-0 left-0 right-0 flex justify-between items-start p-4 md:p-6 z-50 bg-gradient-to-b from-black/80 to-transparent">
-        <button
-          onClick={() => setCurrentPage('home')}
-          className="flex items-center gap-3 cursor-pointer"
-        >
-          <Image
-            src={data.images.logo.isotipoDorado}
-            alt="Hosman Bravo logo"
-            width={52}
-            height={52}
-            className="w-12 h-12 md:w-14 md:h-14 object-contain"
-          />
-          <div className="text-left text-sm leading-tight tracking-wide hidden sm:block">
-            <div className="font-black text-base">HOSMAN</div>
-            <div className="font-black text-base text-amber-400">BRAVO</div>
-          </div>
-        </button>
+        <LeatherMenu items={navItems} current={currentPage} onNavigate={setCurrentPage} />
 
         {/* NAVEGACIÓN CENTRAL */}
         <nav className="absolute left-1/2 -translate-x-1/2 top-8 text-xs tracking-widest space-x-3 md:space-x-5">
@@ -60,16 +49,29 @@ export default function Home() {
         {/* PLATAFORMAS DE MÚSICA
             En pantallas estrechas se despega de la cabecera y baja a una
             rejilla de 4×2, para no cruzarse con la navegación central. */}
-        <div className="absolute right-4 top-[74px] md:static md:right-auto md:top-auto md:text-right">
-          {/* Sobre estos iconos irá el reproductor en la siguiente fase. */}
-          <MusicPlatforms />
+        <div className="absolute right-4 top-[74px] flex flex-col items-end gap-3 md:static md:right-auto md:top-auto md:gap-4">
+          {/* El reproductor manda sobre el audio global; debajo quedan los
+              accesos a las plataformas. */}
+          <div className="hidden sm:block">
+            <TrackPlayer />
+          </div>
+          {/* La `key` remonta el bloque al cambiar de sección, de modo que
+              siempre aparece recogido al navegar. */}
+          <MusicPlatforms key={currentPage} collapsible={currentPage !== 'home'} />
         </div>
       </header>
 
-      {/* HOME PAGE */}
-      {currentPage === 'home' && (
+      {/* PORTADA
+          Se mantiene montada siempre y solo se oculta: así el contexto WebGL y
+          las texturas de densidad del humo sobreviven al cambiar de sección. Si
+          se desmontara, la simulación arrancaría vacía al volver y tardaría más
+          de diez segundos en acumular humo visible. El IntersectionObserver del
+          propio componente detiene el bucle mientras está oculto. */}
+      <div className={currentPage === 'home' ? 'contents' : 'hidden'}>
         <>
-          <section className="relative min-h-screen flex items-center justify-center">
+          {/* La portada ocupa exactamente la pantalla: para ver el resto hay
+              que ir a otra sección, no desplazarse. */}
+          <section className="relative h-[100svh] overflow-hidden flex items-center justify-center">
             {/* CAPA 1 — fondo de la escena: negro con brasa roja muy apagada.
                 Es la continuación de los laterales del vídeo hacia los bordes. */}
             <div
@@ -171,19 +173,50 @@ export default function Home() {
               <SocialLinks />
             </div>
 
-            {/* BADGE DERECHA */}
-            <button
-              onClick={() => setCurrentPage('contact')}
-              className="absolute bottom-6 right-6 z-20 group"
-            >
-              <div className="w-28 h-28 rounded-full border-2 border-amber-400 flex items-center justify-center text-xs text-center bg-black/50 backdrop-blur tracking-widest font-bold group-hover:bg-amber-400 group-hover:text-black transition">
-                CONTRATA<br />TU SHOW
-              </div>
-            </button>
+            {/* BADGE DERECHA, con el aviso legal recogido justo debajo */}
+            <div className="absolute bottom-6 right-6 z-20 flex flex-col items-center gap-2">
+              <button onClick={() => setCurrentPage('contact')} className="group">
+                <div className="w-28 h-28 rounded-full border-2 border-amber-400 flex items-center justify-center text-xs text-center bg-black/50 backdrop-blur tracking-widest font-bold group-hover:bg-amber-400 group-hover:text-black transition">
+                  CONTRATA<br />TU SHOW
+                </div>
+              </button>
+              <p className="max-w-[9rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
+                © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
+                COLOMBIA
+              </p>
+            </div>
           </section>
+        </>
+      </div>
 
-          {/* SECCIÓN EL SHOW */}
-          <section className="py-20 px-6 max-w-6xl mx-auto">
+      {/* PLAYLIST — estructura preparada; la biblioteca llegará después. */}
+      {currentPage === 'playlist' && (
+        <section className="relative min-h-screen pt-32 pb-16 px-6">
+          <div className="mx-auto max-w-4xl text-center">
+            <h2 className="text-3xl md:text-4xl font-black tracking-wide mb-3">
+              LA <span className="text-amber-400">PLAYLIST</span>
+            </h2>
+            <p className="mx-auto max-w-xl text-sm text-gray-400">
+              La música de Hosman Bravo, reunida en un solo sitio.
+            </p>
+
+            <div className="mt-14 rounded-lg border border-dashed border-amber-400/25 bg-black/40 px-6 py-16">
+              <p className="text-[11px] font-semibold tracking-[0.24em] text-amber-400/80">
+                PRÓXIMAMENTE
+              </p>
+              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-gray-500">
+                Aquí estarán todas las canciones, con enlace a cada plataforma.
+                Mientras tanto puedes escucharlas desde los accesos de la cabecera.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* EL SHOW */}
+      {currentPage === 'show' && (
+        <>
+          <section className="pt-32 pb-16 px-6 max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-black tracking-wide mb-3 text-center">
               EL <span className="text-red-600">SHOW</span>
             </h2>
@@ -404,19 +437,22 @@ export default function Home() {
         </section>
       )}
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/10 py-8 px-6 text-center">
-        <Image
-          src={data.images.logo.logotipoDorado}
-          alt="Hosman Bravo"
-          width={160}
-          height={40}
-          className="mx-auto mb-4 w-40 h-auto object-contain"
-        />
-        <p className="text-xs text-gray-600 tracking-widest">
-          © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN, COLOMBIA
-        </p>
-      </footer>
+      {/* En la portada el aviso legal va recogido bajo el botón de contratación;
+          en el resto de secciones cierra la página. */}
+      {currentPage !== 'home' && (
+        <footer className="border-t border-white/10 py-8 px-6 text-center">
+          <Image
+            src={data.images.logo.logotipoDorado}
+            alt="Hosman Bravo"
+            width={160}
+            height={40}
+            className="mx-auto mb-4 w-40 h-auto object-contain"
+          />
+          <p className="text-xs text-gray-600 tracking-widest">
+            © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN, COLOMBIA
+          </p>
+        </footer>
+      )}
     </main>
   );
 }

@@ -73,11 +73,10 @@ export const hosmanData = {
   // El nombre del archivo lleva tilde, así que la ruta va codificada para que
   // resuelva igual en el export estático de GitHub Pages.
   featuredTrack: {
-    // Pendientes de confirmar; se dejan vacíos en lugar de inventarlos.
-    title: '',
+    title: 'Tomando Trago',
     audio: `${bp}/audio/Canci%C3%B3n-entrada.mp3`,
-    youtubeUrl: '',
-    spotifyUrl: ''
+    youtubeUrl: 'https://www.youtube.com/watch?v=wOtsMOie4bw',
+    spotifyUrl: 'https://open.spotify.com/track/2uVmWqSks9Cf9ULXYPWJi0'
   },
 
   // Plataformas de streaming, en orden de importancia.
@@ -156,8 +155,24 @@ export const hosmanData = {
       imagotipoBlanco: `${bp}/images/logo/imagotipo-blanco.png`,
       isotipoDorado: `${bp}/images/logo/isotipo-dorado.png`,
       isotipoBlanco: `${bp}/images/logo/isotipo-blanco.png`,
+      // Isotipo tallado en cuero, para el hueco circular de la cabecera del
+      // menú: ahí el fondo dorado plano del isotipo normal desentonaba con el
+      // material de la pieza.
+      isotipoCuero: `${bp}/images/logo/isotipo-cuero.png`,
       logotipoDorado: `${bp}/images/logo/logotipo-dorado.png`,
       logotipoBlanco: `${bp}/images/logo/logotipo-blanco.png`
+    },
+    // Grano real de cuero negro, usado como material de las piezas del menú
+    // (no como fondo plano); ver `LeatherMenu`.
+    //
+    // `black-leather-matte.webp` es la original pasada por una curva de tono
+    // calcada del perfil de `public/references/menu-reference.png`: mismo medio
+    // y mismo grano, pero con el extremo especular aplastado (149 -> 86), que
+    // era lo que hacía que el cuero se leyera satinado en vez de mate. La
+    // original se conserva por si hiciera falta rederivarla.
+    textures: {
+      blackLeather: `${bp}/images/textures/black-leather-matte.webp`,
+      blackLeatherRaw: `${bp}/images/textures/black-leather.webp`
     },
     hero: `${bp}/images/show-01.jpg`,
     // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).
