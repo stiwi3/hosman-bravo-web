@@ -57,6 +57,34 @@ export const hosmanData = {
     }
   },
 
+  // Próximas fechas. `UpcomingShows` ordena una copia por fecha y muestra solo
+  // las dos primeras (protagonista + secundaria); añadir más aquí no rompe el
+  // bloque del hero, simplemente no se pintan. `date` en ISO (AAAA-MM-DD): es
+  // lo que permitirá más adelante descartar fechas pasadas comparando contra
+  // `Date.now()` sin tener que volver a tocar la forma de los datos.
+  //
+  // `ticketUrl` vacío = la entrada no es un enlace y no muestra el indicador
+  // de click. En cuanto se rellene con la URL real de venta, ambas cosas se
+  // activan solas.
+  upcomingShows: [
+    {
+      id: 'feria-san-marcos-2026',
+      date: '2026-11-28',
+      title: 'Feria Nacional de San Marcos',
+      location: 'Aguascalientes, MX',
+      time: '21:00 HRS',
+      ticketUrl: ''
+    },
+    {
+      id: 'palenque-culiacan-2027',
+      date: '2027-02-28',
+      title: 'Palenque de Culiacán',
+      location: 'Culiacán, SIN',
+      time: '20:30 HRS',
+      ticketUrl: ''
+    }
+  ],
+
   // Redes sociales
   socialLinks: {
     instagram: 'https://www.instagram.com/hosmanbravo/',
@@ -173,6 +201,22 @@ export const hosmanData = {
     textures: {
       blackLeather: `${bp}/images/textures/black-leather-matte.webp`,
       blackLeatherRaw: `${bp}/images/textures/black-leather.webp`
+    },
+    // Piezas del menú ya renderizadas como objeto físico completo (cuero,
+    // costuras, lomo, anillas, sombras). Ver `LeatherMenuPhoto`: la
+    // materialidad viene del asset, no de CSS.
+    // Entrada de concierto ya renderizada como objeto completo (negro mate,
+    // marco dorado, perforaciones, talón, ADMIT ONE, código de barras). Ver
+    // `NextShowTicket`: encima solo se superpone el texto del evento.
+    events: {
+      ticketTemplate: `${bp}/images/events/ticket-template.webp`,
+      // Misma entrada frontal, con copias apiladas asomando detrás: se usa
+      // solo mientras el bloque de próximos shows está cerrado.
+      ticketStack: `${bp}/images/events/ticket-stack.webp`
+    },
+    menu: {
+      header: `${bp}/images/menu/menu-header.webp`,
+      body: `${bp}/images/menu/menu-body.webp`
     },
     hero: `${bp}/images/show-01.jpg`,
     // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).

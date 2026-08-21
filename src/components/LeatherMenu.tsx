@@ -256,7 +256,7 @@ export function LeatherMenu<T extends string>({
     <div
       ref={rootRef}
       style={LEATHER_VAR}
-      className={`relative z-50 ${open ? 'lm-open' : ''}`}
+      className="relative z-50"
     >
       {/* Degradado de latón, compartido por los seis iconos. */}
       <svg width="0" height="0" aria-hidden="true" className="absolute">

@@ -7,8 +7,17 @@ import { MusicPlatforms } from '@/components/MusicPlatforms';
 import { SocialLinks } from '@/components/SocialLinks';
 import { TrackPlayer } from '@/components/audio/TrackPlayer';
 import { LeatherMenu } from '@/components/LeatherMenu';
+import { LeatherMenuPhoto } from '@/components/LeatherMenuPhoto';
+import { UpcomingShows } from '@/components/UpcomingShows';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
+
+// Prueba visual: menú de cuero construido sobre fotografías del objeto ya
+// terminado (`LeatherMenuPhoto`) en vez del anterior, hecho enteramente en
+// CSS/SVG (`LeatherMenu`). Para volver a la versión anterior basta con poner
+// esto en `false` — el componente CSS sigue intacto y montado en el árbol de
+// componentes, sin usarse.
+const USE_PHOTO_MENU = true;
 
 type PageType = 'home' | 'show' | 'playlist' | 'galeria' | 'about' | 'contact';
 
@@ -31,7 +40,11 @@ export default function Home() {
     <main className="bg-black text-white font-sans overflow-x-hidden min-h-screen">
       {/* HEADER FIJO */}
       <header className="fixed top-0 left-0 right-0 flex justify-between items-start p-4 md:p-6 z-50 bg-gradient-to-b from-black/80 to-transparent">
-        <LeatherMenu items={navItems} current={currentPage} onNavigate={setCurrentPage} />
+        {USE_PHOTO_MENU ? (
+          <LeatherMenuPhoto items={navItems} current={currentPage} onNavigate={setCurrentPage} />
+        ) : (
+          <LeatherMenu items={navItems} current={currentPage} onNavigate={setCurrentPage} />
+        )}
 
         {/* NAVEGACIÓN CENTRAL */}
         <nav className="absolute left-1/2 -translate-x-1/2 top-8 text-xs tracking-widest space-x-3 md:space-x-5">
@@ -168,19 +181,41 @@ export default function Home() {
                 aquí solo queda el subtítulo. */}
             <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
 
-            {/* REDES SOCIALES — esquina inferior izquierda */}
+            {/* REDES SOCIALES — esquina inferior izquierda. El CTA de
+                contrataciones cuelga del icono de WhatsApp (el último de la
+                fila, a la derecha del grupo) como un bocadillo discreto en
+                vez de competir por espacio como bloque propio; sigue
+                llevando a la misma sección de contacto que antes. */}
             <div className="absolute bottom-8 left-8 z-20 md:bottom-10 md:left-10">
-              <SocialLinks />
+              <div className="relative">
+                <SocialLinks />
+                <button
+                  onClick={() => setCurrentPage('contact')}
+                  // `rounded-lg` y no `rounded-full`: con la píldora
+                  // completamente redondeada el borde se curva justo donde
+                  // hace falta apoyar la colita, y esta queda desconectada
+                  // del contorno en vez de fundirse con él.
+                  className="group absolute -top-8 right-0 flex items-center gap-1 rounded-lg border border-amber-400/25 bg-black/55 px-2.5 py-1.5 text-[8px] font-semibold tracking-widest text-amber-200/80 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/60 hover:text-amber-300 sm:-top-9"
+                >
+                  CONTRATA TU SHOW
+                  {/* colita apuntando al icono de WhatsApp, justo debajo */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-[4px] right-4 h-[8px] w-[8px] rotate-45 border-b border-r border-amber-400/25 bg-black/55 transition-colors duration-300 group-hover:border-amber-400/60"
+                  />
+                </button>
+              </div>
             </div>
 
-            {/* BADGE DERECHA, con el aviso legal recogido justo debajo */}
-            <div className="absolute bottom-6 right-6 z-20 flex flex-col items-center gap-2">
-              <button onClick={() => setCurrentPage('contact')} className="group">
-                <div className="w-28 h-28 rounded-full border-2 border-amber-400 flex items-center justify-center text-xs text-center bg-black/50 backdrop-blur tracking-widest font-bold group-hover:bg-amber-400 group-hover:text-black transition">
-                  CONTRATA<br />TU SHOW
-                </div>
-              </button>
-              <p className="max-w-[9rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
+            {/* BLOQUE PRÓXIMOS SHOWS, con el aviso legal recogido justo
+                debajo. En móvil el bloque ocupa 92vw, así que ya no cabe al
+                lado de las redes sociales: sube por encima de esa fila en vez
+                de encogerse, que es lo que lo haría ilegible.
+                Va anclado por abajo para que, al desplegarse, crezca hacia
+                arriba y no empuje el aviso legal fuera de la pantalla. */}
+            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-6 sm:right-6 sm:translate-x-0">
+              <UpcomingShows onContact={() => setCurrentPage('contact')} />
+              <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
                 © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
                 COLOMBIA
               </p>
