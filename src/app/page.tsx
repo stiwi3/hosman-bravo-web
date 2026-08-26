@@ -19,6 +19,34 @@ import { hosmanData } from '@/data/hosman-data';
 // componentes, sin usarse.
 const USE_PHOTO_MENU = true;
 
+/* ---------------------------------------------------------------------------
+   Envoltorio común de las escenas con scroll.
+
+   Antes cada sección declaraba por su cuenta `pt-32 pb-16 px-6` y su propio
+   `max-w-*`, así que las cinco tomaban la misma decisión cinco veces y ninguna
+   reaccionaba al alto disponible: los 128px de `pt-32` se comían el 22% de la
+   pantalla en 1280×591 y, en 2048×1023, se quedaban un píxel por debajo de la
+   cabecera real (129px) — de ahí el roce del menú con el contenido.
+
+   Ahora el espacio superior se DERIVA de la altura real de la cabecera
+   (`--spacing-scene-top`, ver `globals.css`), de modo que cabecera y contenido
+   no pueden descuadrarse: si cambia el menú, el hueco se ajusta solo.
+
+   Las secciones que faltan (PLAYLIST, EL SHOW, GALERÍA, CONTACTO) deben
+   construirse sobre estas dos constantes en vez de volver a elegir medidas.
+--------------------------------------------------------------------------- */
+/** Espaciado de escena: salva la cabecera fija y da el aire lateral e
+ *  inferior. Es lo que necesita CUALQUIER sección con scroll. */
+const SCENE = 'relative pt-scene-top pb-scene-bottom px-scene-x';
+
+/** Igual, pero ocupando al menos la pantalla completa. Lo usan las secciones
+ *  que son la única de su página; EL SHOW no, porque lleva otra debajo y con
+ *  `min-h-screen` empujaría la segunda fuera de la vista. */
+const SCENE_FULL = `${SCENE} min-h-screen`;
+
+/** Caja de contenido centrada, con el tope de ancho compartido. */
+const SCENE_CONTENT = 'mx-auto w-full max-w-content';
+
 type PageType = 'home' | 'show' | 'playlist' | 'galeria' | 'about' | 'contact';
 
 const navItems: { id: PageType; label: string }[] = [
@@ -38,16 +66,22 @@ export default function Home() {
 
   return (
     <main className="bg-black text-white font-sans overflow-x-hidden min-h-screen">
-      {/* HEADER FIJO */}
-      <header className="fixed top-0 left-0 right-0 flex justify-between items-start p-4 md:p-6 z-50 bg-gradient-to-b from-black/80 to-transparent">
+      {/* HEADER FIJO
+          Su padding sale del sistema fluido: es el mismo valor del que se
+          deriva `--hb-header-h`, que a su vez marca dónde puede empezar el
+          contenido de cualquier sección con scroll. Una sola fuente de verdad
+          en lugar de un `p-4 md:p-6` aquí y un `pt-32` a mano en cada sección. */}
+      <header className="fixed top-0 left-0 right-0 flex justify-between items-start p-[var(--hb-header-pad)] z-50 bg-gradient-to-b from-black/80 to-transparent">
         {USE_PHOTO_MENU ? (
           <LeatherMenuPhoto items={navItems} current={currentPage} onNavigate={setCurrentPage} />
         ) : (
           <LeatherMenu items={navItems} current={currentPage} onNavigate={setCurrentPage} />
         )}
 
-        {/* NAVEGACIÓN CENTRAL */}
-        <nav className="absolute left-1/2 -translate-x-1/2 top-8 text-xs tracking-widest space-x-3 md:space-x-5">
+        {/* NAVEGACIÓN CENTRAL
+            Se alinea con el padding de la cabecera en vez de con un `top-8`
+            fijo, de modo que sube junto al resto cuando la cabecera encoge. */}
+        <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] text-nav tracking-widest space-x-3 md:space-x-5">
           {navItems.map(({ id, label }) => (
             <button
               key={id}
@@ -62,7 +96,7 @@ export default function Home() {
         {/* PLATAFORMAS DE MÚSICA
             En pantallas estrechas se despega de la cabecera y baja a una
             rejilla de 4×2, para no cruzarse con la navegación central. */}
-        <div className="absolute right-4 top-[74px] flex flex-col items-end gap-3 md:static md:right-auto md:top-auto md:gap-4">
+        <div className="absolute right-4 top-[74px] flex flex-col items-end gap-3 md:static md:right-auto md:top-auto md:gap-[clamp(0.5rem,1.4svh,1rem)]">
           {/* El reproductor manda sobre el audio global; debajo quedan los
               accesos a las plataformas. */}
           <div className="hidden sm:block">
@@ -157,7 +191,14 @@ export default function Home() {
               <div className="relative aspect-[3/4] w-full md:h-full md:w-auto">
                 {/* El rótulo y su bajada van juntos en la misma caja, de modo
                     que se desplazan solidariamente si hay que reajustar. */}
-                <div className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2">
+                {/* `container-type: inline-size` hace que la bajada se mida en
+                    fracción del ANCHO DEL RÓTULO, no en píxeles fijos. Con
+                    `text-xs` fijo, en 1280×591 el encuadre estrecha hasta
+                    239px y la línea partía en dos, lo que empujaba el texto 1px
+                    por debajo del hero. Escalando con el rótulo cabe siempre en
+                    una línea, y el suelo de 9px impide que se vuelva ilegible.
+                    A 2048×1023 devuelve los mismos 12px de antes. */}
+                <div className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2 [container-type:inline-size]">
                   <Image
                     src={data.images.heroLetters}
                     alt=""
@@ -170,7 +211,10 @@ export default function Home() {
                   />
                   {/* Margen negativo para descontar el borde transparente que
                       el propio PNG lleva bajo el artwork (22,4% de su alto). */}
-                  <p className="-mt-[4%] text-center text-[10px] tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] sm:text-xs">
+                  <p
+                    className="-mt-[4%] whitespace-nowrap text-center tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]"
+                    style={{ fontSize: 'max(9px, 2.9cqw)' }}
+                  >
                     MÚSICA POPULAR · SHOWS EN VIVO
                   </p>
                 </div>
@@ -186,7 +230,7 @@ export default function Home() {
                 fila, a la derecha del grupo) como un bocadillo discreto en
                 vez de competir por espacio como bloque propio; sigue
                 llevando a la misma sección de contacto que antes. */}
-            <div className="absolute bottom-8 left-8 z-20 md:bottom-10 md:left-10">
+            <div className="absolute bottom-[var(--hb-hero-inset)] left-[var(--hb-hero-inset)] z-20">
               <div className="relative">
                 <SocialLinks />
                 <button
@@ -213,7 +257,7 @@ export default function Home() {
                 de encogerse, que es lo que lo haría ilegible.
                 Va anclado por abajo para que, al desplegarse, crezca hacia
                 arriba y no empuje el aviso legal fuera de la pantalla. */}
-            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-6 sm:right-6 sm:translate-x-0">
+            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-[var(--hb-hero-inset)] sm:right-[var(--hb-hero-inset)] sm:translate-x-0">
               <UpcomingShows onContact={() => setCurrentPage('contact')} />
               <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
                 © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
@@ -226,9 +270,9 @@ export default function Home() {
 
       {/* PLAYLIST — estructura preparada; la biblioteca llegará después. */}
       {currentPage === 'playlist' && (
-        <section className="relative min-h-screen pt-32 pb-16 px-6">
-          <div className="mx-auto max-w-4xl text-center">
-            <h2 className="text-3xl md:text-4xl font-black tracking-wide mb-3">
+        <section className={SCENE_FULL}>
+          <div className={`${SCENE_CONTENT} max-w-4xl text-center`}>
+            <h2 className="text-section tracking-wide mb-3">
               LA <span className="text-amber-400">PLAYLIST</span>
             </h2>
             <p className="mx-auto max-w-xl text-sm text-gray-400">
@@ -251,8 +295,8 @@ export default function Home() {
       {/* EL SHOW */}
       {currentPage === 'show' && (
         <>
-          <section className="pt-32 pb-16 px-6 max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-black tracking-wide mb-3 text-center">
+          <section className={`${SCENE} ${SCENE_CONTENT}`}>
+            <h2 className="text-section tracking-wide mb-3 text-center">
               EL <span className="text-red-600">SHOW</span>
             </h2>
             <p className="text-sm text-gray-400 text-center max-w-2xl mx-auto mb-12">
@@ -281,10 +325,12 @@ export default function Home() {
             </div>
           </section>
 
-          {/* SECCIÓN CABALLOS */}
-          <section className="py-20 px-6 bg-gradient-to-b from-black via-red-950/20 to-black">
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-black tracking-wide mb-12 text-center">
+          {/* SECCIÓN CABALLOS
+              No lleva `pt-scene-top`: no arranca bajo la cabecera fija, sino
+              a continuación de la sección anterior. */}
+          <section className="py-block px-scene-x bg-gradient-to-b from-black via-red-950/20 to-black">
+            <div className={SCENE_CONTENT}>
+              <h2 className="text-section tracking-wide mb-block text-center">
                 EL <span className="text-amber-400">ELENCO</span> ECUESTRE
               </h2>
               <div className="grid md:grid-cols-3 gap-6">
@@ -306,9 +352,9 @@ export default function Home() {
 
       {/* GALERÍA PAGE */}
       {currentPage === 'galeria' && (
-        <section className="relative min-h-screen pt-32 pb-16 px-6">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-black mb-3 tracking-wide">
+        <section className={SCENE_FULL}>
+          <div className={SCENE_CONTENT}>
+            <h2 className="text-section mb-3 tracking-wide">
               GALERÍA
             </h2>
             <p className="text-sm text-gray-400 mb-10">
@@ -333,26 +379,37 @@ export default function Home() {
 
       {/* ABOUT PAGE */}
       {currentPage === 'about' && (
-        <section className="relative min-h-screen pt-32 pb-16 px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              {/* Foto */}
-              <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
+        <section className={SCENE_FULL}>
+          <div className={SCENE_CONTENT}>
+            <div className="grid lg:grid-cols-2 gap-block items-start">
+              {/* Foto
+                  Manda el ALTO, no el ancho: con `aspect-[3/4]` sobre una
+                  columna de ~550px la foto salía 736px de alto y no cabía en
+                  una pantalla de 591 — había que desplazarse para verla
+                  entera, que es justo el síntoma que se quería corregir.
+                  Fijando el alto a una fracción del viewport y dejando que el
+                  ancho lo siga (`w-auto`), la proporción 3:4 se conserva
+                  intacta y la foto entra siempre en pantalla. */}
+              <div className="relative mx-auto h-[min(72svh,680px)] aspect-[3/4] w-auto overflow-hidden rounded-lg lg:mx-0">
                 <Image
                   src={data.images.about}
                   alt="Hosman Bravo con Don Juan"
                   fill
+                  sizes="(min-width: 1024px) 40vw, 90vw"
                   className="object-cover"
                 />
               </div>
 
               {/* Info */}
               <div className="relative">
-                <div className="absolute -top-16 -left-5 text-[200px] font-black text-white/5 z-0 pointer-events-none select-none">
+                {/* La marca de agua se mide en `em` respecto a su propio
+                    tamaño de letra, así que su desplazamiento acompaña al
+                    cuerpo en vez de quedarse en los -64px/-20px de antes. */}
+                <div className="absolute -top-[0.32em] -left-[0.1em] text-[clamp(6rem,4vw+10svh,12.5rem)] font-black leading-none text-white/5 z-0 pointer-events-none select-none">
                   H
                 </div>
-                <div className="relative z-10 space-y-8">
-                  <h2 className="text-3xl font-black tracking-wide">
+                <div className="relative z-10 space-y-[clamp(1rem,0.6vw+2svh,2rem)]">
+                  <h2 className="text-section tracking-wide">
                     SOBRE <span className="text-amber-400">HOSMAN BRAVO</span>
                   </h2>
 
@@ -415,8 +472,8 @@ export default function Home() {
 
       {/* CONTACT PAGE */}
       {currentPage === 'contact' && (
-        <section className="relative min-h-screen pt-32 pb-16 px-6">
-          <div className="max-w-xl mx-auto">
+        <section className={SCENE_FULL}>
+          <div className={`${SCENE_CONTENT} max-w-narrow`}>
             <div className="flex justify-center mb-8">
               <Image
                 src={data.images.logo.imagotipoDorado}
@@ -426,7 +483,7 @@ export default function Home() {
                 className="w-32 h-auto object-contain"
               />
             </div>
-            <h2 className="text-3xl font-black mb-12 tracking-wide text-center">CONTRATACIONES</h2>
+            <h2 className="text-section mb-block tracking-wide text-center">CONTRATACIONES</h2>
 
             <form className="space-y-6">
               {[

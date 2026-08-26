@@ -32,8 +32,15 @@ export interface ShowEvent {
 }
 
 /** Ancho de la entrada protagonista. El resto de piezas del bloque parten de
- *  este valor para mantener la proporción entre ellas. */
-export const TICKET_WIDTH_MAIN = 'w-[min(92vw,380px)]';
+ *  este valor para mantener la proporción entre ellas.
+ *
+ *  Sale del token `--hb-ticket-w` (ver `globals.css`). Antes era
+ *  `min(92vw,380px)`: solo miraba el ancho, y entre los dos viewports de
+ *  referencia el ancho no cambia de escalón, así que la entrada seguía
+ *  midiendo 380px sobre una escena de 591px de alto. El token mantiene el
+ *  `min(92vw, …)` —en pantallas estrechas sigue mandando el ancho— pero le
+ *  añade el alto disponible, con suelo en 300px. */
+export const TICKET_WIDTH_MAIN = 'w-[var(--hb-ticket-w)]';
 
 /** Dos sombras: uná de contacto corta y otra difusa para la profundidad. Van
  *  en `drop-shadow` y no en `box-shadow` porque el asset tiene esquinas

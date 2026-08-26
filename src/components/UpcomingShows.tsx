@@ -17,19 +17,24 @@ import { PromoTicket } from './PromoTicket';
 --------------------------------------------------------------------------- */
 
 /**
- * Ancho de las piezas secundarias: un 10% menor que la protagonista
- * (`TICKET_WIDTH_MAIN` = `min(92vw,380px)`; aquí, 92×0,9=82,8vw y
- * 380×0,9=342px), dentro del 8–12% pedido, para que se perciba de inmediato
- * cuál es el próximo show sin que la diferencia resulte exagerada.
+ * Ancho de las piezas secundarias: un 10% menor que la protagonista, dentro
+ * del 8–12% pedido, para que se perciba de inmediato cuál es el próximo show
+ * sin que la diferencia resulte exagerada.
  *
- * Va como string literal y no como plantilla con el cálculo en tiempo de
- * ejecución (`` `w-[min(${…}vw,…)]` ``): Tailwind solo genera CSS para clases
+ * Ahora se deriva del mismo token que la protagonista (`--hb-ticket-w`) en vez
+ * de repetir su fórmula multiplicada a mano (antes: `min(82.8vw,342px)`, que
+ * era `min(92vw,380px)` × 0,9 resuelto término a término). Al haber una sola
+ * fuente de verdad, el día que cambie el ancho del ticket no hay que recordar
+ * actualizar aquí un segundo juego de números.
+ *
+ * Sigue siendo un string literal y no una plantilla con el cálculo en tiempo
+ * de ejecución (`` `w-[calc(${…})]` ``): Tailwind solo genera CSS para clases
  * que puede leer como texto literal en el código fuente al escanearlo — una
  * clase construida dinámicamente con JS no se compila y el ancho no aplica.
  *
  * Al estar toda la tipografía en `cqw`, esto escala la entrada entera sin
  * tocar ninguna medida interna. */
-const TICKET_WIDTH_SECONDARY = 'w-[min(82.8vw,342px)]';
+const TICKET_WIDTH_SECONDARY = 'w-[calc(var(--hb-ticket-w)*0.9)]';
 
 /** Ornamento del título: filete que se desvanece y un pequeño rombo, a cada
  *  lado del texto. `scaleX` invierte el filete para el lado derecho en vez de

@@ -32,6 +32,33 @@ interface LeatherMenuPhotoProps<T extends string> {
 const HEADER_NATIVE = { w: 382, h: 151 };
 const BODY_NATIVE = { w: 413, h: 519 };
 
+/* ---------------------------------------------------------------------------
+   Medidas de la navegación escrita sobre el cuero, en `cqw` (1cqw = 1% del
+   ancho del cuerpo del menú). Se calibran contra el ancho aprobado en
+   2048×1023 —288px— de modo que a ese tamaño dan exactamente los píxeles que
+   ya estaban validados; por debajo escalan solas.
+
+   Cada una lleva su propio suelo en px: el menú entero encoge, pero su
+   contenido deja de hacerlo en cuanto llega al límite de lectura. Por eso no
+   son un `cqw` a secas sino un `max(suelo, cqw)` — sin el suelo, en 1280×591
+   el rótulo de sección caía a 8px.
+--------------------------------------------------------------------------- */
+const NAV = {
+  /* 11,5px sobre 288 = 3,99cqw */
+  fontSize: 'max(9px, 3.99cqw)',
+  /* 17px sobre 288 = 5,90cqw */
+  icon: 'max(13px, 5.9cqw)',
+  /* 10px sobre 288 = 3,47cqw */
+  gap: 'max(6px, 3.47cqw)',
+  /* 8px sobre 288 = 2,78cqw */
+  badgeFontSize: 'max(6px, 2.78cqw)',
+  badgePaddingX: 'max(3px, 1.74cqw)',
+  badgePaddingY: 'max(1px, 0.69cqw)',
+  /* Los dos filetes bajo la sección activa, a 5px y 7px del texto. */
+  underlineNear: 'max(3px, 1.74cqw)',
+  underlineFar: 'max(5px, 2.43cqw)'
+} as const;
+
 const ICONS: Record<string, React.ReactNode> = {
   home: <path d="M3.6 10.4 12 3.6l8.4 6.8V20a.9.9 0 0 1-.9.9h-4.6v-6.2H9.1v6.2H4.5a.9.9 0 0 1-.9-.9v-9.6Z" />,
   show: (
@@ -113,17 +140,21 @@ export function LeatherMenuPhoto<T extends string>({
       </svg>
 
       {/* CABECERA — la fotografía ya trae logo, nombre y flecha; el botón
-          solo aporta el área de toque y el estado accesible. Su ancho sale
-          del ancho del cuerpo (ver más abajo) multiplicado por la proporción
-          real entre ambos assets (382/413), para que guarden entre sí la
-          misma escala con la que se generaron. */}
+          solo aporta el área de toque y el estado accesible.
+
+          Su ancho es el token `--hb-menu-w` del sistema fluido: es la medida
+          de la que cuelga todo lo demás de esta pieza (el alto de la propia
+          cabecera, la posición y el ancho del cuerpo) y, fuera de aquí, el
+          alto de la cabecera fija y el espacio superior de las secciones con
+          scroll. Antes eran dos anchos por breakpoint (226/266px) y cada
+          medida derivada estaba calculada a mano para cada uno de los dos. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Abrir menú de secciones"
-        className="relative z-50 block w-[226px] transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37]/70 sm:w-[266px]"
+        className="relative z-50 block w-[var(--hb-menu-w)] transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37]/70"
       >
         <Image
           src={hosmanData.images.menu.header}
@@ -141,13 +172,20 @@ export function LeatherMenuPhoto<T extends string>({
           que la versión CSS: la cabecera queda delante, el cuerpo empieza
           justo donde ella termina de proyectar su sombra: 86% de su propia
           altura, dejando el 14% restante superpuesto).
-          `top` en px explícitos por breakpoint —no en `calc()` a partir del
-          ancho del botón— porque ese ancho también cambia en `sm:` y un solo
-          valor no puede seguir a los dos: 226×(151/382)×0.86 ≈ 77 en móvil,
-          266×(151/382)×0.86 ≈ 90 en escritorio. */}
+
+          Ahora `top` y `width` se DERIVAN del ancho de la cabecera con
+          `calc()`, que es lo que antes no se podía hacer: al haber dos anchos
+          por breakpoint (226/266px) un solo `calc()` no podía seguir a los
+          dos, y hubo que escribir los dos resultados a mano (77px y 90px).
+          Con un ancho continuo el cálculo vuelve a ser posible y deja de
+          existir la pareja de números mágicos:
+            top   = ancho × (151/382) × 0,86  = ancho × 0,340
+            ancho = ancho × 1,082   (relación medida entre ambos assets)
+          Comprobado contra los valores anteriores: con 266px de cabecera da
+          90,4px y 287,8px — los mismos 90/288 de antes. */}
       <div
         aria-hidden={!open}
-        className="pointer-events-none absolute left-0 top-[77px] w-[244px] sm:top-[90px] sm:w-[288px]"
+        className="pointer-events-none absolute left-0 top-[calc(var(--hb-menu-w)*0.34)] w-[calc(var(--hb-menu-w)*1.082)]"
         style={{
           opacity: open ? 1 : 0,
           transform: open ? 'none' : 'translateY(-10px) scale(0.985)',
@@ -155,13 +193,22 @@ export function LeatherMenuPhoto<T extends string>({
           transition: 'opacity 220ms ease-out, transform 420ms cubic-bezier(0.16, 0.84, 0.28, 1)'
         }}
       >
-        <div className="relative" style={{ aspectRatio: `${BODY_NATIVE.w} / ${BODY_NATIVE.h}` }}>
+        {/* `container-type: inline-size` convierte el ancho de esta caja en la
+            unidad de medida de todo lo que va escrito encima del cuero
+            (`1cqw` = 1% de este ancho). Es el mismo recurso que ya usan las
+            entradas de `NextShowTicket`, y por la misma razón: el texto queda
+            anclado a la fotografía, así que ambos escalan juntos y no hay que
+            recalibrar la posición del texto sobre el asset a cada tamaño. */}
+        <div
+          className="relative [container-type:inline-size]"
+          style={{ aspectRatio: `${BODY_NATIVE.w} / ${BODY_NATIVE.h}` }}
+        >
           <Image
             src={hosmanData.images.menu.body}
             alt=""
             aria-hidden="true"
             fill
-            sizes="(min-width: 640px) 288px, 244px"
+            sizes="288px"
             className="select-none object-contain"
             style={{ filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.85))' }}
             draggable={false}
@@ -191,9 +238,10 @@ export function LeatherMenuPhoto<T extends string>({
                       onClick={() => go(id)}
                       aria-current={active ? 'page' : undefined}
                       tabIndex={open ? 0 : -1}
-                      className={`group flex w-full items-center gap-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37]/60 sm:gap-2.5 ${
+                      className={`group flex w-full items-center text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37]/60 ${
                         active ? 'text-[#E4C46B]' : 'text-[#C9A85C]/75 hover:text-[#E4C46B]'
                       }`}
+                      style={{ gap: NAV.gap }}
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -203,30 +251,39 @@ export function LeatherMenuPhoto<T extends string>({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         aria-hidden="true"
-                        className={`h-[14px] w-[14px] shrink-0 transition-opacity duration-200 sm:h-[17px] sm:w-[17px] ${
+                        className={`shrink-0 transition-opacity duration-200 ${
                           active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90'
                         }`}
-                        style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.85))' }}
+                        style={{
+                          width: NAV.icon,
+                          height: NAV.icon,
+                          filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.85))'
+                        }}
                       >
                         {ICONS[id] ?? ICONS.home}
                       </svg>
 
-                      <span className="relative text-[9.5px] font-semibold leading-none tracking-[0.08em] sm:text-[11.5px] sm:tracking-[0.1em]">
+                      <span
+                        className="relative font-semibold leading-none tracking-[0.1em]"
+                        style={{ fontSize: NAV.fontSize }}
+                      >
                         {label}
                         {active && (
                           <>
                             <span
                               aria-hidden="true"
-                              className="absolute -bottom-[4px] left-0 block h-px w-full sm:-bottom-[5px]"
+                              className="absolute left-0 block h-px w-full"
                               style={{
+                                bottom: `calc(-1 * ${NAV.underlineNear})`,
                                 background:
                                   'linear-gradient(90deg, rgba(232,199,110,0.85), rgba(212,175,55,0.35) 70%, transparent)'
                               }}
                             />
                             <span
                               aria-hidden="true"
-                              className="absolute -bottom-[6px] left-0 block h-px w-full sm:-bottom-[7px]"
+                              className="absolute left-0 block h-px w-full"
                               style={{
+                                bottom: `calc(-1 * ${NAV.underlineFar})`,
                                 background:
                                   'linear-gradient(90deg, rgba(150,26,32,0.6), rgba(150,26,32,0.16) 75%, transparent)'
                               }}
@@ -236,7 +293,14 @@ export function LeatherMenuPhoto<T extends string>({
                       </span>
 
                       {isPlaylist && (
-                        <span className="ml-0.5 shrink-0 rounded-sm bg-[#96141B] px-[3px] py-[1px] text-[6px] font-bold leading-none tracking-wide text-white sm:ml-1 sm:px-[5px] sm:py-[2px] sm:text-[8px]">
+                        <span
+                          className="shrink-0 rounded-sm bg-[#96141B] font-bold leading-none tracking-wide text-white"
+                          style={{
+                            fontSize: NAV.badgeFontSize,
+                            paddingInline: NAV.badgePaddingX,
+                            paddingBlock: NAV.badgePaddingY
+                          }}
+                        >
                           NUEVO
                         </span>
                       )}

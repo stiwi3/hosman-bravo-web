@@ -58,17 +58,22 @@ function Equalizer({ active }: { active: boolean }) {
   );
 }
 
-function PlayIcon({ className }: { className?: string }) {
+/** Todos los iconos aceptan `style` además de `className`: sus tamaños van en
+ *  `cqw` (ver `P`), y una unidad de container query no se puede expresar como
+ *  clase de utilidad sin generar una variante por cada valor. */
+type IconProps = { className?: string; style?: React.CSSProperties };
+
+function PlayIcon({ className, style }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className} style={style}>
       <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l11.14-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
     </svg>
   );
 }
 
-function PauseIcon({ className }: { className?: string }) {
+function PauseIcon({ className, style }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className} style={style}>
       <rect x="7" y="5" width="3.4" height="14" rx="1" />
       <rect x="13.6" y="5" width="3.4" height="14" rx="1" />
     </svg>
@@ -76,9 +81,9 @@ function PauseIcon({ className }: { className?: string }) {
 }
 
 /** Altavoz con ondas: el sonido está activo. */
-function SoundOnIcon({ className }: { className?: string }) {
+function SoundOnIcon({ className, style }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className} style={style}>
       <path
         d="M4 9.5v5h3.2L12 18.5v-13L7.2 9.5H4Z"
         fill="currentColor"
@@ -103,9 +108,9 @@ function SoundOnIcon({ className }: { className?: string }) {
  * barra cruza el icono entero. Debajo lleva un trazo del color del fondo que
  * la separa del altavoz y la mantiene legible.
  */
-function SoundOffIcon({ className }: { className?: string }) {
+function SoundOffIcon({ className, style }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className} style={style}>
       <path
         d="M4 9.5v5h3.2L12 18.5v-13L7.2 9.5H4Z"
         fill="currentColor"
@@ -140,8 +145,43 @@ function Divider() {
   );
 }
 
+/* ---------------------------------------------------------------------------
+   Medidas internas en `cqw` (1cqw = 1% del ancho del reproductor, que fija
+   `--hb-player-w`). Calibradas contra el ancho aprobado en 2048×1023 —300px—
+   de modo que a ese tamaño devuelven exactamente los píxeles ya validados.
+
+   Este componente era el que peor llevaba el viewport corto: no tenía ni una
+   sola clase responsive, así que en 1280×591 seguía midiendo lo pensado para
+   1023px de alto. Con el ancho declarado como token, todo el interior escala
+   con él sin necesidad de un solo breakpoint.
+
+   Cada valor lleva su propio suelo: el bloque encoge, pero el título, los
+   rótulos y el área de pulsación del play se detienen en cuanto llegan a su
+   límite de lectura o de uso.
+--------------------------------------------------------------------------- */
+const P = {
+  gap: 'max(7px, 3.33cqw)', /* 10px sobre 300 */
+  label: 'max(8px, 3cqw)', /* 9px  */
+  labelSmall: 'max(7px, 2.67cqw)', /* 8px  */
+  soundIcon: 'max(10px, 4cqw)', /* 12px */
+  playSize: 'max(40px, 18cqw)', /* 54px */
+  playIcon: 'max(14px, 6.33cqw)', /* 19px */
+  title: 'max(16px, 7cqw)', /* 21px */
+  artist: 'max(9px, 3.33cqw)', /* 10px */
+  ctaText: 'max(9px, 3.33cqw)', /* 10px */
+  ctaIcon: 'max(10px, 4cqw)', /* 12px */
+  ctaPaddingX: 'max(8px, 4cqw)', /* 12px */
+  ctaPaddingY: 'max(5px, 2.67cqw)' /* 8px  */
+} as const;
+
 const CTA_CLASS =
-  'group flex items-center gap-2 rounded-md border border-[#D4AF37]/30 px-3 py-2 text-[10px] font-semibold tracking-[0.14em] text-[#F2EEE8]/80 shadow-[inset_0_1px_0_rgba(242,238,232,0.05)] transition-all duration-300 ease-out hover:-translate-y-px hover:scale-[1.02] hover:border-[#D4AF37]/75 hover:text-[#D4AF37] hover:brightness-125 hover:shadow-[0_0_16px_-4px_rgba(212,175,55,0.5),inset_0_1px_0_rgba(242,238,232,0.08)] focus-visible:border-[#D4AF37]/75 focus-visible:text-[#D4AF37] focus-visible:outline-none';
+  'group flex items-center gap-2 rounded-md border border-[#D4AF37]/30 font-semibold tracking-[0.14em] text-[#F2EEE8]/80 shadow-[inset_0_1px_0_rgba(242,238,232,0.05)] transition-all duration-300 ease-out hover:-translate-y-px hover:scale-[1.02] hover:border-[#D4AF37]/75 hover:text-[#D4AF37] hover:brightness-125 hover:shadow-[0_0_16px_-4px_rgba(212,175,55,0.5),inset_0_1px_0_rgba(242,238,232,0.08)] focus-visible:border-[#D4AF37]/75 focus-visible:text-[#D4AF37] focus-visible:outline-none';
+
+const CTA_STYLE: React.CSSProperties = {
+  fontSize: P.ctaText,
+  paddingInline: P.ctaPaddingX,
+  paddingBlock: P.ctaPaddingY
+};
 
 /**
  * Reproductor del último lanzamiento, sobre los iconos de plataformas.
@@ -178,13 +218,20 @@ export function TrackPlayer() {
     .map((w) => w[0] + w.slice(1).toLowerCase())
     .join(' ');
 
-  // El ancho lo marca el contenido: así el título nunca se recorta, con un
-  // mínimo para que no encoja y un techo para no invadir la cabecera.
+  /* El ancho ya no lo marca el contenido sino el token `--hb-player-w`, y de
+     ese ancho cuelga todo el interior vía `cqw` (`container-type`). El título
+     no se recorta —no lleva `truncate`—: si no cabe, reparte en dos líneas. */
   return (
-    <div className="flex w-max min-w-[262px] max-w-[360px] flex-col gap-2.5">
+    <div
+      className="flex w-[var(--hb-player-w)] flex-col [container-type:inline-size]"
+      style={{ gap: P.gap }}
+    >
       {/* Encabezado: rótulo de sección y control de sonido */}
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[9px] font-semibold tracking-[0.26em] text-[#D4AF37]/85">
+        <span
+          className="font-semibold tracking-[0.26em] text-[#D4AF37]/85"
+          style={{ fontSize: P.label }}
+        >
           ÚLTIMO LANZAMIENTO
         </span>
         <button
@@ -192,12 +239,13 @@ export function TrackPlayer() {
           onClick={toggleSound}
           aria-pressed={soundingOut}
           title={soundingOut ? 'Silenciar' : 'Activar sonido'}
-          className="flex items-center gap-1.5 text-[8px] font-medium tracking-[0.16em] text-[#F2EEE8]/40 transition-colors duration-300 hover:text-[#D4AF37] focus-visible:text-[#D4AF37] focus-visible:outline-none"
+          className="flex shrink-0 items-center gap-1.5 font-medium tracking-[0.16em] text-[#F2EEE8]/40 transition-colors duration-300 hover:text-[#D4AF37] focus-visible:text-[#D4AF37] focus-visible:outline-none"
+          style={{ fontSize: P.labelSmall }}
         >
           {soundingOut ? (
-            <SoundOnIcon className="h-3 w-3" />
+            <SoundOnIcon style={{ width: P.soundIcon, height: P.soundIcon }} />
           ) : (
-            <SoundOffIcon className="h-3 w-3" />
+            <SoundOffIcon style={{ width: P.soundIcon, height: P.soundIcon }} />
           )}
           {soundingOut ? 'SOUND ON' : 'SOUND OFF'}
         </button>
@@ -213,25 +261,35 @@ export function TrackPlayer() {
           onClick={toggleSound}
           aria-label={soundingOut ? 'Pausar' : 'Reproducir'}
           title={soundingOut ? 'Pausar' : 'Reproducir'}
-          style={
-            animate ? { animation: 'hb-breathe 2.8s ease-out infinite' } : undefined
-          }
-          className="mt-0.5 flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/40 bg-black/45 text-[#D4AF37]/90 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-[1.04] hover:border-[#D4AF37]/85 hover:bg-black/65 hover:text-[#D4AF37] focus-visible:border-[#D4AF37]/85 focus-visible:outline-none"
+          style={{
+            width: P.playSize,
+            height: P.playSize,
+            ...(animate ? { animation: 'hb-breathe 2.8s ease-out infinite' } : null)
+          }}
+          className="mt-0.5 flex shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/40 bg-black/45 text-[#D4AF37]/90 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-[1.04] hover:border-[#D4AF37]/85 hover:bg-black/65 hover:text-[#D4AF37] focus-visible:border-[#D4AF37]/85 focus-visible:outline-none"
         >
           {soundingOut ? (
-            <PauseIcon className="h-[19px] w-[19px]" />
+            <PauseIcon style={{ width: P.playIcon, height: P.playIcon }} />
           ) : (
-            <PlayIcon className="ml-[2px] h-[19px] w-[19px]" />
+            <PlayIcon className="ml-[2px]" style={{ width: P.playIcon, height: P.playIcon }} />
           )}
         </button>
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-[21px] font-black leading-none tracking-wide text-[#F2EEE8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+          <h2
+            className="font-black leading-none tracking-wide text-[#F2EEE8] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]"
+            style={{ fontSize: P.title }}
+          >
             {track.title.toUpperCase()}
           </h2>
 
           <div className="mt-1.5 flex items-center justify-between gap-3">
-            <span className="text-[10px] tracking-[0.12em] text-[#F2EEE8]/45">{artist}</span>
+            <span
+              className="tracking-[0.12em] text-[#F2EEE8]/45"
+              style={{ fontSize: P.artist }}
+            >
+              {artist}
+            </span>
             <Equalizer active={animate} />
           </div>
 
@@ -244,10 +302,13 @@ export function TrackPlayer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`Ver el vídeo oficial de ${track.title} en YouTube`}
-                  style={LEATHER}
+                  style={{ ...LEATHER, ...CTA_STYLE }}
                   className={CTA_CLASS}
                 >
-                  <YouTubeIcon className="h-3 w-3 shrink-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+                  <YouTubeIcon
+                    className="shrink-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ width: P.ctaIcon, height: P.ctaIcon }}
+                  />
                   VER VIDEO OFICIAL
                 </a>
               )}
@@ -257,10 +318,13 @@ export function TrackPlayer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title={`Escuchar ${track.title} en Spotify`}
-                  style={LEATHER}
+                  style={{ ...LEATHER, ...CTA_STYLE }}
                   className={CTA_CLASS}
                 >
-                  <SpotifyIcon className="h-3 w-3 shrink-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+                  <SpotifyIcon
+                    className="shrink-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ width: P.ctaIcon, height: P.ctaIcon }}
+                  />
                   ESCUCHAR EN SPOTIFY
                 </a>
               )}

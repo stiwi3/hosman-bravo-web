@@ -137,6 +137,152 @@
   --hosman-white: #f5f5f5;
 }
 
+/* ===========================================================================
+   SISTEMA RESPONSIVE FLUIDO
+   ===========================================================================
+
+   PROBLEMA QUE RESUELVE
+   La composición se aprueba en 2048×1023 y se rompía en 1280×591. La causa no
+   era el ancho: en ambos viewports Tailwind está en el mismo escalón (`md:`,
+   ≥768px), así que TODAS las medidas por breakpoint valían lo mismo en los dos.
+   Lo que cambia de verdad entre ellos es el ALTO (1023 → 591, un 42% menos), y
+   INICIO es una escena encerrada en `100svh`: los componentes seguían midiendo
+   igual mientras el espacio donde caben se reducía casi a la mitad.
+
+   PRINCIPIO
+   Cada medida que deba respirar se interpola de forma CONTINUA con una
+   combinación de `vw` y `svh`, no a saltos por breakpoint. Los breakpoints se
+   reservan para cambios reales de composición (una rejilla que colapsa a una
+   columna), que llegarán con tablet/móvil y no viven aquí.
+
+   La fórmula recurrente es `clamp(mínimo, a·vw + b·svh, máximo)`:
+     · el MÁXIMO se calibra para que en 2048×1023 dé exactamente el valor ya
+       aprobado — la referencia no se toca, solo se vuelve el techo de la curva;
+     · el MÍNIMO es el suelo de legibilidad/usabilidad de esa pieza concreta.
+   Cuando una pieza toca su suelo deja de encoger: a partir de ahí el equilibrio
+   se recupera moviendo posición y separación (que siguen cediendo), nunca
+   haciéndola más pequeña de lo que se puede leer o pulsar.
+
+   POR QUÉ `svh` Y NO `vh`
+   `vh` en móvil incluye la barra del navegador y salta al aparecer/desaparecer;
+   `svh` (small viewport height) es estable. INICIO ya usa `100svh`, así que los
+   tokens hablan la misma unidad que la escena que gobiernan.
+
+   POR QUÉ AQUÍ Y NO TODO EN `@theme`
+   En `@theme` van los tokens que deben generar utilidades de Tailwind y se
+   reparten por muchas secciones (padding de escena, ancho de contenido, escala
+   tipográfica). Los de abajo son valores de LAYOUT que se consumen por
+   `var()`/`calc()` en sitios muy concretos —o que se derivan unos de otros, que
+   `@theme` no permite— y como custom properties normales se leen mejor.
+
+   Valores de referencia de cada token en los tres viewports de control
+   (2048×1023 aprobado · 1600×800 intermedio · 1280×591 portátil) anotados en
+   cada declaración.
+   ------------------------------------------------------------------------ */
+:root {
+  /* --- CABECERA PERSISTENTE ---------------------------------------------
+     El menú de cuero es una fotografía de proporción fija (382×151), así que
+     su ancho gobierna su alto y, con él, el hueco que la cabecera ocupa sobre
+     todas las secciones. Por eso `--hb-header-h` se DERIVA del ancho en vez de
+     declararse a mano: antes había un `top` en píxeles calculado por
+     breakpoint para el cuerpo del menú y cada cambio de ancho obligaba a
+     recalcularlo. Ahora hay una sola fuente de verdad.
+
+     Suelo de 190px: por debajo, el panel de secciones que cuelga del menú deja
+     de poder mostrar sus seis entradas con texto legible. */
+  --hb-menu-w: clamp(190px, 6vw + 14svh, 266px); /* 266 · 208 · 190 */
+  --hb-header-pad: clamp(0.75rem, 0.6vw + 1.2svh, 1.5rem); /* 24 · 19 · 15 */
+
+  /* 151/382 = 0,3953 es la proporción nativa del asset de cabecera. */
+  --hb-header-h: calc(var(--hb-header-pad) + var(--hb-menu-w) * 0.3953);
+  /* 129 · 101 · 90 */
+
+  /* --- ESCENA INICIO ------------------------------------------------------
+     Margen seguro de las esquinas del hero (redes abajo-izquierda, bloque de
+     shows abajo-derecha). Sustituye a `bottom-8 left-8 md:bottom-10 md:left-10`,
+     que no cedía ni un píxel al perder alto. */
+  --hb-hero-inset: clamp(1rem, 0.62vw + 2.67svh, 2.5rem); /* 40 · 31 · 24 */
+
+  /* --- CONTROLES REDONDOS PERSISTENTES ------------------------------------
+     Plataformas y redes comparten lenguaje visual pero NO tamaño: las
+     plataformas mandan (son la fila principal de la cabecera) y las redes van
+     un punto por debajo. De ahí que las redes se deriven de las plataformas
+     con un factor, pero conserven un suelo propio: al llegar la cabecera a su
+     mínimo, las redes aún tienen recorrido antes de dejar de ser pulsables. */
+  --hb-control: clamp(2.25rem, 0.72vw + 3.26svh, 3rem); /* 48 · 38 · 36 */
+  --hb-control-social: max(2rem, calc(var(--hb-control) * 0.92)); /* 44 · 35 · 33 */
+
+  /* --- REPRODUCTOR GLOBAL -------------------------------------------------
+     Es la pieza que peor llevaba el viewport corto: no tenía UNA sola clase
+     responsive (`h-[54px]`, `text-[21px]`, `min-w-[262px]`), así que en 591px
+     de alto conservaba el tamaño pensado para 1023.
+
+     Con un ancho declarado, su interior puede medirse en `cqw` —el mismo
+     recurso que ya usan los tickets— y escalar entero sin tocar una sola
+     medida interna. Suelo de 224px: por debajo los dos CTA («VER VIDEO
+     OFICIAL» / «ESCUCHAR EN SPOTIFY») parten en dos líneas. */
+  --hb-player-w: clamp(224px, 5.2vw + 19.5svh, 300px); /* 300 · 239 · 224 */
+
+  /* --- BLOQUE DE EVENTOS --------------------------------------------------
+     Ancho de la entrada protagonista. Antes era `min(92vw,380px)`: solo miraba
+     el ancho, así que en 1280×591 seguía midiendo 380px sobre una escena de
+     591px de alto. El `min(92vw, …)` se conserva para que en pantallas
+     estrechas siga siendo el ancho quien mande.
+
+     Suelo de 300px: es donde la tipografía interna del ticket (toda en `cqw`,
+     ya calibrada sobre el asset) deja de leerse cómodamente. */
+  --hb-ticket-w: min(92vw, clamp(300px, 5vw + 28svh, 380px)); /* 380 · 304 · 300 */
+}
+
+/* ===========================================================================
+   TOKENS CON UTILIDAD DE TAILWIND
+
+   Estos sí van en `@theme` porque su valor se aplica repartido por muchas
+   secciones y conviene escribirlo como clase (`px-scene`, `pt-scene`,
+   `max-w-content`, `text-section`) en vez de como valor arbitrario suelto. Al
+   estar en `@theme` (sin `inline`) Tailwind los emite además como variables
+   CSS, de modo que también se pueden componer con `calc()` desde fuera.
+
+   Las secciones con scroll declaraban cada una su propio `px-6`, su propio
+   `max-w-*` y su propio salto `text-3xl md:text-4xl`. Centralizarlo es lo que
+   permite que las secciones que faltan (PLAYLIST, EL SHOW, GALERÍA, CONTACTO)
+   se construyan sobre el mismo sistema sin volver a decidir estas medidas.
+   ------------------------------------------------------------------------ */
+@theme {
+  /* Padding lateral de escena. Sustituye a los `px-6` sueltos. Solo entra en
+     juego por debajo de ~1200px: por encima manda `max-w-content`. */
+  --spacing-scene-x: clamp(1.25rem, 2.2vw, 2.5rem); /* 40 · 35 · 28 */
+
+  /* Espacio superior de las secciones con scroll: lo que hace falta para
+     salvar la cabecera fija, más un respiro. Antes era `pt-32` (128px) fijo en
+     las cinco secciones — en 1280×591 se comía el 22% de la pantalla, y en
+     2048×1023 se quedaba 1px por debajo de la cabecera real (129px), que es de
+     donde venía el roce del menú con el contenido de SOBRE MÍ. */
+  --spacing-scene-top: calc(var(--hb-header-h) + clamp(0.75rem, 2svh, 1.75rem));
+  /* 150 · 117 · 102 */
+
+  --spacing-scene-bottom: clamp(2.5rem, 1.25vw + 3.75svh, 4rem); /* 64 · 50 · 38 */
+
+  /* Separación vertical entre bloques dentro de una sección. Su techo es el
+     `gap-12`/`mb-12` (48px) que usaban las secciones. */
+  --spacing-block: clamp(1.5rem, 1.04vw + 2.6svh, 3rem); /* 48 · 37 · 29 */
+
+  /* Anchos de contenido. Son topes, no medidas fluidas: por debajo de ellos
+     manda `--spacing-scene-x`. Sustituyen a `max-w-6xl` / `max-w-xl`. */
+  --container-content: 72rem;
+  --container-narrow: 36rem;
+
+  /* Escala tipográfica de sección. Reemplaza `text-3xl md:text-4xl`, que solo
+     tenía dos escalones y ninguno reaccionaba al alto. */
+  --text-section: clamp(1.6rem, 0.82vw + 1.875svh, 2.25rem); /* 36 · 28 · 26 */
+  --text-section--line-height: 1.1;
+  --text-section--font-weight: 900;
+
+  /* Navegación central de la cabecera. */
+  --text-nav: clamp(0.625rem, 0.25vw + 0.75svh, 0.75rem); /* 12 · 10 · 10 */
+  --text-nav--line-height: 1;
+}
+
 .bg-gradient-radial {
   background-image: radial-gradient(circle at 55% 45%, rgba(200, 29, 37, 0.3) 0%, rgba(6, 4, 5, 0.9) 70%);
 }
