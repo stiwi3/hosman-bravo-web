@@ -135,7 +135,10 @@ export function UpcomingShows({
             (imprescindible para que el colapso a 0 no deje contenido
             asomando) se lo comía por completo y quedaba invisible aunque el
             elemento existiera y estuviera bien posicionado. */}
-        <div className="min-h-0 overflow-hidden px-8">
+        {/* `px-2` y no `px-8`: el margen que necesita el `ClickHint` para
+            asomar ya no va aquí sino en el contenedor de dentro, que es quien
+            recorta de verdad (ver abajo). Aquí solo queda un respiro mínimo. */}
+        <div className="min-h-0 overflow-hidden px-2">
           {/* `MusicBlock`, en la cabecera, y este bloque viven en árboles de
               DOM distintos (uno `fixed`, el otro `absolute` dentro del hero),
               así que no hay un contenedor común que reparta el alto entre los
@@ -144,8 +147,16 @@ export function UpcomingShows({
               arriba hasta invadir el reproductor en un viewport bajo. Con el
               contenido actual no debería llegar a activar el scroll en
               ninguno de los tres viewports de control — verificado. */}
+          {/* `px-6 pb-6`: este contenedor es el que recorta de verdad. Lleva
+              `overflow-y-auto`, y en cuanto un eje deja de ser `visible` el
+              navegador convierte el OTRO en `auto` — así que también recorta
+              en horizontal, aunque nunca se pidiera. Eso dejaba al `ClickHint`
+              (que asoma por el flanco derecho e inferior de cada entrada) con
+              dos tercios de su ancho cortados. El recorte ocurre en la caja de
+              PADDING, así que este relleno le devuelve el sitio; va simétrico
+              en horizontal para no descentrar las entradas. */}
           <div
-            className="flex flex-col items-center gap-3 overflow-y-auto pt-3 sm:gap-4 sm:pt-4"
+            className="flex flex-col items-center gap-3 overflow-y-auto px-6 pb-6 pt-3 sm:gap-4 sm:pt-4"
             style={{ maxHeight: 'var(--hb-shows-panel-max)' }}
           >
             {hasSecond && (

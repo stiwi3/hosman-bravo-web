@@ -115,13 +115,29 @@ const ZONES_STACK = {
   titleSize: '4.5cqw'
 };
 
-/* El indicador de click también cambia de sitio entre estados: con `cover`
-   ya no hay margen de letterbox, así que el borde real de la entrada apilada
-   está donde lo mide el propio asset, ~4,5% (frente al 0% del template, que
-   ocupa toda la caja). Se aplica el mismo criterio que en modo individual (la
-   mano arranca 8 puntos antes del borde y termina 3 después). */
-const CLICK_HINT_LEFT_SINGLE = '-8cqw';
-const CLICK_HINT_LEFT_STACK = '-3.5cqw';
+/* ---------------------------------------------------------------------------
+   Posición del indicador de pulsación (la «manito»).
+
+   Va en la esquina INFERIOR DERECHA, sobre el talón crema del asset, justo
+   debajo y a la derecha del código de barras. Antes colgaba del flanco
+   izquierdo con un sangrado negativo (`-8cqw`) y quedaba prácticamente
+   invisible: al mudarse el bloque de eventos a la esquina izquierda del hero,
+   ese sangrado se salía del contenedor y lo recortaba (medido: de 38px de
+   ancho solo se veían 10). En el talón hay sitio de sobra, el contraste
+   dorado-sobre-crema se lee mucho mejor que sobre el negro del cuerpo, y ya
+   no depende de que sobre margen fuera de la pieza.
+
+   Los dos estados necesitan valores distintos porque el borde real de la
+   entrada no cae en el mismo sitio dentro de la caja:
+     · template  → la imagen ocupa la caja entera, borde derecho al 100% y
+       borde inferior al 100%.
+     · apilado   → con `object-cover` la entrada frontal ocupa x 4,5%–96,0%
+       de su lienzo y su borde inferior queda al 93,1% de la caja (ver la
+       conversión documentada en `ZONES_STACK`). De ahí los +4cqw en
+       horizontal y los +2,3cqw en vertical respecto al template.
+--------------------------------------------------------------------------- */
+const CLICK_HINT_SINGLE = { right: '-2cqw', bottom: '-4.5cqw' };
+const CLICK_HINT_STACK = { right: '2cqw', bottom: '-2.2cqw' };
 
 const MONTHS_ES = [
   'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
@@ -173,43 +189,53 @@ function ClockIcon({ className, style }: IconProps) {
  */
 export function ClickHint({
   className,
-  left = CLICK_HINT_LEFT_SINGLE,
+  right = CLICK_HINT_SINGLE.right,
+  bottom = CLICK_HINT_SINGLE.bottom,
   transition
 }: {
   className?: string;
-  /** Dónde empieza, relativo al ancho del contenedor (`cqw`). Por defecto,
-   *  el calibrado para `ticket-template.webp`; `ticket-stack.webp` necesita
-   *  otro valor porque su borde real no está en el 0% de la caja (ver
-   *  `CLICK_HINT_LEFT_STACK`). */
-  left?: string;
+  /** Distancia al borde derecho e inferior de la caja, en `cqw`. Por defecto,
+   *  los calibrados para `ticket-template.webp`; `ticket-stack.webp` necesita
+   *  otros porque el borde real de su entrada frontal no coincide con el de
+   *  la caja (ver `CLICK_HINT_STACK`). */
+  right?: string;
+  bottom?: string;
   transition?: string;
 }) {
   return (
     <span
       aria-hidden="true"
       className={`pointer-events-none absolute z-10 ${className ?? ''}`}
-      /* Queda casi entero fuera de la pieza: la zona de la fecha arranca en el
-         3,5% del ancho, así que a menos desplazamiento la mano se comía el día.
-         Con -8cqw de sangrado y 11cqw de ancho ocupa de -8 a 3cqw: no invade el
-         número y sigue cabiendo en el margen lateral del bloque en móvil. */
-      style={{ left, top: '50%', transform: 'translateY(-50%)', width: '11cqw', transition }}
+      style={{ right, bottom, width: '11cqw', transition }}
     >
-      <svg viewBox="0 0 40 44" fill="none" className="h-auto w-full">
-        {/* Líneas de toque */}
-        <g stroke="#E8C766" strokeWidth="2.6" strokeLinecap="round" opacity="0.9">
-          <path d="M6.5 12.5 2.5 9" />
-          <path d="M9.5 6.5 8 2" />
-          <path d="M16.5 5.5 18.5 1.5" />
+      {/* Mano de cursor señalando hacia arriba, con las líneas de pulsación
+          saliendo de la punta del índice — la misma estructura de la
+          referencia. Los colores sí son los de la casa y no los del ejemplo:
+          relleno negro mate y trazo dorado, como el resto de la interfaz. */}
+      <svg viewBox="0 0 48 62" fill="none" className="h-auto w-full">
+        {/* Líneas de pulsación */}
+        <g stroke="#E8C766" strokeWidth="3" strokeLinecap="round" opacity="0.92">
+          <path d="M12.5 16.5 6 11.5" />
+          <path d="M17 11 14.8 3.5" />
+          <path d="M28.5 10.5 31.5 3.5" />
         </g>
-        {/* Mano */}
+
+        {/* Silueta: índice levantado y puño cerrado con los tres dedos
+            insinuados por los escalones del contorno. */}
         <path
-          d="M13.4 13.2V7.6a2.8 2.8 0 0 1 5.6 0v10.1l2.4-1.1a3 3 0 0 1 3.9 1.4l4.4 8.9c1.5 3.1.6 6.9-2.2 8.9l-1.6 1.2a8.6 8.6 0 0 1-11.6-1.3l-7.2-8.4a2.9 2.9 0 0 1 .5-4.2 3 3 0 0 1 4 .5l2 2.2"
+          d="M19 34V14.5a3.75 3.75 0 0 1 7.5 0V30.5l3.6-1.1a3.5 3.5 0 0 1 4.4 2.3l.5 1.7 2.6-.8a3.5 3.5 0 0 1 4.4 2.4l1.4 5.2c1.9 7.1-2 14.4-8.8 16.8l-2.6.9a11 11 0 0 1-12.1-3.4l-8.5-10.1a3.6 3.6 0 0 1 .6-5.1 3.7 3.7 0 0 1 5 .7l2 2.4Z"
           fill="#0d0b0a"
           stroke="#E8C766"
-          strokeWidth="2.3"
+          strokeWidth="2.6"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
+
+        {/* Separación entre los dedos del puño. */}
+        <g stroke="#E8C766" strokeWidth="1.9" strokeLinecap="round" opacity="0.75">
+          <path d="M30.6 31.4v4.4" />
+          <path d="M35.5 34.5v3.9" />
+        </g>
       </svg>
     </span>
   );
@@ -389,8 +415,9 @@ export function NextShowTicket({
     >
       {content}
       <ClickHint
-        left={isStacked ? CLICK_HINT_LEFT_STACK : CLICK_HINT_LEFT_SINGLE}
-        transition={crossfade ? 'left 320ms ease' : undefined}
+        right={isStacked ? CLICK_HINT_STACK.right : CLICK_HINT_SINGLE.right}
+        bottom={isStacked ? CLICK_HINT_STACK.bottom : CLICK_HINT_SINGLE.bottom}
+        transition={crossfade ? 'right 320ms ease, bottom 320ms ease' : undefined}
       />
     </a>
   ) : (

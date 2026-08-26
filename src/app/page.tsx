@@ -309,8 +309,15 @@ export default function Home() {
                 con las redes sociales). Mismo token de margen seguro que
                 antes, solo cambiado de flanco: `sm:right-auto` es necesario
                 para anular el `right-1/2` con el que se centra en móvil, que
-                de lo contrario seguiría aplicándose a partir de `sm:`. */}
-            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-[var(--hb-hero-inset)] sm:right-auto sm:left-[var(--hb-hero-inset)] sm:translate-x-0">
+                de lo contrario seguiría aplicándose a partir de `sm:`.
+
+                Va a media sangría (`* 0.55`) y no al margen completo como las
+                redes: el bloque centra la entrada dentro de un ancho que marca
+                su título —más ancho que la propia entrada—, así que con el
+                inset íntegro la pieza se veía despegada del borde comparada
+                con el resto de la composición. Sigue derivándose del token, no
+                es un valor suelto. */}
+            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-[var(--hb-hero-inset)] sm:right-auto sm:left-[calc(var(--hb-hero-inset)*0.55)] sm:translate-x-0">
               <UpcomingShows onContact={() => setCurrentPage('contact')} />
               <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
                 © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,

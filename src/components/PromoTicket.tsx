@@ -145,9 +145,10 @@ export function PromoTicket({
 
       {/* Esta entrada es siempre clicable —lleva a Contacto/Booking sin
           depender de ningún `ticketUrl`—, así que el indicador va siempre
-          visible, no condicionado como en las entradas reales. Con el
-          desplazamiento por defecto (`-8cqw` a `3cqw`) queda fuera de la zona
-          del megáfono (que arranca en `left: 3.5%`), así que no colisiona. */}
+          visible, no condicionado como en las entradas reales. Usa la
+          posición por defecto (esquina inferior derecha, sobre el talón
+          crema), que en esta pieza tampoco colisiona con nada: el mensaje
+          termina en el 73% del ancho y el talón arranca en el 75%. */}
       <ClickHint />
     </button>
   );
