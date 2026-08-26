@@ -48,9 +48,15 @@ next-env.d.ts
 # Local temp files
 temp/
 
+# Referencias visuales que Danny va dejando para pedir cambios (moodboards,
+# capturas de ejemplo, bocetos). Son material de trabajo, no del sitio: el
+# repo publicado debe contener solo la web.
+public/references/
+
 # IDE & Editor tools (not needed for production)
 .amazonq/
 .augment/
+.agents/
 .claude/skills/
 .codex/
 .continue/
@@ -61,6 +67,14 @@ temp/
 .aider.conf.yml
 .clinerules
 .windsurfrules
+
+# agent-browser (CLI de navegador para verificar el sitio en local).
+# El binario y Chrome viven en ~/.agent-browser/, fuera del repo; esto solo
+# cubre lo que puede aparecer DENTRO del proyecto. Las capturas van al
+# scratchpad de la sesión, nunca aquí.
+skills-lock.json
+agent-browser.json
+.agent-browser/
 
 # Documentation (internal only)
 AGENTS.md

@@ -160,7 +160,6 @@ function Divider() {
    límite de lectura o de uso.
 --------------------------------------------------------------------------- */
 const P = {
-  gap: 'max(7px, 3.33cqw)', /* 10px sobre 300 */
   label: 'max(8px, 3cqw)', /* 9px  */
   labelSmall: 'max(7px, 2.67cqw)', /* 8px  */
   soundIcon: 'max(10px, 4cqw)', /* 12px */
@@ -182,6 +181,23 @@ const CTA_STYLE: React.CSSProperties = {
   paddingInline: P.ctaPaddingX,
   paddingBlock: P.ctaPaddingY
 };
+
+/**
+ * Separación entre los 4 bloques verticales (encabezado, filete, fila de
+ * play+info, filete): la causa real del "demasiado espacio" reportado.
+ *
+ * NO puede ir en `cqw` como el resto de `P`: `container-type: inline-size` da
+ * contexto de contenedor a los DESCENDIENTES del elemento que lo declara, no
+ * al elemento mismo — un `cqw` en una propiedad del propio contenedor no
+ * tiene contenedor de referencia y cae al viewport. Medido: a 2048px de
+ * ancho de VENTANA (no del reproductor, que mide 300px), `max(7px, 3.33cqw)`
+ * devolvía 68px en vez de ~10px — de ahí que el wrapper midiera 347px con
+ * la mitad vacía. Aquí se deriva directamente de `--hb-player-w` (el ancho
+ * real, no el viewport), que si es descendiente-de-sí-mismo por `calc()` sí
+ * resuelve bien. Resultado idéntico al gap original aprobado (`gap-2.5` =
+ * 10px fijo) en 2048×1023, y sigue encogiendo con el propio ancho del
+ * reproductor por debajo de eso. */
+const PLAYER_GAP = 'max(7px, calc(var(--hb-player-w) * 0.0333))'; /* 10px sobre 300 */
 
 /**
  * Reproductor del último lanzamiento, sobre los iconos de plataformas.
@@ -224,7 +240,7 @@ export function TrackPlayer() {
   return (
     <div
       className="flex w-[var(--hb-player-w)] flex-col [container-type:inline-size]"
-      style={{ gap: P.gap }}
+      style={{ gap: PLAYER_GAP }}
     >
       {/* Encabezado: rótulo de sección y control de sonido */}
       <div className="flex items-center justify-between gap-3">

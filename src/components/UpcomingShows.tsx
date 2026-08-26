@@ -136,7 +136,18 @@ export function UpcomingShows({
             asomando) se lo comía por completo y quedaba invisible aunque el
             elemento existiera y estuviera bien posicionado. */}
         <div className="min-h-0 overflow-hidden px-8">
-          <div className="flex flex-col items-center gap-3 pt-3 sm:gap-4 sm:pt-4">
+          {/* `MusicBlock`, en la cabecera, y este bloque viven en árboles de
+              DOM distintos (uno `fixed`, el otro `absolute` dentro del hero),
+              así que no hay un contenedor común que reparta el alto entre los
+              dos. `--hb-shows-panel-max` (ver `globals.css`) es la red de
+              seguridad: garantiza que el panel abierto no pueda crecer hacia
+              arriba hasta invadir el reproductor en un viewport bajo. Con el
+              contenido actual no debería llegar a activar el scroll en
+              ninguno de los tres viewports de control — verificado. */}
+          <div
+            className="flex flex-col items-center gap-3 overflow-y-auto pt-3 sm:gap-4 sm:pt-4"
+            style={{ maxHeight: 'var(--hb-shows-panel-max)' }}
+          >
             {hasSecond && (
               <NextShowTicket
                 events={sorted}

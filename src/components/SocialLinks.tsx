@@ -9,16 +9,23 @@ import {
   YouTubeIcon,
 } from './icons/SocialIcons';
 
+/**
+ * WhatsApp va PRIMERO (extremo izquierdo de la fila) a propósito: de él cuelga
+ * el bocadillo «CONTRATA TU SHOW», y es el canal por el que de verdad se
+ * contrata. El resto queda por orden de prioridad comercial. Cambiar este
+ * orden obliga a mover también el anclaje del bocadillo en `page.tsx`, que
+ * apunta al primer icono de la fila.
+ */
 const NETWORKS = [
+  { name: 'WhatsApp', url: hosmanData.socialLinks.whatsapp, Icon: WhatsAppIcon },
   { name: 'Instagram', url: hosmanData.socialLinks.instagram, Icon: InstagramIcon },
   { name: 'YouTube', url: hosmanData.socialLinks.youtube, Icon: YouTubeIcon },
   { name: 'TikTok', url: hosmanData.socialLinks.tiktok, Icon: TikTokIcon },
   { name: 'Facebook', url: hosmanData.socialLinks.facebook, Icon: FacebookIcon },
-  { name: 'WhatsApp', url: hosmanData.socialLinks.whatsapp, Icon: WhatsAppIcon },
 ] as const;
 
 /**
- * Redes sociales del artista, en la esquina inferior izquierda del hero.
+ * Redes sociales del artista, en la esquina inferior derecha del hero.
  *
  * Comparte el mismo lenguaje visual que los enlaces a plataformas de la
  * cabecera, un punto más compacto para no competir con la composición.

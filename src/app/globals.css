@@ -223,6 +223,14 @@
      OFICIAL» / «ESCUCHAR EN SPOTIFY») parten en dos líneas. */
   --hb-player-w: clamp(224px, 5.2vw + 19.5svh, 300px); /* 300 · 239 · 224 */
 
+  /* --- MÓDULO REPRODUCTOR + PLATAFORMAS (`MusicBlock`) --------------------
+     Reproductor y plataformas se leen como una sola pieza, no como dos
+     controles sueltos: por eso su separación es un token propio y pequeño,
+     no el resultado de que cada uno escale con su propia curva `vw+svh`
+     (antes el hueco entre ambos crecía o encogía por su cuenta, sin relación
+     con lo apretado o holgado que se viera el resto del módulo). */
+  --hb-music-gap: clamp(0.5rem, 0.35vw + 1svh, 0.75rem); /* 12 · 10,4 · 8,9 */
+
   /* --- BLOQUE DE EVENTOS --------------------------------------------------
      Ancho de la entrada protagonista. Antes era `min(92vw,380px)`: solo miraba
      el ancho, así que en 1280×591 seguía midiendo 380px sobre una escena de
@@ -232,6 +240,22 @@
      Suelo de 300px: es donde la tipografía interna del ticket (toda en `cqw`,
      ya calibrada sobre el asset) deja de leerse cómodamente. */
   --hb-ticket-w: min(92vw, clamp(300px, 5vw + 28svh, 380px)); /* 380 · 304 · 300 */
+
+  /* Tope de alto del panel desplegable (segunda fecha + promocional).
+     `MusicBlock` (arriba, anclado a la cabecera) y `UpcomingShows` (abajo,
+     anclado al borde del hero) viven en árboles de DOM distintos — la
+     cabecera es `fixed`, el bloque de shows es `absolute` dentro del hero —
+     así que no hay un contenedor común que reparta el espacio entre los dos.
+     Sin este tope, en un viewport bajo el panel abierto podía crecer hacia
+     arriba hasta invadir el reproductor.
+
+     Reserva el 44% superior del alto del hero para la cabecera (más generoso
+     que lo que `MusicBlock` ocupa en la práctica, para no rozarlo) y dedica
+     el resto, menos el margen de seguridad del hero, al panel. Es una red de
+     seguridad (`overflow-y: auto` en el propio panel): con el contenido
+     actual (segunda fecha + promocional) no debería llegar a activarse en
+     ninguno de los tres viewports de control — verificado. */
+  --hb-shows-panel-max: calc(56svh - var(--hb-hero-inset));
 }
 
 /* ===========================================================================
@@ -257,9 +281,24 @@
      salvar la cabecera fija, más un respiro. Antes era `pt-32` (128px) fijo en
      las cinco secciones — en 1280×591 se comía el 22% de la pantalla, y en
      2048×1023 se quedaba 1px por debajo de la cabecera real (129px), que es de
-     donde venía el roce del menú con el contenido de SOBRE MÍ. */
-  --spacing-scene-top: calc(var(--hb-header-h) + clamp(0.75rem, 2svh, 1.75rem));
-  /* 150 · 117 · 102 */
+     donde venía el roce del menú con el contenido de SOBRE MÍ.
+
+     Después, calcularlo solo a partir de `--hb-header-h` (que solo conoce el
+     ANCHO DEL MENÚ) se quedó corto: la cabecera no es simétrica, y el módulo
+     reproductor+plataformas de la derecha es más alto que el menú — así que
+     una sección cuyo contenido llega hasta el borde derecho (SOBRE MÍ, con su
+     `grid` a dos columnas) podía arrancar bajo el reproductor aunque ya
+     hubiera "espacio" según el menú.
+
+     `--hb-header-real-h` la publica un `ResizeObserver` sobre la cabecera de
+     verdad (ver `page.tsx`), así que conoce la altura real de LOS DOS lados
+     sin tener que modelar en CSS la suma de fuentes/paddings del módulo
+     derecho —cálculo fràgil, se desincroniza en cuanto ese módulo cambia—.
+     `var(--hb-header-h)` queda como valor de reserva para el primer frame,
+     antes de que React monte y el observer mida por primera vez. */
+  --spacing-scene-top: calc(
+    var(--hb-header-real-h, var(--hb-header-h)) + clamp(0.75rem, 2svh, 1.75rem)
+  );
 
   --spacing-scene-bottom: clamp(2.5rem, 1.25vw + 3.75svh, 4rem); /* 64 · 50 · 38 */
 

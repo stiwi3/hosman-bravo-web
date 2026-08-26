@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
 import { MusicPlatforms } from '@/components/MusicPlatforms';
@@ -61,8 +61,38 @@ const navItems: { id: PageType; label: string }[] = [
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const reducedMotion = useReducedMotion();
+  const headerRef = useRef<HTMLElement>(null);
 
   const data = hosmanData;
+
+  /* La cabecera no es simétrica: a la izquierda va el menú (bajo), a la
+     derecha el módulo reproductor+plataformas (más alto, y de altura
+     distinta según la página — en INICIO `MusicPlatforms` va sin recoger).
+     `--spacing-scene-top` (el hueco que las secciones con scroll reservan
+     para no arrancar debajo de la cabecera) necesitaba conocer cuál de los
+     dos lados manda, y calcularlo a mano solo a partir del menú (como hacía
+     `--hb-header-h`) se quedaba corto: el contenido de SOBRE MÍ, que ocupa
+     todo el ancho de su columna, podía empezar bajo el reproductor.
+
+     En vez de modelar en CSS la suma de fuentes/paddings/gaps del módulo
+     derecho (frágil: cualquier cambio ahí desincroniza el cálculo), se mide
+     la cabecera de verdad con `ResizeObserver` y el resultado se publica
+     como variable CSS. Es la única forma de que la reserva conozca la
+     geometría REAL sin adivinarla ni repetirla — y de paso se ajusta sola
+     por página, porque en las demás secciones `MusicPlatforms` sí se recoge
+     y la cabecera es más baja. */
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const update = () => {
+      root.style.setProperty('--hb-header-real-h', `${header.getBoundingClientRect().height}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <main className="bg-black text-white font-sans overflow-x-hidden min-h-screen">
@@ -70,8 +100,12 @@ export default function Home() {
           Su padding sale del sistema fluido: es el mismo valor del que se
           deriva `--hb-header-h`, que a su vez marca dónde puede empezar el
           contenido de cualquier sección con scroll. Una sola fuente de verdad
-          en lugar de un `p-4 md:p-6` aquí y un `pt-32` a mano en cada sección. */}
-      <header className="fixed top-0 left-0 right-0 flex justify-between items-start p-[var(--hb-header-pad)] z-50 bg-gradient-to-b from-black/80 to-transparent">
+          en lugar de un `p-4 md:p-6` aquí y un `pt-32` a mano en cada sección.
+          `ref`: es el elemento que mide el `ResizeObserver` de arriba. */}
+      <header
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 flex justify-between items-start p-[var(--hb-header-pad)] z-50 bg-gradient-to-b from-black/80 to-transparent"
+      >
         {USE_PHOTO_MENU ? (
           <LeatherMenuPhoto items={navItems} current={currentPage} onNavigate={setCurrentPage} />
         ) : (
@@ -93,10 +127,17 @@ export default function Home() {
           ))}
         </nav>
 
-        {/* PLATAFORMAS DE MÚSICA
-            En pantallas estrechas se despega de la cabecera y baja a una
-            rejilla de 4×2, para no cruzarse con la navegación central. */}
-        <div className="absolute right-4 top-[74px] flex flex-col items-end gap-3 md:static md:right-auto md:top-auto md:gap-[clamp(0.5rem,1.4svh,1rem)]">
+        {/* MUSICBLOCK — reproductor + plataformas.
+            Se leen como una sola pieza, así que se mueven como una: un único
+            `gap` (`--hb-music-gap`) los separa, en vez de que cada uno cargue
+            su propia curva de escalado y el hueco entre ambos crezca o
+            encoja por su cuenta sin relación con el resto del módulo (eso
+            producía, según el viewport, o demasiado aire entre los dos o las
+            plataformas empujadas hacia abajo). En pantallas estrechas se
+            despega de la cabecera y baja a una rejilla de 4×2, para no
+            cruzarse con la navegación central — sigue siendo el mismo bloque,
+            solo cambia su posición de anclaje. */}
+        <div className="absolute right-4 top-[74px] flex flex-col items-end gap-[var(--hb-music-gap)] md:static md:right-auto md:top-auto">
           {/* El reproductor manda sobre el audio global; debajo quedan los
               accesos a las plataformas. */}
           <div className="hidden sm:block">
@@ -225,12 +266,15 @@ export default function Home() {
                 aquí solo queda el subtítulo. */}
             <h1 className="sr-only">Hosman Bravo — {data.artist.tagline}</h1>
 
-            {/* REDES SOCIALES — esquina inferior izquierda. El CTA de
-                contrataciones cuelga del icono de WhatsApp (el último de la
-                fila, a la derecha del grupo) como un bocadillo discreto en
-                vez de competir por espacio como bloque propio; sigue
-                llevando a la misma sección de contacto que antes. */}
-            <div className="absolute bottom-[var(--hb-hero-inset)] left-[var(--hb-hero-inset)] z-20">
+            {/* REDES SOCIALES — esquina inferior derecha. El CTA de
+                contrataciones cuelga del icono de WhatsApp (el PRIMERO de la
+                fila, a la izquierda del grupo — ver el orden en
+                `SocialLinks.tsx`) como un bocadillo discreto en vez de
+                competir por espacio como bloque propio; sigue llevando a la
+                misma sección de contacto que antes.
+                Mismo token de margen seguro (`--hb-hero-inset`) que antes,
+                solo cambiado de flanco. */}
+            <div className="absolute bottom-[var(--hb-hero-inset)] right-[var(--hb-hero-inset)] z-20">
               <div className="relative">
                 <SocialLinks />
                 <button
@@ -239,13 +283,16 @@ export default function Home() {
                   // completamente redondeada el borde se curva justo donde
                   // hace falta apoyar la colita, y esta queda desconectada
                   // del contorno en vez de fundirse con él.
-                  className="group absolute -top-8 right-0 flex items-center gap-1 rounded-lg border border-amber-400/25 bg-black/55 px-2.5 py-1.5 text-[8px] font-semibold tracking-widest text-amber-200/80 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/60 hover:text-amber-300 sm:-top-9"
+                  className="group absolute -top-8 left-0 flex items-center gap-1 rounded-lg border border-amber-400/25 bg-black/55 px-2.5 py-1.5 text-[8px] font-semibold tracking-widest text-amber-200/80 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/60 hover:text-amber-300 sm:-top-9"
                 >
                   CONTRATA TU SHOW
-                  {/* colita apuntando al icono de WhatsApp, justo debajo */}
+                  {/* Colita apuntando al icono de WhatsApp, justo debajo. Se
+                      ancla por la IZQUIERDA porque WhatsApp pasó a ser el
+                      primer icono de la fila; antes iba `right-4`, con
+                      WhatsApp de último. */}
                   <span
                     aria-hidden="true"
-                    className="absolute -bottom-[4px] right-4 h-[8px] w-[8px] rotate-45 border-b border-r border-amber-400/25 bg-black/55 transition-colors duration-300 group-hover:border-amber-400/60"
+                    className="absolute -bottom-[4px] left-4 h-[8px] w-[8px] rotate-45 border-b border-r border-amber-400/25 bg-black/55 transition-colors duration-300 group-hover:border-amber-400/60"
                   />
                 </button>
               </div>
@@ -256,8 +303,14 @@ export default function Home() {
                 lado de las redes sociales: sube por encima de esa fila en vez
                 de encogerse, que es lo que lo haría ilegible.
                 Va anclado por abajo para que, al desplegarse, crezca hacia
-                arriba y no empuje el aviso legal fuera de la pantalla. */}
-            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-[var(--hb-hero-inset)] sm:right-[var(--hb-hero-inset)] sm:translate-x-0">
+                arriba y no empuje el aviso legal fuera de la pantalla.
+
+                Esquina inferior IZQUIERDA a partir de ahora (intercambiado
+                con las redes sociales). Mismo token de margen seguro que
+                antes, solo cambiado de flanco: `sm:right-auto` es necesario
+                para anular el `right-1/2` con el que se centra en móvil, que
+                de lo contrario seguiría aplicándose a partir de `sm:`. */}
+            <div className="absolute bottom-[104px] right-1/2 z-20 flex translate-x-1/2 flex-col items-center gap-2 sm:bottom-[var(--hb-hero-inset)] sm:right-auto sm:left-[var(--hb-hero-inset)] sm:translate-x-0">
               <UpcomingShows onContact={() => setCurrentPage('contact')} />
               <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
                 © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
@@ -381,21 +434,32 @@ export default function Home() {
       {currentPage === 'about' && (
         <section className={SCENE_FULL}>
           <div className={SCENE_CONTENT}>
+            {/* ABOUTLAYOUT — foto e info forman una sola composición.
+                El `grid` es la única fuente de ancho total, ancho relativo
+                entre columnas, separación y escala: cuando el viewport
+                encoge, es ESTA rejilla la que se estrecha, y las dos columnas
+                la siguen en la misma proporción porque ninguna tiene una
+                medida propia que la desconecte de ella.
+
+                La foto NO lleva un alto propio (`h-[min(72svh,...)]`, como
+                tuvo en una versión anterior): eso la hacía más angosta que su
+                columna en viewports bajos —el alto mandaba, el ancho quedaba
+                suelto— y dejaba un hueco horizontal entre foto y texto que
+                rompía la composición. Aquí manda el ANCHO de la columna
+                (100% de lo que le da el `grid`) y el alto sale solo de
+                `aspect-[3/4]`, así que foto y columna miden lo mismo siempre.
+                Si en un viewport bajo la foto resulta más alta que la
+                ventana, se resuelve con el scroll normal de esta sección
+                (SOBRE MÍ nunca fue una escena sin scroll, a diferencia de
+                INICIO), no achicando la foto por su cuenta. */}
             <div className="grid lg:grid-cols-2 gap-block items-start">
-              {/* Foto
-                  Manda el ALTO, no el ancho: con `aspect-[3/4]` sobre una
-                  columna de ~550px la foto salía 736px de alto y no cabía en
-                  una pantalla de 591 — había que desplazarse para verla
-                  entera, que es justo el síntoma que se quería corregir.
-                  Fijando el alto a una fracción del viewport y dejando que el
-                  ancho lo siga (`w-auto`), la proporción 3:4 se conserva
-                  intacta y la foto entra siempre en pantalla. */}
-              <div className="relative mx-auto h-[min(72svh,680px)] aspect-[3/4] w-auto overflow-hidden rounded-lg lg:mx-0">
+              {/* Foto */}
+              <div className="relative aspect-[3/4] overflow-hidden rounded-lg">
                 <Image
                   src={data.images.about}
                   alt="Hosman Bravo con Don Juan"
                   fill
-                  sizes="(min-width: 1024px) 40vw, 90vw"
+                  sizes="(min-width: 1024px) 46vw, 90vw"
                   className="object-cover"
                 />
               </div>
