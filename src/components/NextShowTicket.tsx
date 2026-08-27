@@ -213,8 +213,13 @@ export function ClickHint({
           referencia. Los colores sí son los de la casa y no los del ejemplo:
           relleno negro mate y trazo dorado, como el resto de la interfaz. */}
       <svg viewBox="0 0 48 62" fill="none" className="h-auto w-full">
-        {/* Líneas de pulsación */}
-        <g stroke="#E8C766" strokeWidth="3" strokeLinecap="round" opacity="0.92">
+        {/* Líneas de pulsación. En NEGRO y no en dorado como el resto del
+            icono: son lo único que queda sobre el talón crema del asset, sin
+            el relleno oscuro de la mano por detrás que les diera contraste, y
+            en dorado se perdían contra el fondo claro. El negro es el mismo
+            `#0d0b0a` del relleno de la mano, así que el icono sigue siendo de
+            dos tintas y no introduce un color nuevo. */}
+        <g stroke="#0d0b0a" strokeWidth="3" strokeLinecap="round" opacity="0.9">
           <path d="M12.5 16.5 6 11.5" />
           <path d="M17 11 14.8 3.5" />
           <path d="M28.5 10.5 31.5 3.5" />

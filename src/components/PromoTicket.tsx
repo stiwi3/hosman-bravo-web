@@ -15,6 +15,19 @@ import { ClickHint, TICKET_NATIVE, TICKET_SHADOW, TICKET_SHELL_BASE } from './Ne
    la superficie pulsable, así que no hay controles anidados.
 --------------------------------------------------------------------------- */
 
+/**
+ * Relleno del megáfono. TRASLÚCIDO, no opaco: este icono va sobre el cuerpo
+ * negro del ticket, no sobre el talón crema, así que no necesita tapar nada.
+ * Con el `#0d0b0a` opaco que tenía antes se leía como un parche macizo
+ * recortado sobre el material impreso; a media opacidad deja pasar la textura
+ * del asset y el icono se integra, conservando aun así cuerpo suficiente para
+ * que el trazo dorado no quede flotando.
+ *
+ * (La mano del `ClickHint` sí lleva relleno opaco a propósito: esa va sobre el
+ * talón crema y ahí el contraste sí hace falta.)
+ */
+const MEGA_FILL = 'rgba(13, 11, 10, 0.5)';
+
 function MegaphoneIcon({
   className,
   style
@@ -27,17 +40,17 @@ function MegaphoneIcon({
       {/* Cono */}
       <path
         d="M30 4.5 12.5 14.2v8.6L30 32.5V4.5Z"
-        fill="#0d0b0a"
+        fill={MEGA_FILL}
         stroke="#E8C766"
         strokeWidth="2.4"
         strokeLinejoin="round"
       />
       {/* Boca del cono */}
-      <ellipse cx="30" cy="18.5" rx="3.4" ry="14" fill="#0d0b0a" stroke="#E8C766" strokeWidth="2.4" />
+      <ellipse cx="30" cy="18.5" rx="3.4" ry="14" fill={MEGA_FILL} stroke="#E8C766" strokeWidth="2.4" />
       {/* Cuerpo trasero */}
       <path
         d="M12.5 14.2H8.2a3.2 3.2 0 0 0-3.2 3.2v2.2a3.2 3.2 0 0 0 3.2 3.2h4.3"
-        fill="#0d0b0a"
+        fill={MEGA_FILL}
         stroke="#E8C766"
         strokeWidth="2.4"
         strokeLinejoin="round"
@@ -45,7 +58,7 @@ function MegaphoneIcon({
       {/* Asa */}
       <path
         d="M14.5 23.4 17 33.6a2.9 2.9 0 0 0 5.7-.7l-.4-6.6"
-        fill="#0d0b0a"
+        fill={MEGA_FILL}
         stroke="#E8C766"
         strokeWidth="2.4"
         strokeLinejoin="round"

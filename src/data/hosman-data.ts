@@ -202,6 +202,33 @@ export const hosmanData = {
       blackLeather: `${bp}/images/textures/black-leather-matte.webp`,
       blackLeatherRaw: `${bp}/images/textures/black-leather.webp`
     },
+    /**
+     * Telón de la portada de acceso (`EntryScreen`). Cinco piezas que
+     * comparten EXACTAMENTE el mismo lienzo de 2778×1533 y conservan sus
+     * coordenadas originales: superpuestas al 100% reconstruyen el telón
+     * completo. No recortar, reposicionar ni reescalar ninguna por separado —
+     * toda la composición depende de que sigan compartiendo sistema de
+     * coordenadas.
+     *
+     * Las traseras (`*Back`) son las únicas que se desplazan al abrir; las
+     * frontales y el galón son fijos. Extensión real de cada pieza sobre el
+     * lienzo, medida por canal alfa (se usa para calibrar los recorridos en
+     * `EntryScreen`):
+     *   leftBack   x 0–1440   ·  rightBack   x 1429–2777
+     *   leftFront  x 0–946    ·  rightFront  x 2052–2777
+     *   top        x 0–2777, y 0–230
+     *
+     * Convertidas de PNG a WebP conservando lienzo y alfa (10,6 MB → 1,4 MB);
+     * `images.unoptimized` está activo, así que se sirven tal cual y el peso
+     * del original habría entrado entero en la primera carga.
+     */
+    curtain: {
+      leftBack: `${bp}/images/Telon/curtain-left-back.webp`,
+      rightBack: `${bp}/images/Telon/curtain-right-back.webp`,
+      leftFront: `${bp}/images/Telon/curtain-left-front.webp`,
+      rightFront: `${bp}/images/Telon/curtain-right-front.webp`,
+      top: `${bp}/images/Telon/curtain-top.webp`
+    },
     // Piezas del menú ya renderizadas como objeto físico completo (cuero,
     // costuras, lomo, anillas, sombras). Ver `LeatherMenuPhoto`: la
     // materialidad viene del asset, no de CSS.
