@@ -1,8 +1,13 @@
 // Datos editables de Hosman Bravo
 // Actualiza este archivo para cambiar el contenido del sitio
+//
+// La FORMA de estos datos vive en `./types.ts`, no aquí ni en los componentes.
+
+import type { Horse, ShowEvent, Song } from './types';
 
 // Prefijo de rutas cuando el sitio se publica en un subdirectorio
 // (ej: stiwi3.github.io/hosman-bravo-web). Vacío en desarrollo local.
+// Solo para ASSETS: las rutas de navegación las prefija `next/link` sola.
 const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const hosmanData = {
@@ -49,7 +54,7 @@ export const hosmanData = {
       role: 'Retirado del show. Vive en retiro digno. Historia emocional poderosa.',
       color: 'Criollo'
     }
-  ],
+  ] satisfies readonly Horse[],
 
   // Información comercial
   shows: {
@@ -89,7 +94,7 @@ export const hosmanData = {
       time: '20:30 HRS',
       ticketUrl: ''
     }
-  ],
+  ] satisfies readonly ShowEvent[],
 
   // Redes sociales
   socialLinks: {
@@ -172,14 +177,6 @@ export const hosmanData = {
     youtube: '977',
     facebook: '616',
     spotify: '72/mes'
-  },
-
-  // Colores personalizados
-  colors: {
-    primary: '#c81d25', // Rojo
-    dark: '#060405',    // Negro muy oscuro
-    darkRed: '#4a0d10', // Rojo oscuro para gradientes
-    white: '#f5f5f5'
   },
 
   // Imágenes del sitio (rutas en /public)
@@ -288,5 +285,5 @@ export const hosmanData = {
     { title: 'No Lo Decidí', year: 2024 },
     { title: 'Una Botella', year: 2022 },
     { title: 'El Circo de Tu Amor', year: 2022 }
-  ]
+  ] satisfies readonly Song[]
 }

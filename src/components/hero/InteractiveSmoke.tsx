@@ -192,18 +192,27 @@ export function InteractiveSmoke({ reducedMotion = false, className }: Interacti
     resizeObserver.observe(host);
 
     // Solo se simula mientras el hero está a la vista.
+    // Se recuerda el último estado de intersección porque el manejador de
+    // pestaña lo necesita: el observer solo vuelve a disparar cuando la
+    // intersección CAMBIA, así que no puede corregir a posteriori.
+    let intersecting = false;
     const visibility = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !document.hidden) start();
+        intersecting = entry.isIntersecting;
+        if (intersecting && !document.hidden) start();
         else stop();
       },
       { threshold: 0.01 }
     );
     visibility.observe(host);
 
+    // Al volver a la pestaña solo se reanuda si el hero SIGUE a la vista. Sin
+    // la condición, el ciclo «INICIO → otra ruta → cambiar de pestaña →
+    // volver» rearrancaba el bucle y los listeners sobre un hero oculto, y
+    // seguían consumiendo GPU hasta la siguiente navegación a INICIO.
     const onVisibilityChange = () => {
       if (document.hidden) stop();
-      else start();
+      else if (intersecting) start();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 

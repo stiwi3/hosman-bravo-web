@@ -6,10 +6,12 @@ Sitio web oficial de **Hosman Bravo**, "El Rey de los Caballos" — cantautor co
 
 ## Secciones
 
-- **Inicio** — Presentación del artista con fotos del show en vivo
-- **Galería** — Fotos de shows, sesiones y el elenco ecuestre
-- **Sobre mí** — Biografía, discografía y redes sociales
-- **Contacto** — Formulario de contrataciones
+- **Inicio** (`/`) — Presentación del artista con fotos del show en vivo
+- **El show** (`/el-show`) — El espectáculo y el elenco ecuestre
+- **Música** (`/musica`) — La discografía del artista
+- **Galería** (`/galeria`) — Fotos de shows, sesiones y caballos
+- **Sobre mí** (`/sobre-mi`) — Biografía, discografía y redes sociales
+- **Contacto** (`/contacto`) — Formulario de contrataciones
 
 ## Tecnología
 

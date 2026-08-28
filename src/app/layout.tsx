@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AudioProvider } from "@/components/audio/AudioProvider";
-import { EntryScreen } from "@/components/audio/EntryScreen";
+import { SiteShell } from "@/components/SiteShell";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,10 +32,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {/* El proveedor envuelve a la página entera: así la canción sigue
-            sonando aunque después naveguemos entre secciones. */}
+            sonando aunque después naveguemos entre secciones.
+            `SiteShell` es la capa persistente que hay debajo (telón, cabecera,
+            hero); solo `children` cambia al navegar. Ver ARCHITECTURE.md §3. */}
         <AudioProvider>
-          <EntryScreen />
-          {children}
+          <SiteShell>{children}</SiteShell>
         </AudioProvider>
       </body>
     </html>

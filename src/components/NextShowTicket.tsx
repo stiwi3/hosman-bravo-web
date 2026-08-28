@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { hosmanData } from '@/data/hosman-data';
+import type { ShowEvent } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
    Entrada de un show.
@@ -22,14 +23,8 @@ import { hosmanData } from '@/data/hosman-data';
    entrada entera escala sola sin tocar una sola medida interna.
 --------------------------------------------------------------------------- */
 
-export interface ShowEvent {
-  id: string;
-  date: string;
-  title: string;
-  location: string;
-  time: string;
-  ticketUrl?: string;
-}
+/* `ShowEvent` vivía aquí; ahora está en `@/data/types`, junto a los datos que
+   describe. Este componente pinta la entrada, no decide su forma. */
 
 /** Ancho de la entrada protagonista. El resto de piezas del bloque parten de
  *  este valor para mantener la proporción entre ellas.

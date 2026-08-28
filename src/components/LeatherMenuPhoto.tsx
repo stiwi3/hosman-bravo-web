@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { hosmanData } from '@/data/hosman-data';
-import type { MenuItem } from './LeatherMenu';
+import type { NavItem, SectionId } from '@/data/types';
 
-interface LeatherMenuPhotoProps<T extends string> {
-  items: readonly MenuItem<T>[];
-  current: T;
-  onNavigate: (id: T) => void;
+interface LeatherMenuPhotoProps {
+  items: readonly NavItem[];
+  /** Escena activa, para el subrayado y el `aria-current`. */
+  current: SectionId;
 }
 
 /* ---------------------------------------------------------------------------
@@ -59,15 +60,19 @@ const NAV = {
   underlineFar: 'max(5px, 2.43cqw)'
 } as const;
 
-const ICONS: Record<string, React.ReactNode> = {
+/* `Record<SectionId, …>` y no `Record<string, …>`: si mañana se añade una
+   escena y se olvida su icono, TypeScript lo para aquí. Antes la clave era
+   `string` y el `?? ICONS.home` de más abajo lo tapaba pintando el icono de
+   casa en silencio. */
+const ICONS: Record<SectionId, React.ReactNode> = {
   home: <path d="M3.6 10.4 12 3.6l8.4 6.8V20a.9.9 0 0 1-.9.9h-4.6v-6.2H9.1v6.2H4.5a.9.9 0 0 1-.9-.9v-9.6Z" />,
-  show: (
+  'el-show': (
     <>
       <rect x="9.3" y="2.8" width="5.4" height="10.4" rx="2.7" />
       <path d="M6.4 11.2a5.6 5.6 0 0 0 11.2 0M12 16.8V21M9.2 21h5.6" />
     </>
   ),
-  playlist: (
+  musica: (
     <>
       <path d="M9.4 17.6V6.2l8.6-1.9v11.4" />
       <ellipse cx="7" cy="17.8" rx="2.5" ry="2.2" />
@@ -80,13 +85,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="12" cy="13.2" r="3.5" />
     </>
   ),
-  about: (
+  'sobre-mi': (
     <>
       <circle cx="12" cy="7.6" r="3.9" />
       <path d="M4.9 20.7c0-3.4 3.2-6 7.1-6s7.1 2.6 7.1 6" />
     </>
   ),
-  contact: (
+  contacto: (
     <>
       <rect x="3" y="5.4" width="18" height="13.2" rx="1.4" />
       <path d="m3.6 6.6 8.4 5.6 8.4-5.6" />
@@ -94,11 +99,7 @@ const ICONS: Record<string, React.ReactNode> = {
   )
 };
 
-export function LeatherMenuPhoto<T extends string>({
-  items,
-  current,
-  onNavigate
-}: LeatherMenuPhotoProps<T>) {
+export function LeatherMenuPhoto({ items, current }: LeatherMenuPhotoProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -119,10 +120,11 @@ export function LeatherMenuPhoto<T extends string>({
     };
   }, [open]);
 
-  const go = (id: T) => {
-    onNavigate(id);
-    setOpen(false);
-  };
+  /* La navegación la hace el propio `<Link>`; aquí solo queda recoger la
+     solapa. Antes este componente avisaba al padre con `onNavigate` porque la
+     sección era estado de React; ahora es una ruta y el padre no necesita
+     enterarse. */
+  const closeMenu = () => setOpen(false);
 
   return (
     <div ref={rootRef} className="relative z-50">
@@ -227,15 +229,19 @@ export function LeatherMenuPhoto<T extends string>({
             }}
           >
             <ul className="flex h-full flex-col justify-between">
-              {items.map(({ id, label }) => {
+              {items.map(({ id, label, href, badge }) => {
                 const active = current === id;
-                const isPlaylist = String(id) === 'playlist';
                 return (
                   <li key={id}>
-                    <button
-                      type="button"
+                    {/* `<Link>` y no `<button>`: son rutas de verdad, así que
+                        tienen que funcionar con clic central, «abrir en pestaña
+                        nueva» y los botones de atrás/adelante. Las clases y el
+                        `tabIndex` son exactamente los de antes. `next/link`
+                        aplica solo el `basePath`: `href` va sin `${bp}`. */}
+                    <Link
+                      href={href}
                       role="menuitem"
-                      onClick={() => go(id)}
+                      onClick={closeMenu}
                       aria-current={active ? 'page' : undefined}
                       tabIndex={open ? 0 : -1}
                       className={`group flex w-full items-center text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D4AF37]/60 ${
@@ -260,7 +266,7 @@ export function LeatherMenuPhoto<T extends string>({
                           filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.85))'
                         }}
                       >
-                        {ICONS[id] ?? ICONS.home}
+                        {ICONS[id]}
                       </svg>
 
                       <span
@@ -292,7 +298,10 @@ export function LeatherMenuPhoto<T extends string>({
                         )}
                       </span>
 
-                      {isPlaylist && (
+                      {/* El distintivo lo decide `NAV_ITEMS`, no este
+                          componente: antes era un `String(id) === 'playlist'`
+                          cableado aquí dentro. */}
+                      {badge && (
                         <span
                           className="shrink-0 rounded-sm bg-[#96141B] font-bold leading-none tracking-wide text-white"
                           style={{
@@ -301,10 +310,10 @@ export function LeatherMenuPhoto<T extends string>({
                             paddingBlock: NAV.badgePaddingY
                           }}
                         >
-                          NUEVO
+                          {badge}
                         </span>
                       )}
-                    </button>
+                    </Link>
                   </li>
                 );
               })}

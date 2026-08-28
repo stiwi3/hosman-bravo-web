@@ -3,8 +3,9 @@
 import { useId, useState } from 'react';
 import { hosmanData } from '@/data/hosman-data';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { NextShowTicket, type ShowEvent } from './NextShowTicket';
+import { NextShowTicket } from './NextShowTicket';
 import { PromoTicket } from './PromoTicket';
+import type { ShowEvent } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
    Bloque PRÓXIMOS SHOWS del hero.
@@ -125,8 +126,17 @@ export function UpcomingShows({
           cerrado, individual en abierto) cruzando su opacidad. */}
       <NextShowTicket events={sorted} index={0} stacked={!open} />
 
-      {/* PANEL DESPLEGABLE */}
-      <div id={panelId} style={panelStyle} aria-hidden={!open}>
+      {/* PANEL DESPLEGABLE
+
+          `inert` además de `aria-hidden`: el panel cerrado sigue teniendo
+          controles dentro (la entrada promocional es un `<button>`, y la
+          segunda fecha pasa a ser un `<a>` en cuanto tenga `ticketUrl`), y
+          marcarlos como ocultos sin sacarlos del orden de tabulación es una
+          contradicción — el foco de teclado caía en contenido invisible y
+          declarado inexistente. `inert` los saca del foco Y del árbol de
+          accesibilidad de una vez. Es el mismo problema que `LeatherMenuPhoto`
+          ya resolvía con `tabIndex={open ? 0 : -1}`. */}
+      <div id={panelId} style={panelStyle} aria-hidden={!open} inert={!open}>
         {/* `min-h-0` es imprescindible: sin él el hijo de la rejilla conserva
             su altura mínima de contenido y la fila nunca llega a colapsar a 0.
             `px-8`: el `ClickHint` de la promocional sobresale hasta 8cqw

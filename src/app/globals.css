@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -129,12 +127,20 @@
   }
 }
 
-/* Hosman Bravo Custom Styles */
-:root {
-  --hosman-red: #c81d25;
-  --hosman-dark: #060405;
-  --hosman-dark-red: #4a0d10;
-  --hosman-white: #f5f5f5;
+/* Fondo real del documento.
+
+   El `@layer base` de arriba (heredado del scaffold) pinta `body` con
+   `var(--background)`, que en el tema claro vale BLANCO — y `<html>` nunca
+   lleva la clase `dark`, así que ese es el valor que se aplica. Hasta ahora lo
+   tapaba `<main class="bg-black min-h-screen">`, pero cualquier zona que `main`
+   no cubra enseñaba blanco: el rebote elástico de scroll en iOS o una
+   impresión.
+
+   Va FUERA de `@layer base` a propósito: las reglas sin capa ganan a las
+   colocadas en una capa, así que esto manda sin necesidad de `!important`.
+   El color es el mismo `#050304` del fondo de la escena INICIO. */
+body {
+  background-color: #050304;
 }
 
 /* ===========================================================================
@@ -311,6 +317,15 @@
   --container-content: 72rem;
   --container-narrow: 36rem;
 
+  /* Tope de la pieza destacada de MÚSICA (el último lanzamiento). Es un tope y
+     no una curva: por debajo manda el `w-full`, así que en móvil ocupa el ancho
+     disponible sola. 54rem sobre los 72rem de contenido deja aire a los lados
+     en escritorio, que es lo que la separa del resto de la cuadrícula.
+     La variante cuadrada existe porque un single sin videoclip destacado a
+     54rem de ancho sería una caja enorme: se acota más. */
+  --container-release: 54rem;
+  --container-release-square: 34rem;
+
   /* Escala tipográfica de sección. Reemplaza `text-3xl md:text-4xl`, que solo
      tenía dos escalones y ninguno reaccionaba al alto. */
   --text-section: clamp(1.6rem, 0.82vw + 1.875svh, 2.25rem); /* 36 · 28 · 26 */
@@ -320,10 +335,6 @@
   /* Navegación central de la cabecera. */
   --text-nav: clamp(0.625rem, 0.25vw + 0.75svh, 0.75rem); /* 12 · 10 · 10 */
   --text-nav--line-height: 1;
-}
-
-.bg-gradient-radial {
-  background-image: radial-gradient(circle at 55% 45%, rgba(200, 29, 37, 0.3) 0%, rgba(6, 4, 5, 0.9) 70%);
 }
 
 /* Smooth transitions */
@@ -343,33 +354,9 @@ a, button {
   }
 }
 
-/* Cuero oscuro para los botones del reproductor.
-   Dos tramas de líneas finas cruzadas en ángulos distintos crean un grano
-   irregular, y un tinte burdeos por arriba le da profundidad. Todo en CSS:
-   ninguna imagen que descargar. */
-.hb-leather {
-  background-color: #140a0c;
-  background-image:
-    repeating-linear-gradient(
-      52deg,
-      rgba(255, 255, 255, 0.016) 0 1px,
-      transparent 1px 4px
-    ),
-    repeating-linear-gradient(-38deg, rgba(0, 0, 0, 0.26) 0 2px, transparent 2px 6px),
-    radial-gradient(125% 150% at 28% -10%, rgba(122, 32, 38, 0.34), transparent 70%);
-  box-shadow:
-    inset 0 1px 0 rgba(214, 175, 96, 0.09),
-    inset 0 -6px 12px -8px rgba(0, 0, 0, 0.9);
-}
-
-/* Filo dorado que aparece al pasar por encima, sin llegar a brillar. */
-.hb-leather:hover {
-  background-color: #1b0e11;
-  box-shadow:
-    inset 0 1px 0 rgba(214, 175, 96, 0.18),
-    inset 0 -6px 12px -8px rgba(0, 0, 0, 0.85),
-    0 0 16px -4px rgba(196, 150, 66, 0.38);
-}
+/* (Aquí vivían `.hb-leather` y `.hb-leather:hover`, el cuero de los botones del
+   reproductor. Quedaron sin usar: ese cuero lo resuelve la constante `LEATHER`
+   en `TrackPlayer.tsx`, y las reglas CSS se quedaron atrás sin consumidor.) */
 
 /* Respiración del botón de reproducción: un anillo dorado que se expande y
    se desvanece mientras suena. Muy tenue, sin llegar a resplandor. */
@@ -476,6 +463,3 @@ a, button {
   pointer-events: none;
 }
 
-/* Las secciones no tienen entrada propia: aparecen con la misma pieza de
-   cuero, como si ya estuvieran escritas en ella. Una entrada renglón a renglón
-   sugiere una lista cargándose y rompe la sensación de objeto físico. */
