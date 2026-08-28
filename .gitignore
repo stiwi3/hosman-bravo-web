@@ -89,8 +89,13 @@ Dockerfile.dev
 docker-compose.yml
 .dockerignore
 .nvmrc
+
+# Documentos de trabajo internos. `ARCHITECTURE.md` NO va aquí a propósito:
+# describe cómo está construido el código, no revela nada sensible y debe
+# viajar con el repositorio para que quien lo clone entienda el sistema.
 CLAUDE.md
 PROGRESS.md
+AUDITORIA_TECNICA.md
 
 # GitHub templates from the original template repo (not needed)
 .github/FUNDING.yml
