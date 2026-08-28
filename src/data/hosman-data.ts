@@ -38,6 +38,12 @@ export const hosmanData = {
       color: 'Blanco'
     },
     {
+      name: 'Bandido',
+      description: 'Caballo criollo colombiano',
+      role: 'Estilo parqueado. Integrante del elenco ecuestre.',
+      color: 'Criollo'
+    },
+    {
       name: 'Triunfador',
       description: 'Caballo criollo colombiano',
       role: 'Retirado del show. Vive en retiro digno. Historia emocional poderosa.',

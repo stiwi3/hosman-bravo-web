@@ -393,7 +393,10 @@ export default function Home() {
               <h2 className="text-section tracking-wide mb-block text-center">
                 EL <span className="text-amber-400">ELENCO</span> ECUESTRE
               </h2>
-              <div className="grid md:grid-cols-3 gap-6">
+              {/* 1 / 2 / 4 columnas. Con `md:grid-cols-3` y cuatro caballos el
+                  último quedaba solo en una segunda fila, descolgado; en
+                  múltiplos de 2 la rejilla queda siempre completa. */}
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {data.horses.map((horse) => (
                   <div
                     key={horse.name}
