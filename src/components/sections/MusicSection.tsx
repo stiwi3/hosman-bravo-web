@@ -1,5 +1,8 @@
+'use client';
+
 import { MusicCard } from '@/components/music/MusicCard';
 import { releasesByDateDesc, releaseKind } from '@/data/music-releases';
+import { useMusicReleases } from '@/hooks/useMusicReleases';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
 /* ---------------------------------------------------------------------------
@@ -11,15 +14,25 @@ import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
    El destacado NO se elige a mano. Es siempre el primero de la lista ordenada
    por fecha descendente, de modo que publicar una canción nueva la asciende
-   sola — cuando los datos vengan de Google Sheets, añadir una fila bastará.
+   sola: basta con añadir su fila a la hoja de cálculo.
 
-   Esta sección y sus piezas son Server Components: no hay estado, y el
-   `prefers-reduced-motion` se resuelve con la variante `motion-reduce:` de
-   Tailwind en vez de con JavaScript. No se envía ni un byte de JS por ella.
+   DE DÓNDE SALEN LOS DATOS
+   Del endpoint de contenido, en el navegador (ver `useMusicReleases`). Esta
+   sección es un componente de cliente por eso y solo por eso — la composición,
+   las medidas y `MusicCard` son exactamente los aprobados, no se ha tocado una
+   clase. Si el endpoint falla se cae al catálogo local y la sección sigue
+   funcionando igual.
 --------------------------------------------------------------------------- */
+
+/** Alto de cada hueco mientras se carga: el mismo que tendrá la pieza real. */
+const PLACEHOLDER_BOX =
+  'rounded-[3px] bg-white/[0.03] ring-1 ring-white/[0.05] motion-safe:animate-pulse';
+
 export function MusicSection() {
-  const releases = releasesByDateDesc();
-  const [latest, ...rest] = releases;
+  const { releases, source } = useMusicReleases();
+
+  const ordered = releasesByDateDesc(releases);
+  const [latest, ...rest] = ordered;
 
   /* Un single destacado se acota más que un videoclip: a 54rem de ancho una
      funda cuadrada sería una caja desproporcionada. Ambas son clases
@@ -38,27 +51,59 @@ export function MusicSection() {
           La música de Hosman Bravo, reunida en un solo sitio.
         </p>
 
-        {latest && (
-          /* ÚLTIMO LANZAMIENTO — solo, centrado y sin nada alrededor. Ni
-             rótulo ni ficha: lo que lo señala como el más reciente es que está
-             solo y es mucho más grande que el resto. */
-          <div className="mt-block flex justify-center">
-            <div className={`w-full ${featuredWidth}`}>
-              <MusicCard release={latest} featured />
+        {source === 'loading' ? (
+          /* CARGA — no es un diseño nuevo: es la MISMA composición con las
+             piezas en hueco, para que al llegar los datos nada salte de sitio.
+             Un destacado y cinco huecos de cuadrícula, con las proporciones
+             reales (16:9 y 4:3). */
+          <div aria-busy="true" aria-live="polite">
+            <span className="sr-only">Cargando la discografía…</span>
+            <div className="mt-block flex justify-center">
+              <div className={`w-full max-w-release ${PLACEHOLDER_BOX} aspect-video`} />
+            </div>
+            <div className="mt-block grid grid-cols-2 gap-[clamp(0.75rem,0.5vw+1.1svh,1.5rem)] lg:grid-cols-3">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className={`${PLACEHOLDER_BOX} aspect-[4/3]`} />
+              ))}
             </div>
           </div>
-        )}
+        ) : ordered.length === 0 ? (
+          /* SIN CATÁLOGO — el endpoint no respondió y el respaldo está vacío a
+             propósito (ver `music-releases.ts`: antes había canciones
+             inventadas y un fallo publicaba una discografía falsa).
 
-        {rest.length > 0 && (
-          /* EL RESTO — dos columnas en móvil, tres a partir de `lg`. La
-             separación se interpola con el viewport igual que el resto del
-             sistema, en vez de saltar por breakpoint: a 320px son 12px y en
-             escritorio 24px, así que la retícula respira sin apretarse nunca. */
-          <div className="mt-block grid grid-cols-2 gap-[clamp(0.75rem,0.5vw+1.1svh,1.5rem)] lg:grid-cols-3">
-            {rest.map((release) => (
-              <MusicCard key={release.id} release={release} />
-            ))}
-          </div>
+             No es un diseño nuevo: es la misma tipografía de la bajada de la
+             sección. Prefiere decir la verdad en una línea antes que dejar una
+             cuadrícula muda que parezca rota. */
+          <p className="mx-auto mt-block max-w-xl text-center text-sm text-gray-500">
+            No hemos podido cargar la discografía en este momento. Puedes escuchar a
+            Hosman Bravo desde los accesos a plataformas de la cabecera.
+          </p>
+        ) : (
+          <>
+            {latest && (
+              /* ÚLTIMO LANZAMIENTO — solo, centrado y sin nada alrededor. Ni
+                 rótulo ni ficha: lo que lo señala como el más reciente es que
+                 está solo y es mucho más grande que el resto. */
+              <div className="mt-block flex justify-center">
+                <div className={`w-full ${featuredWidth}`}>
+                  <MusicCard release={latest} featured />
+                </div>
+              </div>
+            )}
+
+            {rest.length > 0 && (
+              /* EL RESTO — dos columnas en móvil, tres a partir de `lg`. La
+                 separación se interpola con el viewport igual que el resto del
+                 sistema, en vez de saltar por breakpoint: a 320px son 12px y en
+                 escritorio 24px, así que la retícula respira sin apretarse. */
+              <div className="mt-block grid grid-cols-2 gap-[clamp(0.75rem,0.5vw+1.1svh,1.5rem)] lg:grid-cols-3">
+                {rest.map((release) => (
+                  <MusicCard key={release.id} release={release} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

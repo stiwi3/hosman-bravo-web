@@ -130,4 +130,22 @@ export interface MusicRelease {
   spotifyUrl?: string;
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
+
+  /* Resto de plataformas del contrato externo. Están validadas y mapeadas,
+     pero `MusicCard` todavía NO las pinta: hoy solo muestra Spotify, Apple
+     Music y YouTube Music. Se conservan para no tener que volver a abrir la
+     capa de datos cuando se decida ampliar la fila de iconos. */
+  amazonMusicUrl?: string;
+  deezerUrl?: string;
+  tidalUrl?: string;
+  soundcloudUrl?: string;
+  audiomackUrl?: string;
+
+  /* Preparado para la fase de previews; sin uso todavía. */
+  audioPreviewUrl?: string;
+  /** Segundo por el que debe arrancar la preview. */
+  previewStartSec?: number;
+
+  /** Nota interna del catálogo (créditos, duración…). No se muestra. */
+  notes?: string;
 }

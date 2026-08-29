@@ -1,88 +1,44 @@
 /* ---------------------------------------------------------------------------
-   Discografía de la sección MÚSICA.
+   Ayudas del catálogo de música, y el respaldo cuando no hay catálogo remoto.
 
-   ⚠️ DATOS PROVISIONALES. Este archivo es el ÚNICO punto que hay que sustituir
-   cuando los lanzamientos vengan del endpoint de Google Sheets: los tipos ya
-   viven en `./types.ts` y los componentes solo conocen el tipo, no este array.
-   La sustitución será cambiar el literal de abajo por un `fetch`.
+   LA FUENTE REAL ES LA HOJA DE CÁLCULO, a través de `src/lib/content-api`
+   (ver `useMusicReleases`). Aquí no vive contenido.
 
-   ⚠️ PORTADAS PROVISIONALES. Ninguna es el arte real de su single: son fotos
-   que ya estaban en `public/images/` reutilizadas para poder aprobar la
-   composición. No se ha creado ni generado ningún asset nuevo. Al llegar las
-   portadas de verdad solo cambian estas rutas.
+   POR QUÉ EL RESPALDO ESTÁ VACÍO
+   Hasta ahora contenía seis lanzamientos inventados para poder aprobar el
+   diseño. Eso convertía un fallo del endpoint en algo peor que una sección
+   vacía: la web del artista publicando una discografía falsa —títulos, fechas
+   y enlaces que no existen— sin que nada avisara de que era un respaldo.
 
-   Los `youtubeId` de las canciones con videoclip son los reales del canal;
-   todavía no se usan para pintar nada — solo clasifican el lanzamiento.
+   No se ha sustituido por «datos reales» sacados de otro sitio del repositorio
+   porque no los hay: `hosmanData.songs` tiene títulos y años, pero no día ni
+   mes ni enlaces por canción, así que rellenarlo sería inventar igualmente.
+
+   Un array vacío es el estado seguro: si el endpoint cae, MÚSICA lo dice en
+   una línea y no afirma nada falso. Ver el estado vacío de `MusicSection`.
+
+   Este archivo se mantiene porque las dos funciones de abajo sí aportan: son
+   las reglas del catálogo —qué es un vídeo y cómo se ordena— y valen para los
+   datos vengan de donde vengan.
 --------------------------------------------------------------------------- */
 
 import type { MusicRelease, ReleaseKind } from './types';
 
-const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-
-export const musicReleases: readonly MusicRelease[] = [
-  {
-    // El más reciente → es el que la sección destaca automáticamente.
-    // Con videoclip y con todas las plataformas: el caso completo.
-    id: 'borracho-todavia',
-    title: 'Borracho Todavía',
-    releaseDate: '2026-07-18',
-    coverUrl: `${bp}/images/show-02.jpg`,
-    youtubeId: 'wOtsMOie4bw',
-    spotifyUrl: 'https://open.spotify.com/artist/5IZ9yQEhRQ3rTq76sm93R3',
-    appleMusicUrl: 'https://music.apple.com/us/artist/hosman-bravo/1635792181',
-    youtubeMusicUrl: 'https://music.youtube.com/@hosmanbravo'
-  },
-  {
-    // Con videoclip, pero SIN Apple Music: comprueba que un icono ausente no
-    // deja hueco ni se pinta deshabilitado, simplemente no existe.
-    id: 'ranchero-genuino',
-    title: 'Ranchero Genuino',
-    releaseDate: '2025-11-05',
-    coverUrl: `${bp}/images/show-04.jpg`,
-    youtubeId: 'wOtsMOie4bw',
-    spotifyUrl: 'https://open.spotify.com/artist/5IZ9yQEhRQ3rTq76sm93R3',
-    youtubeMusicUrl: 'https://music.youtube.com/@hosmanbravo'
-  },
-  {
-    // Sin videoclip pero CON portada: single con vinilo, una sola plataforma.
-    id: 'ya-perdiste',
-    title: 'Ya Perdiste',
-    releaseDate: '2024-09-12',
-    coverUrl: `${bp}/images/sesion-01.jpg`,
-    spotifyUrl: 'https://open.spotify.com/artist/5IZ9yQEhRQ3rTq76sm93R3'
-  },
-  {
-    // SIN videoclip y SIN portada: cae en el fallback de marca.
-    id: 'no-lo-decidi',
-    title: 'No Lo Decidí',
-    releaseDate: '2024-03-01',
-    spotifyUrl: 'https://open.spotify.com/artist/5IZ9yQEhRQ3rTq76sm93R3',
-    youtubeMusicUrl: 'https://music.youtube.com/@hosmanbravo'
-  },
-  {
-    // Con videoclip y todas las plataformas, pero antiguo: va a la cuadrícula.
-    id: 'una-botella',
-    title: 'Una Botella',
-    releaseDate: '2022-08-19',
-    coverUrl: `${bp}/images/galeria/galeria-04.jpg`,
-    youtubeId: 'wOtsMOie4bw',
-    spotifyUrl: 'https://open.spotify.com/artist/5IZ9yQEhRQ3rTq76sm93R3',
-    appleMusicUrl: 'https://music.apple.com/us/artist/hosman-bravo/1635792181',
-    youtubeMusicUrl: 'https://music.youtube.com/@hosmanbravo'
-  },
-  {
-    // Sin vídeo y SIN NINGUNA plataforma: al pasar el ratón solo aparece el
-    // título. Comprueba que la fila de iconos no deja un hueco vacío.
-    id: 'el-circo-de-tu-amor',
-    title: 'El Circo de Tu Amor',
-    releaseDate: '2022-02-14',
-    coverUrl: `${bp}/images/sesion-02.jpg`
-  }
-];
+/**
+ * Catálogo de respaldo. **Vacío a propósito** — ver el comentario de arriba.
+ *
+ * Si algún día hay lanzamientos que merezca la pena garantizar aunque la hoja
+ * no responda, este es su sitio, pero solo con datos verificados.
+ */
+export const musicReleasesFallback: readonly MusicRelease[] = [];
 
 /**
  * Qué tipo de pieza es. Se deriva del dato, nunca se declara: si hay
  * `youtubeId` hay videoclip. Ver `ReleaseKind` en `./types.ts`.
+ *
+ * La hoja trae además una columna `has_video`, que NO se usa para esto: sin un
+ * identificador no hay vídeo que reproducir por mucho que la casilla diga que
+ * sí, así que manda el dato que de verdad permite hacer algo.
  */
 export function releaseKind(release: MusicRelease): ReleaseKind {
   return release.youtubeId ? 'video' : 'audio';
@@ -91,15 +47,16 @@ export function releaseKind(release: MusicRelease): ReleaseKind {
 /**
  * Los lanzamientos del más reciente al más antiguo.
  *
- * Ordena sobre una COPIA: `sort` muta el array que recibe, y este es un módulo
- * compartido — ordenarlo en sitio alteraría los datos para todo lo demás. Es la
- * misma trampa que ya está documentada en `UpcomingShows`.
+ * Ordena sobre una COPIA: `sort` muta el array que recibe, y este puede venir
+ * del estado de React o de la caché del módulo — ordenarlo en sitio alteraría
+ * los datos compartidos. Es la misma trampa que ya está documentada en
+ * `UpcomingShows`.
  *
  * `localeCompare` sobre fechas ISO ordena bien porque el formato AAAA-MM-DD es
  * lexicográficamente equivalente a su orden cronológico.
  */
 export function releasesByDateDesc(
-  releases: readonly MusicRelease[] = musicReleases
+  releases: readonly MusicRelease[] = musicReleasesFallback
 ): MusicRelease[] {
   return [...releases].sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
 }
