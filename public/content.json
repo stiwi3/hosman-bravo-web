@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-08-31T21:11:12.849Z",
-  "publishedAt": "2026-08-31T21:11:12.849Z",
+  "contentVersion": "2026-08-31T21:23:07.422Z",
+  "publishedAt": "2026-08-31T21:23:07.422Z",
   "music": [
     {
       "id": "borracho-todavia",
@@ -22,7 +22,7 @@
       "has_video": false
     },
     {
-      "id": "tomando-trago-prueba",
+      "id": "tomando-trago",
       "title": "Tomando Trago",
       "release_date": "15-05-2026",
       "cover_url": null,
