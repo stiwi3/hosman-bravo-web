@@ -1,6 +1,8 @@
 {
   "test": true,
+  "version": 2,
   "source": "GOOGLE_APPS_SCRIPT",
-  "message": "Publicación desde Apps Script funcionando",
-  "publishedAt": "2026-08-31T09:30:46.455Z"
+  "message": "Segunda publicación: actualización funcionando",
+  "pruebaActualizacion": "Este campo no existía antes",
+  "publishedAt": "2026-08-31T10:09:59.045Z"
 }
