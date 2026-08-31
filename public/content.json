@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-08-31T10:43:32.789Z",
-  "publishedAt": "2026-08-31T10:43:32.789Z",
+  "contentVersion": "2026-08-31T10:46:22.716Z",
+  "publishedAt": "2026-08-31T10:46:22.716Z",
   "music": [
     {
       "id": "borracho-todavia",
@@ -22,7 +22,7 @@
       "has_video": false
     },
     {
-      "id": "tomando-trago",
+      "id": "tomando-trago PRUEBA",
       "title": "Tomando Trago",
       "release_date": "15-05-2026",
       "cover_url": null,
@@ -40,25 +40,7 @@
       "has_video": false
     },
     {
-      "id": "single-sin-video",
-      "title": "Single sin videoclip",
-      "release_date": "20-11-2025",
-      "cover_url": null,
-      "youtube_id": null,
-      "spotify_url": null,
-      "apple_music_url": null,
-      "youtube_music_url": null,
-      "amazon_music_url": null,
-      "deezer_url": null,
-      "tidal_url": null,
-      "soundcloud_url": null,
-      "audiomack_url": null,
-      "audio_preview_url": null,
-      "preview_start_sec": null,
-      "has_video": false
-    },
-    {
-      "id": "el-circo-de-tu-amor",
+      "id": "el-circo-de-tu-am",
       "title": "El circo de tu amor",
       "release_date": "12-08-2022",
       "cover_url": null,
