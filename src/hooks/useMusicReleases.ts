@@ -6,19 +6,19 @@ import { musicReleasesFallback } from '@/data/music-releases';
 import type { MusicRelease } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
-   Catálogo de música, traído del endpoint de contenido.
+   Catálogo de música, leído del snapshot publicado (`/content.json`).
 
    POR QUÉ EN EL NAVEGADOR Y NO EN EL BUILD
-   El sitio es un export estático servido por GitHub Pages: no hay servidor de
-   Next en producción. Si el catálogo se resolviera durante la compilación,
-   cambiar una fila de la hoja obligaría a recompilar y redesplegar. Trayéndolo
-   desde el navegador, editar la hoja basta.
+   Porque así una publicación de Hosman se ve sin recompilar la web. Si el
+   catálogo se resolviera al compilar, cada cambio en la hoja exigiría un
+   despliegue del frontend; leyéndolo en el navegador, basta con que el
+   snapshot cambie en el repositorio.
 
    El precio: el HTML exportado de `/musica` no contiene los lanzamientos, solo
    el estado de carga. Es la contrapartida elegida a propósito.
 
    LA CACHÉ VIVE EN `content-api`, no aquí. Este hook solo la consulta. Ver
-   allí el porqué del TTL y de la reutilización de peticiones en vuelo.
+   allí por qué sigue haciendo falta pese a que el contenido ya sea estático.
 --------------------------------------------------------------------------- */
 
 export type MusicSource = 'loading' | 'api' | 'fallback';
@@ -67,7 +67,7 @@ export function useMusicReleases(): MusicReleasesState {
       .catch((error: unknown) => {
         if (!alive) return;
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[música] no se pudo leer el catálogo remoto.', error);
+          console.warn('[música] no se pudo leer el snapshot de contenido.', error);
         }
         setState({ releases: [...musicReleasesFallback], source: 'fallback' });
       });

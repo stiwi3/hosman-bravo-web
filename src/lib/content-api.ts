@@ -1,28 +1,36 @@
 import type { MusicRelease } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
-   FRONTERA CON EL CONTENIDO EXTERNO.
+   FRONTERA CON EL CONTENIDO PUBLICADO.
 
-   Aquí, y solo aquí, se sabe que los datos vienen de una hoja de cálculo a
-   través de un Apps Script. `MusicSection` y `MusicCard` no lo saben ni deben
-   saberlo: reciben `MusicRelease[]` y ya está.
+   Aquí, y solo aquí, se sabe de dónde sale el contenido. `MusicSection` y
+   `MusicCard` no lo saben ni deben saberlo: reciben `MusicRelease[]` y ya está.
 
-       Apps Script (JSON)
+       public/content.json  (snapshot estático del propio sitio)
          → fetch
+         → validación del sobre (esquema)
          → validación fila a fila
          → mapeo snake_case → camelCase
          → MusicRelease[]
 
-   PRINCIPIO: el JSON externo NO es de fiar. Lo edita una persona en una hoja
-   de cálculo, así que puede traer una celda mal pegada, una fecha imposible o
-   un enlace en la columna equivocada. Una fila inválida se descarta SOLA; no
-   puede tumbar el catálogo entero. Un campo inválido se descarta SOLO; no
-   puede tumbar su fila.
+   EL NAVEGADOR YA NO HABLA CON GOOGLE. Antes pedía el catálogo a un Apps
+   Script que leía la hoja en vivo, y una sola petición llegó a tardar 23 s: el
+   visitante pagaba la latencia de Google. Ahora Hosman edita la hoja y pulsa
+   PUBLICAR; el Apps Script valida y escribe `public/content.json` en el
+   repositorio, y la web sirve ese archivo como un asset más. Si Google falla o
+   tarda, lo sufre Hosman una vez al publicar — nunca el visitante, que sigue
+   viendo el último snapshot válido.
+
+   PRINCIPIO, QUE NO CAMBIA: el contenido NO es de fiar aunque venga de nuestro
+   propio repositorio. Lo escribe una persona en una hoja de cálculo, así que
+   puede traer una celda mal pegada, una fecha imposible o un enlace en la
+   columna equivocada, y el Apps Script no es la última barrera. Una fila
+   inválida se descarta SOLA; no puede tumbar el catálogo entero. Un campo
+   inválido se descarta SOLO; no puede tumbar su fila.
 --------------------------------------------------------------------------- */
 
-/** Forma que promete el Apps Script. Nada de esto se da por bueno sin validar. */
+/** Forma que promete el snapshot. Nada de esto se da por bueno sin validar. */
 interface RawRelease {
-  active?: unknown;
   id?: unknown;
   title?: unknown;
   release_date?: unknown;
@@ -39,7 +47,6 @@ interface RawRelease {
   audio_preview_url?: unknown;
   preview_start_sec?: unknown;
   has_video?: unknown;
-  notes?: unknown;
 }
 
 /** Por qué se descartó algo. Se usa solo para el aviso en desarrollo. */
@@ -253,78 +260,97 @@ function mapRow(
     soundcloudUrl: platform('soundcloud_url', row.soundcloud_url, 'soundcloud'),
     audiomackUrl: platform('audiomack_url', row.audiomack_url, 'audiomack'),
     audioPreviewUrl: previewUrl?.toString(),
-    previewStartSec: parseStartSeconds(row.preview_start_sec),
-    notes: asTrimmedString(row.notes)
+    previewStartSec: parseStartSeconds(row.preview_start_sec)
   };
 }
 
 /* --- fetch ---------------------------------------------------------------- */
 
-/** URL base del contenido. No es un secreto: es un endpoint público de lectura. */
-export const CONTENT_API_URL = process.env.NEXT_PUBLIC_CONTENT_API_URL ?? '';
+/**
+ * Ruta del snapshot publicado.
+ *
+ * Es un asset del propio sitio, así que va prefijada con el `basePath` igual
+ * que las imágenes: en local resuelve a `/content.json` y en GitHub Pages a
+ * `/hosman-bravo-web/content.json`. Nunca una URL absoluta a GitHub ni a
+ * `raw.githubusercontent.com`: el navegador debe descargar el mismo archivo
+ * que sirve el hosting, sea cual sea.
+ */
+const CONTENT_SNAPSHOT_URL = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/content.json`;
 
-/** Si el endpoint no responde en este tiempo, se abandona y se usa el fallback. */
-const TIMEOUT_MS = 8000;
+/**
+ * Red de seguridad por si la conexión se queda colgada sin responder.
+ *
+ * Con el snapshot servido por el propio hosting esto casi no debería saltar
+ * nunca —si ese archivo no llega, el sitio entero está en problemas—, pero
+ * cuesta cuatro líneas y evita que la sección espere indefinidamente.
+ */
+const TIMEOUT_MS = 5000;
+
+/** La versión de esquema que este código sabe leer. */
+const SUPPORTED_SCHEMA_VERSION = 1;
 
 /**
  * Trae y normaliza el catálogo de música. Sin caché: es la petición cruda.
  *
- * Lanza si la red o la forma de la respuesta fallan; quien llama decide qué
- * hacer. Lo que NO lanza es una fila mala: eso se descarta y se sigue.
+ * Lanza si la red o el ESQUEMA del snapshot fallan; quien llama decide qué
+ * hacer. Lo que NO lanza es una fila mala: eso se descarta y se sigue, para
+ * que un enlace mal pegado no deje al artista sin discografía.
  *
  * Para consumo normal usa `getMusicReleases()`, que añade caché y reutiliza
  * las peticiones en vuelo.
  */
-export async function fetchMusicReleases(signal?: AbortSignal): Promise<MusicFetchResult> {
-  if (!CONTENT_API_URL) {
-    throw new Error('NEXT_PUBLIC_CONTENT_API_URL no está configurada');
-  }
-
-  // Timeout propio, combinado con el `signal` de quien llama (el desmontaje del
-  // componente). Sin esto, un endpoint que acepta la conexión y no responde
-  // dejaría la sección esperando para siempre.
-  const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), TIMEOUT_MS);
-  const signals = signal ? [signal, timeout.signal] : [timeout.signal];
+export async function fetchMusicReleases(): Promise<MusicFetchResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${CONTENT_API_URL}?resource=music`, {
-      signal: AbortSignal.any(signals),
-      // El interés es ver los cambios de la hoja sin recompilar, así que no se
-      // cachea la respuesta.
-      cache: 'no-store'
+    const response = await fetch(CONTENT_SNAPSHOT_URL, {
+      signal: controller.signal,
+      /* `no-cache` y NO `no-store`: se revalida siempre contra el servidor,
+         pero si el snapshot no ha cambiado responde 304 y no se descarga el
+         cuerpo. Así una publicación nueva de Hosman se ve en la siguiente
+         carga sin recompilar el frontend, y a la vez no se malgasta ancho de
+         banda cuando no ha publicado nada. `no-store` obligaría a bajar el
+         JSON entero cada vez sin ninguna ganancia. */
+      cache: 'no-cache'
     });
 
     if (!response.ok) {
-      throw new Error(`El endpoint respondió ${response.status}`);
+      throw new Error(`El snapshot respondió ${response.status}`);
     }
 
     const payload: unknown = await response.json();
-    if (typeof payload !== 'object' || payload === null) {
-      throw new Error('La respuesta no es un objeto');
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+      throw new Error('El snapshot no es un objeto');
     }
 
-    const body = payload as { ok?: unknown; data?: unknown; updatedAt?: unknown };
-    if (body.ok !== true) throw new Error('La respuesta no trae ok: true');
-    if (!Array.isArray(body.data)) throw new Error('La respuesta no trae un array en data');
+    /* VALIDACIÓN DEL SOBRE. Que el archivo salga de nuestro repositorio no lo
+       hace fiable: lo genera un Apps Script a partir de lo que alguien escribe
+       en una hoja. Se comprueba explícitamente antes de mirar las filas. */
+    const body = payload as {
+      schemaVersion?: unknown;
+      music?: unknown;
+      publishedAt?: unknown;
+    };
+
+    if (body.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+      throw new Error(
+        `Esquema no compatible: se esperaba ${SUPPORTED_SCHEMA_VERSION} y llegó ${String(
+          body.schemaVersion
+        )}`
+      );
+    }
+    if (!Array.isArray(body.music)) {
+      throw new Error('El snapshot no trae un array en `music`');
+    }
 
     const releases: MusicRelease[] = [];
     const rejectedRows: RejectionNote[] = [];
     const rejectedFields: RejectionNote[] = [];
 
-    for (const entry of body.data as RawRelease[]) {
+    for (const entry of body.music as RawRelease[]) {
       if (typeof entry !== 'object' || entry === null) {
         rejectedRows.push({ id: '(desconocido)', field: '(fila)', reason: 'no es un objeto' });
-        continue;
-      }
-      // El Apps Script ya filtra `active = FALSE`, pero se vuelve a comprobar
-      // aquí: es la última barrera antes de publicar algo, y es barata.
-      if (entry.active === false) {
-        rejectedRows.push({
-          id: asTrimmedString(entry.id) ?? '(sin id)',
-          field: 'active',
-          reason: 'marcada como inactiva'
-        });
         continue;
       }
 
@@ -342,7 +368,9 @@ export async function fetchMusicReleases(signal?: AbortSignal): Promise<MusicFet
 
     return {
       releases,
-      updatedAt: asTrimmedString(body.updatedAt),
+      // Solo se acepta si es una cadena con algo: se muestra en el aviso de
+      // desarrollo, no se interpreta como fecha.
+      updatedAt: asTrimmedString(body.publishedAt),
       rejectedRows,
       rejectedFields
     };
@@ -354,24 +382,33 @@ export async function fetchMusicReleases(signal?: AbortSignal): Promise<MusicFet
 /* --- caché ---------------------------------------------------------------- */
 
 /**
- * CACHÉ DEL CATÁLOGO.
+ * CACHÉ DEL CATÁLOGO. Se mantiene, pero ahora sirve para otra cosa.
  *
- * El problema que resuelve: `MusicSection` vive dentro de `children`, así que
- * se remonta en cada navegación a `/musica`. Sin caché, cada visita pagaba una
- * consulta al Apps Script — medidos ~3 s de espera con el esqueleto delante,
- * una y otra vez.
+ * Con el Apps Script existía para no pagar ~3 s de latencia de Google en cada
+ * visita. Eso ya no aplica: el snapshot es un archivo del propio hosting y la
+ * caché HTTP del navegador se encarga del tráfico.
  *
- * Es deliberadamente pequeña: dos variables de módulo. No hace falta más, y
- * cualquier biblioteca de datos sería infraestructura nueva para un único
- * recurso.
+ * SIGUE HACIENDO FALTA por una razón distinta y puramente de interfaz:
+ * `MusicSection` vive dentro de `children`, así que **se remonta en cada
+ * navegación a `/musica`**. Sin nada en memoria, cada reentrada arrancaría con
+ * el estado de carga y el esqueleto parpadearía aunque los datos llegasen del
+ * disco en milisegundos — porque `fetch` es asíncrono por definición y siempre
+ * habría al menos un render sin datos. La caché permite que el primer render
+ * ya traiga el catálogo (ver `peekMusicReleases`).
+ *
+ * El TTL, además, es lo que hace que una publicación nueva de Hosman aparezca
+ * en una pestaña que lleve horas abierta, sin obligar a recargar.
+ *
+ * Es deliberadamente pequeña: dos variables de módulo. Cualquier biblioteca de
+ * datos sería infraestructura nueva para un único recurso.
  *
  * NO se persiste en `localStorage`: la vida útil de esta caché es la de la
  * pestaña. Persistirla obligaría a decidir invalidación entre sesiones y a
- * tratar datos corruptos de una sesión anterior, y todavía no hace falta.
+ * tratar datos corruptos de una sesión anterior, y no hace falta.
  */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** Última respuesta buena del endpoint, con el momento en que se obtuvo. */
+/** Último snapshot bueno, con el momento en que se leyó. */
 let cached: { result: MusicFetchResult; at: number } | null = null;
 
 /**
@@ -385,8 +422,8 @@ let inFlight: Promise<MusicFetchResult> | null = null;
 function logResult(result: MusicFetchResult) {
   if (process.env.NODE_ENV === 'production') return;
   console.info(
-    `[música] ${result.releases.length} lanzamientos desde el endpoint` +
-      (result.updatedAt ? ` · actualizado ${result.updatedAt}` : '')
+    `[música] ${result.releases.length} lanzamientos desde el snapshot` +
+      (result.updatedAt ? ` · publicado ${result.updatedAt}` : '')
   );
   for (const r of result.rejectedRows) {
     console.warn(`[música] fila descartada «${r.id}» (${r.field}): ${r.reason}`);
@@ -415,7 +452,7 @@ export function peekMusicReleases(): MusicFetchResult | null {
  *   · petición en vuelo   → se comparte esa misma promesa;
  *   · caducado o vacío    → se consulta de nuevo.
  *
- * SI LA NUEVA CONSULTA FALLA pero hay un catálogo remoto anterior, se devuelve
+ * SI LA NUEVA CONSULTA FALLA pero hay un catálogo anterior, se devuelve
  * ese aunque esté caducado: datos reales viejos son mejores que ninguno. No se
  * refresca su marca de tiempo, así que el siguiente intento volverá a probar la
  * red en lugar de quedarse anclado a una copia rancia.
@@ -436,7 +473,7 @@ export function getMusicReleases(): Promise<MusicFetchResult> {
       if (cached) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn(
-            '[música] el endpoint falló; se conserva el catálogo remoto anterior.',
+            '[música] el snapshot falló; se conserva el catálogo anterior.',
             error
           );
         }

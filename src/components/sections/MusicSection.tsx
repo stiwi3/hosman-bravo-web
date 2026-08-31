@@ -17,11 +17,11 @@ import { SCENE_FULL, SCENE_CONTENT } from './scene';
    sola: basta con añadir su fila a la hoja de cálculo.
 
    DE DÓNDE SALEN LOS DATOS
-   Del endpoint de contenido, en el navegador (ver `useMusicReleases`). Esta
-   sección es un componente de cliente por eso y solo por eso — la composición,
-   las medidas y `MusicCard` son exactamente los aprobados, no se ha tocado una
-   clase. Si el endpoint falla se cae al catálogo local y la sección sigue
-   funcionando igual.
+   Del snapshot publicado (`/content.json`), leído en el navegador (ver
+   `useMusicReleases`). Esta sección es un componente de cliente por eso y solo
+   por eso — la composición, las medidas y `MusicCard` son exactamente los
+   aprobados, no se ha tocado una clase. Si el snapshot no se puede leer, la
+   sección lo dice y sigue funcionando.
 --------------------------------------------------------------------------- */
 
 /** Alto de cada hueco mientras se carga: el mismo que tendrá la pieza real. */
@@ -68,7 +68,7 @@ export function MusicSection() {
             </div>
           </div>
         ) : ordered.length === 0 ? (
-          /* SIN CATÁLOGO — el endpoint no respondió y el respaldo está vacío a
+          /* SIN CATÁLOGO — el snapshot no se pudo leer y el respaldo está vacío a
              propósito (ver `music-releases.ts`: antes había canciones
              inventadas y un fallo publicaba una discografía falsa).
 

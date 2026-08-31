@@ -202,12 +202,79 @@ scroll conoce la altura de verdad de los dos flancos de la cabecera, que no es s
 
 ## 8. Datos
 
-`src/data/hosman-data.ts` — **fuente única de contenido**: textos, biografía, caballos,
-canciones, eventos, enlaces, rutas de assets. Para cambios de contenido se edita ahí, no
-el JSX.
+Hay **dos** orígenes, y no se mezclan:
 
-`src/data/types.ts` — **frontera de tipos**: `SectionId`, `NavItem`, `ShowEvent` y los
-tipos de los datos. Ningún componente define la forma de los datos que pinta.
+**Contenido fijo** — `src/data/hosman-data.ts`: textos, biografía, caballos, enlaces de
+redes, rutas de assets. Lo edita quien toca el código.
+
+**Contenido publicable** — `public/content.json`: lo edita Hosman desde una hoja de
+cálculo y lo publica él mismo. Hoy contiene `music`; `events` y `config` están previstos.
+
+`src/data/types.ts` — **frontera de tipos**: `SectionId`, `NavItem`, `ShowEvent`,
+`MusicRelease` y demás. Ningún componente define la forma de los datos que pinta.
+
+### El circuito de publicación
+
+```
+Hosman → Google Sheet privado → botón PUBLICAR
+       → Apps Script: valida TODO antes de tocar nada
+       → API de GitHub: reescribe public/content.json + commit
+       → despliegue del sitio
+       → el navegador lee /content.json como un asset más
+```
+
+**El visitante nunca habla con Google.** Antes el navegador pedía el catálogo a un Apps
+Script que leía la hoja en vivo, y una petición llegó a tardar 23 s. Ahora esa latencia la
+paga Hosman una vez al publicar; el visitante siempre ve el último snapshot válido.
+
+**Si la validación falla, no se publica nada** y el snapshot anterior queda intacto. Y
+como cada publicación es un commit, hay historial y se puede volver atrás.
+
+`src/lib/content-api.ts` es la **única** frontera con ese contenido: valida el sobre
+(`schemaVersion === 1`, `music` es array), valida fila a fila, traduce snake_case a
+camelCase y devuelve `MusicRelease[]`. Nada más en la aplicación sabe de dónde salen los
+datos.
+
+⚠️ **El snapshot NO es de fiar por estar en nuestro repositorio.** Lo genera un script a
+partir de lo que alguien escribe en una hoja. La validación de cliente se mantiene entera:
+una fila inválida se descarta sola, un campo inválido se descarta solo. Las URL se
+comprueban por **hostname completo** —un enlace de Amazon pegado en la columna de Apple no
+puede acabar bajo el icono de Apple— y `youtube_id` solo se acepta como identificador de
+11 caracteres, nunca como HTML.
+
+### Patrón obligatorio para nuevas hojas del CMS
+
+Al conectar una hoja nueva (`02_EVENTOS`, `03_CONFIG_GLOBAL`…), replicar lo ya hecho en
+`01_MUSICA`:
+
+1. **La hoja es la primera capa preventiva**, no la única: formatos, desplegables,
+   casillas y notas para que el editor se equivoque menos.
+2. **Apps Script es la capa autoritativa.** Una `validate[Recurso]ForPublication_()` que
+   lea la hoja sin caché, valide todas las filas activas y devuelva `{ok, errors, data}`.
+3. Las filas **inactivas son borradores** y pueden estar incompletas; las activas deben
+   cumplir todos los campos obligatorios.
+4. Cada error lleva al menos `sheet`, `row`, `field` y `message`, para poder mostrárselo
+   al editor.
+5. `publishContentSnapshot()` valida **todos** los recursos antes de llamar a GitHub. Un
+   solo error crítico cancela la publicación entera.
+6. Reutilizar los cleaners existentes (`cleanString`, `cleanUrl`, `formatDateDDMMYYYY`…);
+   no duplicarlos.
+7. **No publicar campos editoriales internos** como `notes`.
+8. Mantener `events`, `config`, etc. en la raíz del snapshot aunque estén vacíos.
+9. **No tocar `publishJsonToGitHub_()`** salvo necesidad justificada: es infraestructura
+   probada.
+10. Definir por escrito, para cada hoja: campos obligatorios, opcionales, derivados,
+    formatos, unicidad de IDs y qué es público.
+11. Añadir un `setup[Recurso]Sheet()` para que las validaciones visuales de la hoja sean
+    reproducibles y no dependan de configuración manual.
+
+### Secretos
+
+La credencial que usa Apps Script para escribir en GitHub vive **solo** en las Script
+Properties privadas de Apps Script, se lee con `PropertiesService.getScriptProperties()` y
+**nunca** aparece en este repositorio, en el frontend, en un `.env` ni en la hoja. La
+configuración no secreta (repositorio, rama, ruta del snapshot) vive también ahí.
+`content.json` contiene exclusivamente información pública destinada a la web.
 
 ⚠️ **Toda ruta de asset lleva el prefijo `${bp}`** (`NEXT_PUBLIC_BASE_PATH`). Una ruta
 escrita como `'/images/foto.jpg'` funciona en local y da 404 en producción — ya ocurrió.

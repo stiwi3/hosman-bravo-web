@@ -41,12 +41,6 @@ jobs:
         env:
           # basePath automático según el nombre del repositorio
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          # Endpoint de contenido (Apps Script, solo lectura). Las variables
-          # NEXT_PUBLIC_* se incrustan en el bundle al compilar, así que sin
-          # esto la web publicada se quedaría sin catálogo y caería siempre al
-          # respaldo local. No es un secreto — es una Web App pública de
-          # lectura, y su valor viaja igualmente al navegador.
-          NEXT_PUBLIC_CONTENT_API_URL: https://script.google.com/macros/s/AKfycbx3s8FVdbV_KGF4fVlSkk5aBfNFVuDRLelO6ORY6Gps2YT5Fy__sSyMgxmtS03Sl1kt/exec
 
       - name: Subir artefacto
         uses: actions/upload-pages-artifact@v3

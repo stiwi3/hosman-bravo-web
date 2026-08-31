@@ -95,9 +95,10 @@ export interface Song {
 /* ---------------------------------------------------------------------------
    MÚSICA
 
-   Este contrato está pensado para que la MISMA estructura llegue después desde
-   un endpoint conectado a Google Sheets. Cuando eso ocurra solo cambia el
-   origen (`src/data/music-releases.ts`); ni los tipos ni la interfaz cambian.
+   Es la forma que tiene la música dentro del snapshot publicado
+   (`public/content.json`), que Hosman genera desde la hoja de cálculo. El
+   snapshot lo trae en snake_case; la traducción a estos nombres ocurre en
+   `src/lib/content-api`, que es la única frontera con el contenido externo.
 
    Por eso todo lo opcional es opcional de verdad: la UI decide qué mostrar a
    partir de lo que hay, no al revés. Una hoja de cálculo tendrá celdas vacías.
@@ -145,7 +146,4 @@ export interface MusicRelease {
   audioPreviewUrl?: string;
   /** Segundo por el que debe arrancar la preview. */
   previewStartSec?: number;
-
-  /** Nota interna del catálogo (créditos, duración…). No se muestra. */
-  notes?: string;
 }

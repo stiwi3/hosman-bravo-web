@@ -1,12 +1,13 @@
 /* ---------------------------------------------------------------------------
-   Ayudas del catálogo de música, y el respaldo cuando no hay catálogo remoto.
+   Ayudas del catálogo de música, y el respaldo cuando no hay catálogo.
 
-   LA FUENTE REAL ES LA HOJA DE CÁLCULO, a través de `src/lib/content-api`
-   (ver `useMusicReleases`). Aquí no vive contenido.
+   LA FUENTE REAL ES EL SNAPSHOT PUBLICADO (`public/content.json`), que Hosman
+   genera desde la hoja de cálculo al pulsar PUBLICAR. Se lee en
+   `src/lib/content-api`. Aquí no vive contenido.
 
    POR QUÉ EL RESPALDO ESTÁ VACÍO
    Hasta ahora contenía seis lanzamientos inventados para poder aprobar el
-   diseño. Eso convertía un fallo del endpoint en algo peor que una sección
+   diseño. Eso convertía un fallo de lectura en algo peor que una sección
    vacía: la web del artista publicando una discografía falsa —títulos, fechas
    y enlaces que no existen— sin que nada avisara de que era un respaldo.
 
@@ -14,7 +15,7 @@
    porque no los hay: `hosmanData.songs` tiene títulos y años, pero no día ni
    mes ni enlaces por canción, así que rellenarlo sería inventar igualmente.
 
-   Un array vacío es el estado seguro: si el endpoint cae, MÚSICA lo dice en
+   Un array vacío es el estado seguro: si el snapshot falla, MÚSICA lo dice en
    una línea y no afirma nada falso. Ver el estado vacío de `MusicSection`.
 
    Este archivo se mantiene porque las dos funciones de abajo sí aportan: son
