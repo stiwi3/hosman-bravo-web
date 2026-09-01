@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-08-31T21:36:35.072Z",
-  "publishedAt": "2026-08-31T21:36:35.072Z",
+  "contentVersion": "2026-09-01T09:17:02.012Z",
+  "publishedAt": "2026-09-01T09:17:02.012Z",
   "music": [
     {
       "id": "borracho-todavia",
@@ -10,9 +10,9 @@
       "cover_url": null,
       "youtube_id": null,
       "spotify_url": null,
-      "apple_music_url": "https://music.amazon.es/albums/B0GX2KXDTM",
+      "apple_music_url": null,
       "youtube_music_url": null,
-      "amazon_music_url": null,
+      "amazon_music_url": "https://music.amazon.es/albums/B0GX2KXDTM",
       "deezer_url": null,
       "tidal_url": null,
       "soundcloud_url": null,
