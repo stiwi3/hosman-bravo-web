@@ -1,4 +1,13 @@
-import { SpotifyIcon, AppleMusicIcon, YouTubeMusicIcon } from '@/components/icons/PlatformIcons';
+import {
+  SpotifyIcon,
+  AppleMusicIcon,
+  YouTubeMusicIcon,
+  AmazonMusicIcon,
+  DeezerIcon,
+  TidalIcon,
+  SoundCloudIcon,
+  AudiomackIcon
+} from '@/components/icons/PlatformIcons';
 import { ReleaseVisual } from './ReleaseVisual';
 import { releaseKind } from '@/data/music-releases';
 import type { MusicRelease } from '@/data/types';
@@ -42,13 +51,59 @@ import type { MusicRelease } from '@/data/types';
    funcionando por encima de esa superficie sin más cambios.
 --------------------------------------------------------------------------- */
 
-/** Solo se pintan las plataformas que de verdad tienen URL. */
+/**
+ * PLATAFORMAS TITULARES, de más a menos relevante. Son las que se muestran
+ * siempre que la canción las tenga.
+ */
+const PRIMARY_PLATFORMS = [
+  { key: 'spotify', name: 'Spotify', field: 'spotifyUrl', Icon: SpotifyIcon },
+  { key: 'tidal', name: 'Tidal', field: 'tidalUrl', Icon: TidalIcon },
+  { key: 'apple', name: 'Apple Music', field: 'appleMusicUrl', Icon: AppleMusicIcon },
+  { key: 'ytmusic', name: 'YouTube Music', field: 'youtubeMusicUrl', Icon: YouTubeMusicIcon }
+] as const;
+
+/**
+ * SUPLENTES. Solo entran a ocupar el hueco que deje una titular ausente, en
+ * este orden.
+ */
+const RESERVE_PLATFORMS = [
+  { key: 'amazon', name: 'Amazon Music', field: 'amazonMusicUrl', Icon: AmazonMusicIcon },
+  { key: 'deezer', name: 'Deezer', field: 'deezerUrl', Icon: DeezerIcon },
+  { key: 'soundcloud', name: 'SoundCloud', field: 'soundcloudUrl', Icon: SoundCloudIcon },
+  { key: 'audiomack', name: 'Audiomack', field: 'audiomackUrl', Icon: AudiomackIcon }
+] as const;
+
+/**
+ * Cuántos iconos caben sin que la fila se parta sobre la carátula.
+ *
+ * Con las ocho plataformas rellenas, en una tarjeta de la cuadrícula a 320px la
+ * fila se rompía en varias líneas y tapaba la imagen. Cuatro es el máximo que
+ * se lee de un vistazo y no compite con el título.
+ */
+const MAX_VISIBLE_PLATFORMS = 4;
+
+/**
+ * Las plataformas que se pintan, ya resueltas.
+ *
+ * Primero las titulares que tengan enlace, en su orden; después las suplentes,
+ * solo hasta completar el cupo. Así una canción que no esté en Spotify no
+ * desperdicia el hueco: lo ocupa la siguiente que sí tenga.
+ *
+ * El icono aparece si —y solo si— esa plataforma trae un enlace que ha pasado
+ * la validación de dominio del CMS. Anunciar un destino que no existe, o que
+ * lleva a la tienda equivocada, es peor que no anunciarlo.
+ */
 function platformsOf(release: MusicRelease) {
-  return [
-    { key: 'spotify', name: 'Spotify', url: release.spotifyUrl, Icon: SpotifyIcon },
-    { key: 'apple', name: 'Apple Music', url: release.appleMusicUrl, Icon: AppleMusicIcon },
-    { key: 'ytmusic', name: 'YouTube Music', url: release.youtubeMusicUrl, Icon: YouTubeMusicIcon }
-  ].filter((p): p is typeof p & { url: string } => Boolean(p.url));
+  const withUrl = (entry: (typeof PRIMARY_PLATFORMS | typeof RESERVE_PLATFORMS)[number]) => {
+    const url = release[entry.field];
+    return url ? { key: entry.key, name: entry.name, Icon: entry.Icon, url } : null;
+  };
+
+  const resolved = [...PRIMARY_PLATFORMS, ...RESERVE_PLATFORMS]
+    .map(withUrl)
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+  return resolved.slice(0, MAX_VISIBLE_PLATFORMS);
 }
 
 /* Los dos tamaños de la pieza. Van como literales estáticos y no como
