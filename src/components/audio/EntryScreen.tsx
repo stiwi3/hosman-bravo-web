@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
 import { useAudio } from './AudioProvider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
@@ -159,6 +160,12 @@ function CurtainLayer({
 export function EntryScreen() {
   const { enter } = useAudio();
   const reducedMotion = useReducedMotion();
+  const router = useRouter();
+
+  /* `useSelectedLayoutSegment` y no `usePathname`: lee el árbol de rutas y no
+     la cadena de URL, así que no le afecta el `basePath` de GitHub Pages.
+     Devuelve `null` cuando la ruta es `/`. */
+  const isHome = useSelectedLayoutSegment() === null;
   const [leaving, setLeaving] = useState(false);
   const [gone, setGone] = useState(false);
   /** Solo se activa con hover real de puntero; en táctil no existe y el tap
@@ -189,6 +196,28 @@ export function EntryScreen() {
     setLeaving(true);
     // No se espera al audio: si el navegador lo rechaza, se entra igual.
     void enter();
+
+    /* EMBUDO DE ENTRADA.
+     *
+     * Se entre por donde se entre, el telón abre sobre INICIO. Alguien que
+     * pegue `/musica` en la barra de direcciones no debe saltarse la portada:
+     * el hero es la carta de presentación del artista y la experiencia está
+     * pensada para empezar ahí.
+     *
+     * `replace` y no `push`: la URL profunda desaparece del historial, así que
+     * el botón «atrás» devuelve al sitio de donde vino el visitante y no a una
+     * sección que nunca llegó a ver.
+     *
+     * Se lanza AHORA, no al terminar la animación: el cambio de ruta ocurre
+     * mientras las cortinas se abren, de modo que lo que aparece detrás ya es
+     * el hero. Esperar dejaría ver un instante la sección equivocada.
+     *
+     * ⚠️ El precio es que los enlaces profundos dejan de llevar a su sección:
+     * compartir `/contacto` lleva al hero. Es una decisión de embudo, tomada a
+     * conciencia. */
+    if (!isHome) {
+      router.replace('/');
+    }
   };
 
   /* CLOSED → PEEK (hover) → OPEN (clic). El estado de apertura manda siempre
