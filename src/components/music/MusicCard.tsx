@@ -57,9 +57,9 @@ import type { MusicRelease } from '@/data/types';
  */
 const PRIMARY_PLATFORMS = [
   { key: 'spotify', name: 'Spotify', field: 'spotifyUrl', Icon: SpotifyIcon },
-  { key: 'tidal', name: 'Tidal', field: 'tidalUrl', Icon: TidalIcon },
+  { key: 'ytmusic', name: 'YouTube Music', field: 'youtubeMusicUrl', Icon: YouTubeMusicIcon },
   { key: 'apple', name: 'Apple Music', field: 'appleMusicUrl', Icon: AppleMusicIcon },
-  { key: 'ytmusic', name: 'YouTube Music', field: 'youtubeMusicUrl', Icon: YouTubeMusicIcon }
+  { key: 'amazon', name: 'Amazon Music', field: 'amazonMusicUrl', Icon: AmazonMusicIcon }
 ] as const;
 
 /**
@@ -67,8 +67,8 @@ const PRIMARY_PLATFORMS = [
  * este orden.
  */
 const RESERVE_PLATFORMS = [
-  { key: 'amazon', name: 'Amazon Music', field: 'amazonMusicUrl', Icon: AmazonMusicIcon },
   { key: 'deezer', name: 'Deezer', field: 'deezerUrl', Icon: DeezerIcon },
+  { key: 'tidal', name: 'Tidal', field: 'tidalUrl', Icon: TidalIcon },
   { key: 'soundcloud', name: 'SoundCloud', field: 'soundcloudUrl', Icon: SoundCloudIcon },
   { key: 'audiomack', name: 'Audiomack', field: 'audiomackUrl', Icon: AudiomackIcon }
 ] as const;
