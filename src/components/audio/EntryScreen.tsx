@@ -5,6 +5,7 @@ import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
 import { useAudio } from './AudioProvider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { hosmanData } from '@/data/hosman-data';
+import { DIRECT_ENTRY_SECTIONS, type SectionId } from '@/data/types';
 
 /** Duración de la salida. Con movimiento reducido se acorta casi a cero. */
 const EXIT_MS = 1600;
@@ -165,7 +166,10 @@ export function EntryScreen() {
   /* `useSelectedLayoutSegment` y no `usePathname`: lee el árbol de rutas y no
      la cadena de URL, así que no le afecta el `basePath` de GitHub Pages.
      Devuelve `null` cuando la ruta es `/`. */
-  const isHome = useSelectedLayoutSegment() === null;
+  const segment = useSelectedLayoutSegment();
+  const isHome = segment === null;
+  const staysOnRoute =
+    isHome || DIRECT_ENTRY_SECTIONS.includes(segment as SectionId);
   const [leaving, setLeaving] = useState(false);
   const [gone, setGone] = useState(false);
   /** Solo se activa con hover real de puntero; en táctil no existe y el tap
@@ -199,23 +203,19 @@ export function EntryScreen() {
 
     /* EMBUDO DE ENTRADA.
      *
-     * Se entre por donde se entre, el telón abre sobre INICIO. Alguien que
-     * pegue `/musica` en la barra de direcciones no debe saltarse la portada:
-     * el hero es la carta de presentación del artista y la experiencia está
-     * pensada para empezar ahí.
+     * Quien pega una URL profunda acaba en INICIO: el hero es la carta de
+     * presentación y la experiencia está pensada para empezar ahí. Las escenas
+     * de `DIRECT_ENTRY_SECTIONS` se libran — hoy solo `/contacto`, porque es el
+     * enlace que se manda a un promotor.
      *
      * `replace` y no `push`: la URL profunda desaparece del historial, así que
      * el botón «atrás» devuelve al sitio de donde vino el visitante y no a una
      * sección que nunca llegó a ver.
      *
-     * Se lanza AHORA, no al terminar la animación: el cambio de ruta ocurre
-     * mientras las cortinas se abren, de modo que lo que aparece detrás ya es
-     * el hero. Esperar dejaría ver un instante la sección equivocada.
-     *
-     * ⚠️ El precio es que los enlaces profundos dejan de llevar a su sección:
-     * compartir `/contacto` lleva al hero. Es una decisión de embudo, tomada a
-     * conciencia. */
-    if (!isHome) {
+     * Se lanza AHORA, no al terminar la animación. `SiteShell` ya está pintando
+     * el hero detrás del telón (ver allí), así que el cambio de ruta ocurre
+     * mientras las cortinas se abren y el visitante nunca ve un salto. */
+    if (!staysOnRoute) {
       router.replace('/');
     }
   };

@@ -62,6 +62,19 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ];
 
 /**
+ * EMBUDO DE ENTRADA: escenas a las que SÍ se puede llegar directamente.
+ *
+ * Por norma, quien pega una URL profunda en el navegador acaba en INICIO: el
+ * hero es la carta de presentación y la experiencia está pensada para empezar
+ * ahí. `/contacto` es la excepción, y por una razón comercial: es el enlace que
+ * se comparte con un promotor, y hacerle dar un rodeo por la portada para
+ * encontrar el formulario sería trabajar en contra del propio negocio.
+ *
+ * Lo que hay detrás del telón es SIEMPRE el destino final. Ver `SiteShell`.
+ */
+export const DIRECT_ENTRY_SECTIONS: readonly SectionId[] = ['contacto'];
+
+/**
  * Una fecha del bloque PRÓXIMOS SHOWS.
  *
  * `date` en ISO (AAAA-MM-DD): es lo que permitirá descartar fechas pasadas

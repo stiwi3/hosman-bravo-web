@@ -5,12 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSelectedLayoutSegment } from 'next/navigation';
 import { EntryScreen } from '@/components/audio/EntryScreen';
+import { useAudio } from '@/components/audio/AudioProvider';
 import { TrackPlayer } from '@/components/audio/TrackPlayer';
 import { MusicPlatforms } from '@/components/MusicPlatforms';
 import { LeatherMenuPhoto } from '@/components/LeatherMenuPhoto';
 import { HeroScene } from '@/components/HeroScene';
 import { hosmanData } from '@/data/hosman-data';
-import { NAV_ITEMS, type SectionId } from '@/data/types';
+import { NAV_ITEMS, DIRECT_ENTRY_SECTIONS, type SectionId } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
    LA CAPA PERSISTENTE.
@@ -36,12 +37,32 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
      cadena de URL, así que es agnóstico al `basePath`. En GitHub Pages la URL
      real es `/hosman-bravo-web/galeria` y aquí sigue llegando `'galeria'`.
      Devuelve `null` en `/`. */
+  const { hasEntered } = useAudio();
+
   const segment = useSelectedLayoutSegment();
 
   /* Se contrasta contra la propia tabla de navegación en vez de castear: un
      segmento desconocido (la página 404) cae en INICIO sin romper nada. */
   const current: SectionId = NAV_ITEMS.find((item) => item.id === segment)?.id ?? 'home';
   const isHome = current === 'home';
+
+  /* LO QUE SE VE POR LA ABERTURA DEL TELÓN ES EL DESTINO FINAL.
+   *
+   * Mientras la portada sigue puesta, el visitante ya entrevé lo que hay
+   * detrás: el telón es semitransparente en sus zonas oscuras y el gesto de
+   * hover abre una rendija. Si alguien entra por `/musica`, ahí debe estar el
+   * hero —que es adonde va a acabar—, no la sección de la que viene.
+   *
+   * `hasEntered` viene de `AudioProvider` porque el gesto que abre el telón es
+   * el mismo que arranca el audio: una sola verdad para «ya se ha entrado».
+   *
+   * Las escenas de `DIRECT_ENTRY_SECTIONS` (hoy `/contacto`) no se redirigen,
+   * así que detrás del telón se muestran ellas mismas: siguen siendo su propio
+   * destino. */
+  const willBeFunneled =
+    !isHome && !DIRECT_ENTRY_SECTIONS.includes(current) && !hasEntered;
+
+  const showHero = isHome || willBeFunneled;
 
   const headerRef = useRef<HTMLElement>(null);
 
@@ -141,7 +162,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             `hidden` es `display:none`, no desmontaje: el ResizeObserver de
             `InteractiveSmoke` recibe entonces 0×0 y `applySize` sale por su
             guarda, que es justo lo que impide recrear las texturas. */}
-        <div className={isHome ? 'contents' : 'hidden'}>
+        <div className={showHero ? 'contents' : 'hidden'}>
           <HeroScene />
         </div>
 
