@@ -268,6 +268,51 @@ Al conectar una hoja nueva (`02_EVENTOS`, `03_CONFIG_GLOBAL`…), replicar lo ya
 11. Añadir un `setup[Recurso]Sheet()` para que las validaciones visuales de la hoja sean
     reproducibles y no dependan de configuración manual.
 
+### El Apps Script, por dentro
+
+**No vive en este repositorio.** Vive en Google, asociado al Sheet, y se sincroniza con
+`clasp` a una carpeta `apps-script/` que está en `.gitignore`. Para recuperarlo en una
+máquina nueva: `npm i -g @google/clasp`, `clasp login`, y `clasp clone-script <ID>` — el
+Script ID está en el Sheet, en *Extensiones → Apps Script → ⚙ Configuración del proyecto*
+(y anotado en `PROGRESS.md`, que es local).
+
+Seis módulos, separados por responsabilidad:
+
+| Archivo | Qué hace |
+|---|---|
+| `Config.js` | IDs, `MUSIC_HEADERS`, `musicColumn_`. **Única definición del esquema** |
+| `Validation.js` | Limpiadores puros y dominios oficiales por plataforma |
+| `Music.js` | `readMusicSheet_` (una sola lectura) + `validateMusicForPublication_` |
+| `GitHub.js` | Configuración de Script Properties y publicador |
+| `Publish.js` | Lógica, resultado y presentación separados |
+| `SheetSetup.js` | Mantenimiento reproducible de la hoja, idempotente |
+
+Decisiones que no son obvias y conviene no deshacer:
+
+- **Una sola lectura de la hoja por publicación.** Antes había dos, lo que además abría
+  una ventana para editar entre ambas y validar una cosa publicando otra.
+- **El validador devuelve directamente el modelo publicable**, sin pasar por un objeto
+  intermedio con `active` y `notes`. Así esos campos no pueden filtrarse por descuido.
+- **`Ui.alert()` nunca se muestra con el cerrojo tomado.** `alert` suspende la ejecución
+  esperando a que alguien pulse un botón, y un `LockService` no debe sostenerse durante esa
+  espera. `publishContentSnapshot()` devuelve un resultado; `publishFromSheet()` lo
+  traduce a diálogo, ya fuera de la sección crítica.
+- **No hay `doGet`.** El Apps Script no expone ninguna API: es solo el backend editorial.
+- **Las fórmulas de la hoja se escriben sin argumentos** (`=LEN($F3)>0`, no
+  `=IF(...,TRUE,FALSE)`). Una hoja configurada en una región que usa `;` como separador no
+  interpreta las comas y devuelve `#ERROR!` en toda la columna.
+- **Cada escritura de `setupMusicSheet()` va aislada con su propio `flush()`.** Apps Script
+  encola las escrituras, así que sin el vaciado inmediato una excepción aparece en una
+  lectura posterior, señalando una línea que no tiene nada que ver.
+- **La hoja es una Tabla de Google Sheets** con tipos de columna propios, y por eso rechaza
+  aplicar un formato de fecha a `release_date`. No molesta: el formato ya es el correcto y
+  el validador acepta tanto `Date` como texto `DD-MM-YYYY`.
+
+Hay una suite local de 70 pruebas en `apps-script/tests/`. Se ejecuta con
+`node tests/test-cms.js .` desde esa carpeta y **no toca Google**: el validador recibe los
+datos, así que se puede probar entero en local. Ejecutarla antes de cualquier
+`clasp push`.
+
 ### Secretos
 
 La credencial que usa Apps Script para escribir en GitHub vive **solo** en las Script

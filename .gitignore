@@ -90,6 +90,22 @@ docker-compose.yml
 .dockerignore
 .nvmrc
 
+# CMS — Apps Script (clasp)
+#
+# Copia local del Apps Script que publica `public/content.json`. Se descarga
+# solo para inspeccionarla; NO forma parte del sitio web y no debe publicarse
+# todavía en el repositorio.
+apps-script/
+
+# Credenciales de clasp. Los tokens OAuth viven normalmente en `~/.clasprc.json`
+# (fuera del repositorio), pero `clasp login` admite variantes que dejan el
+# archivo en el directorio de trabajo. Se ignoran aquí en cualquier caso: un
+# `.clasprc.json` contiene refresh tokens de la cuenta de Google.
+.clasprc.json
+**/.clasprc.json
+.clasp.json
+**/.clasp.json
+
 # Documentos de trabajo internos. `ARCHITECTURE.md` NO va aquí a propósito:
 # describe cómo está construido el código, no revela nada sensible y debe
 # viajar con el repositorio para que quien lo clone entienda el sistema.
