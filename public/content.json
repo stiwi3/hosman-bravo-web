@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-01T09:17:02.012Z",
-  "publishedAt": "2026-09-01T09:17:02.012Z",
+  "contentVersion": "2026-09-02T15:52:43.644Z",
+  "publishedAt": "2026-09-02T15:52:43.644Z",
   "music": [
     {
       "id": "borracho-todavia",
@@ -59,7 +59,7 @@
     },
     {
       "id": "el-circo-de-tu-amor",
-      "title": "El circo de tu amor",
+      "title": "PRUEBA El circo de tu amor",
       "release_date": "12-08-2022",
       "cover_url": null,
       "youtube_id": "__Sc5sDOZ8I",
