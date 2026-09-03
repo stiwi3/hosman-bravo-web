@@ -23,7 +23,7 @@
    datos vengan de donde vengan.
 --------------------------------------------------------------------------- */
 
-import type { MusicRelease, ReleaseKind } from './types';
+import type { MusicRelease, ReleaseKind, ReleasePresentation } from './types';
 
 /**
  * Catálogo de respaldo. **Vacío a propósito** — ver el comentario de arriba.
@@ -43,6 +43,22 @@ export const musicReleasesFallback: readonly MusicRelease[] = [];
  */
 export function releaseKind(release: MusicRelease): ReleaseKind {
   return release.youtubeId ? 'video' : 'audio';
+}
+
+/**
+ * Cómo se pinta la pieza. Lo decide la PROCEDENCIA de la portada, no el tipo:
+ *
+ * · Con portada nuestra → `object`. Las portadas se entregan cuadradas, como
+ *   en cualquier plataforma, y a sangre se perderían el título y los créditos:
+ *   medido, un 25% del alto en la cuadrícula y un 44% en el destacado.
+ * · Sin ella → `window`, porque lo que se pinta es la miniatura del videoclip,
+ *   que ya nace en 16:9 y llena la tarjeta sin recortar nada.
+ *
+ * Así vuelve a haber dos tratamientos en la sección —ventana y objeto— que es
+ * la distinción de la fase 1, pero ahora la marca el material disponible.
+ */
+export function releasePresentation(release: MusicRelease): ReleasePresentation {
+  return release.coverUrl ? 'object' : 'window';
 }
 
 /**

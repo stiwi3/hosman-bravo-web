@@ -147,6 +147,35 @@ function parseHttpUrl(value: unknown): URL | undefined {
   }
 }
 
+/** Carpeta única donde pueden vivir las portadas propias. */
+const COVER_DIR = '/images/covers/';
+
+/**
+ * Portada: URL externa http(s), o ruta interna bajo `/images/covers/`.
+ *
+ * Las rutas internas están acotadas a esa carpeta a propósito, igual que las
+ * de audio en el Apps Script. `//dominio.com` NO es una ruta interna —el
+ * navegador la resuelve como URL absoluta a otro dominio— y cualquier `..`
+ * abre la puerta a salir del directorio previsto.
+ *
+ * La ruta interna sale con el prefijo `${bp}` aplicado, porque en GitHub Pages
+ * el sitio vive en un subdirectorio: sin él, `/images/...` da 404 en
+ * producción y funciona en local, que es el peor de los fallos posibles.
+ */
+function parseCoverReference(value: unknown): string | undefined {
+  const raw = asTrimmedString(value);
+  if (!raw) return undefined;
+
+  if (raw.startsWith('/')) {
+    if (raw.startsWith('//')) return undefined;
+    if (!raw.startsWith(COVER_DIR)) return undefined;
+    if (raw.split('/').includes('..')) return undefined;
+    return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${raw}`;
+  }
+
+  return parseHttpUrl(raw)?.toString();
+}
+
 /**
  * Reconocedores por plataforma.
  *
@@ -224,9 +253,14 @@ function mapRow(
   const coverRaw = asTrimmedString(row.cover_url);
   let coverUrl: string | undefined;
   if (coverRaw) {
-    const url = parseHttpUrl(coverRaw);
-    if (url) coverUrl = url.toString();
-    else rejectedFields.push({ id, field: 'cover_url', reason: `URL no válida: ${coverRaw}` });
+    const cover = parseCoverReference(coverRaw);
+    if (cover) coverUrl = cover;
+    else
+      rejectedFields.push({
+        id,
+        field: 'cover_url',
+        reason: `Portada no válida: ${coverRaw}. Debe ser http(s) o una ruta bajo ${COVER_DIR}`
+      });
   }
 
   const youtubeRaw = asTrimmedString(row.youtube_id);

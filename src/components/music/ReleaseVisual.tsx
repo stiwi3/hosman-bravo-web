@@ -1,6 +1,9 @@
+'use client';
+
 import Image from 'next/image';
+import { useState } from 'react';
 import { hosmanData } from '@/data/hosman-data';
-import type { MusicRelease, ReleaseKind } from '@/data/types';
+import type { MusicRelease, ReleasePresentation } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
    La superficie visual de un lanzamiento.
@@ -8,9 +11,16 @@ import type { MusicRelease, ReleaseKind } from '@/data/types';
    Resuelve los tres casos que puede traer el dato, y solo eso — el overlay, el
    título y las plataformas son cosa de `MusicCard`:
 
-     · videoclip            → la miniatura llena la pieza a sangre
-     · single con portada   → funda cuadrada + vinilo asomando por detrás
-     · sin portada          → fallback de marca (brasa burdeos + isotipo)
+     · `window` → la miniatura de YouTube llena la pieza a sangre. Ya nace en
+       16:9, así que encaja en la caja sin perder nada.
+     · `object` → hay portada NUESTRA: funda cuadrada + vinilo asomando por
+       detrás. Se pinta así porque las portadas se entregan en 1:1 y a sangre
+       se perderían el título y los créditos (medido: 25% del alto en la
+       cuadrícula, 44% en el destacado).
+     · sin ninguna de las dos → fallback de marca (brasa burdeos + isotipo).
+
+   Quién elige entre `window` y `object` es `releasePresentation()`, no este
+   componente: aquí solo se pinta.
 
    ⚠️ NADA de esto usa un asset nuevo. El vinilo es CSS puro y el fallback
    reutiliza el isotipo dorado que ya existe, de modo que sustituirlo por el
@@ -83,39 +93,95 @@ function BrandFallback() {
   );
 }
 
-export function ReleaseVisual({
+/* ---------------------------------------------------------------------------
+   La portada, por orden de preferencia.
+
+     1. La NUESTRA (`cover_url` de la hoja), si la hay. Siempre manda.
+     2. La miniatura del videoclip en YouTube, que existe por el mero hecho de
+        haber publicado el vídeo. `maxresdefault` es 1280×720 pero NO se genera
+        para todos los vídeos; `hqdefault` sí existe siempre, aunque más
+        pequeña. Se pide la buena y se cae a la segura si devuelve 404.
+     3. El fallback de marca, solo si no hay ninguna de las dos.
+
+   La cascada se resuelve con el `onError` de la propia imagen y no mirando el
+   dato: así cubre también el caso de una `cover_url` nuestra que un día deje
+   de responder — se cae a la de YouTube en vez de dejar el hueco roto.
+--------------------------------------------------------------------------- */
+function coverCandidates(release: MusicRelease): string[] {
+  const candidates: string[] = [];
+  if (release.coverUrl) candidates.push(release.coverUrl);
+  if (release.youtubeId) {
+    candidates.push(`https://i.ytimg.com/vi/${release.youtubeId}/maxresdefault.jpg`);
+    candidates.push(`https://i.ytimg.com/vi/${release.youtubeId}/hqdefault.jpg`);
+  }
+  return candidates;
+}
+
+/**
+ * Imagen de portada con respaldos encadenados.
+ *
+ * ⚠️ Es un `<img>` y no `next/image` a propósito. Con `images.unoptimized`
+ * (obligado por el export estático) `next/image` no optimiza nada, pero sigue
+ * exigiendo declarar cada host remoto en `remotePatterns`. Como `cover_url`
+ * la escribe Hosman en la hoja y puede apuntar a cualquier alojamiento, esa
+ * lista sería imposible de mantener y fallaría el día que use uno nuevo.
+ */
+function CoverImage({
   release,
-  kind,
-  sizes
+  className
 }: {
   release: MusicRelease;
-  kind: ReleaseKind;
-  /** Se pasa desde `MusicCard`, que es quien sabe a qué tamaño se pinta. */
-  sizes: string;
+  className: string;
 }) {
-  /* CASO VIDEOCLIP — la miniatura manda y llena la pieza a sangre.
+  const candidates = coverCandidates(release);
+  const [index, setIndex] = useState(0);
+  const src = candidates[index];
+
+  if (!src) return <BrandFallback />;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- ver comentario arriba
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      /* Sin `loading="lazy"`. Medido: con `lazy` las ocho portadas se quedan
+         en `complete: false` indefinidamente —ni al entrar en viewport ni al
+         desplazar—, mientras que la misma URL con `eager` carga a 1280×720.
+         Puede ser una particularidad del navegador de pruebas, pero una
+         portada que no aparece es un fallo grave y el coste de cargarlas es
+         asumible: son ocho imágenes y solo en `/musica`. */
+      decoding="async"
+      onError={() => setIndex((i) => i + 1)}
+      className={`absolute inset-0 h-full w-full ${className}`}
+    />
+  );
+}
+
+export function ReleaseVisual({
+  release,
+  presentation
+}: {
+  release: MusicRelease;
+  presentation: ReleasePresentation;
+}) {
+  /* CASO VENTANA — la miniatura manda y llena la pieza a sangre.
      El leve acercamiento al pasar el ratón es el único movimiento; se anula
      con `prefers-reduced-motion`. */
-  if (kind === 'video') {
-    return release.coverUrl ? (
-      <Image
-        src={release.coverUrl}
-        alt=""
-        aria-hidden="true"
-        fill
-        sizes={sizes}
+  if (presentation === 'window') {
+    return (
+      <CoverImage
+        release={release}
         className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.035] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
       />
-    ) : (
-      <BrandFallback />
     );
   }
 
-  /* CASO SINGLE — un OBJETO sobre una superficie, no un fotograma a sangre.
-     Esa es la diferencia deliberada con el caso de arriba: un videoclip es una
-     ventana y llena la pieza; un single es una cosa física —funda de cartón y
-     disco— apoyada sobre un fondo. La distinción la marca el contenido, no un
-     adorno.
+  /* CASO OBJETO — una cosa sobre una superficie, no un fotograma a sangre.
+     Esa es la diferencia deliberada con el caso de arriba: una miniatura de
+     vídeo es una ventana y llena la pieza; una portada es una cosa física
+     —funda de cartón y disco— apoyada sobre un fondo. La distinción la marca
+     el material disponible, no un adorno.
 
      La funda es un cuadrado que no llega a los bordes de la caja, y el disco
      asoma por detrás de su canto derecho. El fondo lleva una brasa burdeos muy
@@ -144,18 +210,7 @@ export function ReleaseVisual({
             className="relative h-full aspect-square overflow-hidden"
             style={{ boxShadow: '0 12px 30px -12px rgba(0,0,0,0.95)' }}
           >
-            {release.coverUrl ? (
-              <Image
-                src={release.coverUrl}
-                alt=""
-                aria-hidden="true"
-                fill
-                sizes={sizes}
-                className="object-cover"
-              />
-            ) : (
-              <BrandFallback />
-            )}
+            <CoverImage release={release} className="object-cover" />
             {/* Canto de la funda: filo de luz por donde sale el disco. Da el
                 grosor del cartón sin dibujar una sombra falsa. */}
             <div

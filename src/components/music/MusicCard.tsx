@@ -9,7 +9,7 @@ import {
   AudiomackIcon
 } from '@/components/icons/PlatformIcons';
 import { ReleaseVisual } from './ReleaseVisual';
-import { releaseKind } from '@/data/music-releases';
+import { releasePresentation } from '@/data/music-releases';
 import type { MusicRelease } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
@@ -124,12 +124,8 @@ export function MusicCard({
   release: MusicRelease;
   featured?: boolean;
 }) {
-  const kind = releaseKind(release);
+  const presentation = releasePresentation(release);
   const platforms = platformsOf(release);
-
-  const sizes = featured
-    ? '(min-width: 1024px) 54rem, 92vw'
-    : '(min-width: 1024px) 22rem, 46vw';
 
   return (
     <article
@@ -138,7 +134,7 @@ export function MusicCard({
       }`}
     >
       {/* La imagen, la funda o el fallback. Es lo único que se ve en reposo. */}
-      <ReleaseVisual release={release} kind={kind} sizes={sizes} />
+      <ReleaseVisual release={release} presentation={presentation} />
 
       {/* VELO — de negro por abajo a nada por arriba. Muy contenido: tiene que
           dejar leer el título sin apagar la imagen, no oscurecer la pieza. */}

@@ -1,7 +1,7 @@
 'use client';
 
 import { MusicCard } from '@/components/music/MusicCard';
-import { releasesByDateDesc, releaseKind } from '@/data/music-releases';
+import { releasesByDateDesc, releasePresentation } from '@/data/music-releases';
 import { useMusicReleases } from '@/hooks/useMusicReleases';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
@@ -39,7 +39,7 @@ export function MusicSection() {
      literales — el JIT de Tailwind no compila clases construidas en tiempo de
      ejecución. */
   const featuredWidth =
-    latest && releaseKind(latest) === 'video' ? 'max-w-release' : 'max-w-release-square';
+    latest && releasePresentation(latest) === 'window' ? 'max-w-release' : 'max-w-release-square';
 
   return (
     <section className={SCENE_FULL}>

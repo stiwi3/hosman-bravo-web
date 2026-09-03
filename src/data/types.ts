@@ -124,6 +124,17 @@ export interface Song {
  */
 export type ReleaseKind = 'video' | 'audio';
 
+/**
+ * Cómo se PINTA la pieza, que no es lo mismo que qué es.
+ *
+ * `window` — la imagen llena la tarjeta a sangre. Es lo que corresponde a una
+ * miniatura de YouTube, que ya viene en 16:9.
+ * `object`  — funda cuadrada con el vinilo asomando por detrás. Es lo que
+ * corresponde a una portada nuestra, que se entrega en 1:1 como en cualquier
+ * plataforma: recortarla a sangre se comería el título.
+ */
+export type ReleasePresentation = 'window' | 'object';
+
 /** Un lanzamiento musical. */
 export interface MusicRelease {
   id: string;
