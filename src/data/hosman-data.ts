@@ -10,10 +10,26 @@ import type { Horse, ShowEvent, Song } from './types';
 // Solo para ASSETS: las rutas de navegación las prefija `next/link` sola.
 const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
+// Origen público del sitio, con el subdirectorio incluido. Lo consumen los
+// metadatos de Open Graph, que necesitan URL absolutas: un enlace compartido
+// por WhatsApp lo resuelve el servidor de Meta, no el navegador del visitante.
+// El día que el sitio viva en hosmanbravo.com basta con definir la variable.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://stiwi3.github.io${bp}`;
+
 export const hosmanData = {
   // Prefijo de despliegue para assets que no son imágenes (vídeos, descargas).
   // Las rutas de `images` ya lo llevan aplicado.
   basePath: bp,
+
+  // Cómo se ve el sitio cuando alguien pega el enlace en WhatsApp, en una
+  // ficha de buscador o en una red. La imagen es 1200×630, la medida que
+  // esperan todas las plataformas.
+  seo: {
+    siteUrl,
+    ogImage: `${siteUrl}/seo/og-cover.jpg`,
+    ogImageAlt:
+      'Hosman Bravo cantando a caballo sobre la tarima, con su banda detrás',
+  },
 
   // Información personal
   artist: {
@@ -165,8 +181,12 @@ export const hosmanData = {
 
   // Información de contacto
   contact: {
+    // ⚠️ El dominio hosmanbravo.com todavía no está comprado: este correo
+    // NO recibe. Se mantiene a propósito hasta que exista (ver PROGRESS.md).
     email: 'contacto@hosmanbravo.com',
-    whatsapp: '+57 (your number)',
+    // Solo dígitos, con indicativo de país y sin `+`: es el formato que pide
+    // `wa.me`. Es la misma línea que `socialLinks.whatsapp`.
+    whatsapp: '573225129515',
     managerEmail: 'danny@hosmanbravo.com'
   },
 
