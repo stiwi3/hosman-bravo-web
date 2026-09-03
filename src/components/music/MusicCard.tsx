@@ -196,28 +196,40 @@ export function MusicCard({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-60 transition-[opacity,transform] duration-300 ease-out group-hover:scale-105 group-hover:opacity-100 peer-focus-visible:scale-105 peer-focus-visible:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:peer-focus-visible:scale-100"
         >
-          <span
-            className="flex items-center justify-center rounded-full border border-[#D4AF37]/40 bg-black/45 text-[#D4AF37] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.9)] backdrop-blur-sm"
+          {/* El triángulo SOLO, sin círculo, placa ni fondo: la señal se apoya
+              en la miniatura en vez de taparla con un botón.
+
+              El `viewBox` va ajustado a la propia figura, de modo que el tamaño
+              declarado ES el del triángulo y no el de una caja con aire
+              alrededor. La esquina redondeada sale de trazar el mismo camino
+              que se rellena, con `stroke-linejoin: round` — por eso los
+              vértices van metidos hacia dentro: el trazo crece la mitad de su
+              grosor hacia fuera.
+
+              La sombra es lo único que queda de la antigua placa, y va DOBLE a
+              propósito: una corta y muy pegada, que le da filo contra una
+              miniatura clara —medido en las dos peores, la camisa blanca de
+              «Una Botella» y el cielo de «Ya Perdiste»—, y otra larga y suave
+              que la despega del fondo. Las dos son negras: es sombra, no
+              resplandor. */}
+          <svg
+            viewBox="0 0 19 22"
+            aria-hidden="true"
+            className="w-auto [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))_drop-shadow(0_3px_11px_rgba(0,0,0,0.55))]"
             style={{
-              width: featured
-                ? 'clamp(3rem, 0.9vw + 3.4svh, 4.2rem)'
-                : 'clamp(2.1rem, 0.5vw + 2.3svh, 2.9rem)',
               height: featured
-                ? 'clamp(3rem, 0.9vw + 3.4svh, 4.2rem)'
-                : 'clamp(2.1rem, 0.5vw + 2.3svh, 2.9rem)'
+                ? 'clamp(3.2rem, 1vw + 3.7svh, 4.7rem)'
+                : 'clamp(2.3rem, 0.55vw + 2.5svh, 3.2rem)'
             }}
           >
-            {/* Desplazado un pelo a la derecha: un triángulo centrado por su
-                caja se ve descentrado por su propia forma. */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-              className="ml-[6%] h-[38%] w-[38%]"
-            >
-              <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l11.14-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
-            </svg>
-          </span>
+            <path
+              d="M3 2.5 L16 11 L3 19.5 Z"
+              fill="#D4AF37"
+              stroke="#D4AF37"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
       )}
 
