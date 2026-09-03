@@ -1,8 +1,11 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MusicCard } from '@/components/music/MusicCard';
-import { releasesByDateDesc, releasePresentation } from '@/data/music-releases';
+import { YouTubeModal } from '@/components/music/YouTubeModal';
+import { releasesByDateDesc, releasePresentation, releaseKind } from '@/data/music-releases';
 import { useMusicReleases } from '@/hooks/useMusicReleases';
+import type { MusicRelease } from '@/data/types';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
 /* ---------------------------------------------------------------------------
@@ -33,6 +36,41 @@ export function MusicSection() {
 
   const ordered = releasesByDateDesc(releases);
   const [latest, ...rest] = ordered;
+
+  /* EL VÍDEO ABIERTO, si lo hay. Vive aquí y no en `MusicCard` por dos
+     razones: el `<article>` de la tarjeta declara `isolate`, así que un modal
+     dentro quedaría atrapado en SU contexto de apilamiento por mucho `z-index`
+     que llevase; y habría un modal por pieza en lugar de uno solo. */
+  const [playing, setPlaying] = useState<MusicRelease | null>(null);
+
+  /* Quién abrió el vídeo, para devolverle el foco al cerrar. Se guarda el
+     elemento y no un índice: la lista puede reordenarse si llega un snapshot
+     nuevo mientras el modal está abierto. */
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  const openVideo = useCallback((release: MusicRelease) => {
+    const active = document.activeElement;
+    triggerRef.current = active instanceof HTMLElement ? active : null;
+    setPlaying(release);
+  }, []);
+
+  const closeVideo = useCallback(() => setPlaying(null), []);
+
+  /* El foco vuelve DESPUÉS de que el modal salga del DOM — por eso va en un
+     efecto y no dentro de `closeVideo`: al desmontarse el diálogo el foco cae
+     en `<body>`, y devolverlo antes lo perdería igualmente. */
+  useEffect(() => {
+    if (playing) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    triggerRef.current = null;
+    trigger.focus();
+  }, [playing]);
+
+  /* Solo abre modal la pieza que tiene videoclip. `releaseKind` lo deriva del
+     `youtubeId`, que es el dato que de verdad permite reproducir algo. */
+  const playHandler = (release: MusicRelease) =>
+    releaseKind(release) === 'video' ? () => openVideo(release) : undefined;
 
   /* Un single destacado se acota más que un videoclip: a 54rem de ancho una
      funda cuadrada sería una caja desproporcionada. Ambas son clases
@@ -87,7 +125,7 @@ export function MusicSection() {
                  está solo y es mucho más grande que el resto. */
               <div className="mt-block flex justify-center">
                 <div className={`w-full ${featuredWidth}`}>
-                  <MusicCard release={latest} featured />
+                  <MusicCard release={latest} featured onPlay={playHandler(latest)} />
                 </div>
               </div>
             )}
@@ -99,13 +137,29 @@ export function MusicSection() {
                  escritorio 24px, así que la retícula respira sin apretarse. */
               <div className="mt-block grid grid-cols-2 gap-[clamp(0.75rem,0.5vw+1.1svh,1.5rem)] lg:grid-cols-3">
                 {rest.map((release) => (
-                  <MusicCard key={release.id} release={release} />
+                  <MusicCard
+                    key={release.id}
+                    release={release}
+                    onPlay={playHandler(release)}
+                  />
                 ))}
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* El modal solo existe mientras hay vídeo abierto: su montaje y su
+          desmontaje SON el ciclo de vida completo (scroll, audio y
+          reproductor). La comprobación de `youtubeId` además lo estrecha a
+          `string`, que es lo que el modal necesita. */}
+      {playing?.youtubeId && (
+        <YouTubeModal
+          videoId={playing.youtubeId}
+          title={playing.title}
+          onClose={closeVideo}
+        />
+      )}
     </section>
   );
 }

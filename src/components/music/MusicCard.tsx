@@ -42,13 +42,15 @@ import type { MusicRelease } from '@/data/types';
    `focus-within` acompaña al hover para que el teclado llegue a lo mismo que
    el ratón: al tabular hasta un icono, el overlay aparece.
 
-   PUNTO DE ENGANCHE (fase siguiente): la superficie principal de una pieza con
-   videoclip debe abrir el reproductor de YouTube. Hoy es un `<div>` a
-   propósito y NO un `<button>` inerte — un control que no hace nada es peor
-   que ninguno. Cuando se implemente, el gesto será: abrir vídeo → pausar el
-   audio global con `pause()` de `useAudio()` → montar el reproductor. Los
-   iconos de plataforma ya son `<a>` independientes, así que seguirán
-   funcionando por encima de esa superficie sin más cambios.
+   ABRIR EL VIDEOCLIP
+   Si la pieza tiene vídeo, `MusicSection` le pasa `onPlay` y aparece una
+   superficie de disparo que cubre la tarjeta. NO es un `<button>` envolvente
+   a propósito: los iconos de plataforma son `<a>` y quedarían anidados dentro
+   de un control, que es HTML inválido y un estorbo para el lector de
+   pantalla. En su lugar la superficie es un hermano de la capa de
+   información, va por DEBAJO de ella en orden de pintado, y esa capa deja
+   pasar el puntero salvo en los propios enlaces. Así el vídeo y las
+   plataformas son acciones hermanas, no una dentro de otra.
 --------------------------------------------------------------------------- */
 
 /**
@@ -119,10 +121,13 @@ const BOX_GRID = 'aspect-[4/3]';
 
 export function MusicCard({
   release,
-  featured = false
+  featured = false,
+  onPlay
 }: {
   release: MusicRelease;
   featured?: boolean;
+  /** Abre el videoclip. Solo llega si la pieza tiene uno. */
+  onPlay?: () => void;
 }) {
   const presentation = releasePresentation(release);
   const platforms = platformsOf(release);
@@ -136,6 +141,39 @@ export function MusicCard({
       {/* La imagen, la funda o el fallback. Es lo único que se ve en reposo. */}
       <ReleaseVisual release={release} presentation={presentation} />
 
+      {/* SUPERFICIE DE DISPARO — solo si hay videoclip.
+          `role="button"` + `tabIndex` en vez de un `<button>` real por lo que
+          explica la cabecera. Espacio lleva `preventDefault` porque su acción
+          por defecto es desplazar la página, y un teclado que abre el vídeo no
+          debe además mover la sección bajo él.
+          El anillo de foco va `inset`: el `<article>` es `overflow-hidden` y
+          uno exterior se recortaría justo por donde se ve. */}
+      {onPlay && (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={`Reproducir el videoclip de ${release.title}`}
+          /* El foco se pone a mano antes de abrir: no todos los navegadores
+             enfocan un `div` con `tabIndex` al pulsarlo, y de ese foco depende
+             que al cerrar el modal se pueda devolver aquí. Con ratón no se ve
+             anillo, porque es `focus-visible` y no `focus`. */
+          onClick={(event) => {
+            event.currentTarget.focus();
+            onPlay();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onPlay();
+          }}
+          /* `peer`: el indicador de play es un hermano POSTERIOR y se ilumina
+             con `peer-focus-visible` cuando esta superficie recibe el foco por
+             teclado. No vale `group-focus-within` en el `<article>`: eso se
+             dispararía también al tabular hasta un icono de plataforma. */
+          className="peer absolute inset-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D4AF37]"
+        />
+      )}
+
       {/* VELO — de negro por abajo a nada por arriba. Muy contenido: tiene que
           dejar leer el título sin apagar la imagen, no oscurecer la pieza. */}
       <div
@@ -143,10 +181,55 @@ export function MusicCard({
         className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent opacity-100 transition-opacity duration-500 ease-out [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none"
       />
 
+      {/* PLAY — la señal de que la pieza se puede reproducir.
+          Va SIEMPRE visible, también en táctil: si solo apareciera al pasar el
+          ratón, el usuario no tendría forma de saber que la tarjeta abre un
+          vídeo. En reposo queda a media opacidad para no disputarle la imagen
+          a la portada; al pasar el ratón o al enfocar el disparador con el
+          teclado se vuelve sólido y crece un punto. Nada más: ni latido, ni
+          rebote, ni resplandor — la sombra es de contacto, para que se lea
+          sobre una portada clara.
+          Va DESPUÉS del velo para que este no lo apague, y `pointer-events-none`
+          para que el clic lo atraviese hasta la superficie de disparo. */}
+      {onPlay && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-60 transition-[opacity,transform] duration-300 ease-out group-hover:scale-105 group-hover:opacity-100 peer-focus-visible:scale-105 peer-focus-visible:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:peer-focus-visible:scale-100"
+        >
+          <span
+            className="flex items-center justify-center rounded-full border border-[#D4AF37]/40 bg-black/45 text-[#D4AF37] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.9)] backdrop-blur-sm"
+            style={{
+              width: featured
+                ? 'clamp(3rem, 0.9vw + 3.4svh, 4.2rem)'
+                : 'clamp(2.1rem, 0.5vw + 2.3svh, 2.9rem)',
+              height: featured
+                ? 'clamp(3rem, 0.9vw + 3.4svh, 4.2rem)'
+                : 'clamp(2.1rem, 0.5vw + 2.3svh, 2.9rem)'
+            }}
+          >
+            {/* Desplazado un pelo a la derecha: un triángulo centrado por su
+                caja se ve descentrado por su propia forma. */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+              className="ml-[6%] h-[38%] w-[38%]"
+            >
+              <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l11.14-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
+            </svg>
+          </span>
+        </div>
+      )}
+
       {/* INFORMACIÓN — título y plataformas. Sube tres píxeles al aparecer:
-          lo justo para que se lea como que emerge, sin desplazamiento. */}
+          lo justo para que se lea como que emerge, sin desplazamiento.
+
+          `pointer-events-none` en el bloque y `pointer-events-auto` en cada
+          enlace: el título deja pasar el clic a la superficie de disparo de
+          arriba —pulsar sobre el nombre abre el vídeo, que es lo esperable—
+          mientras que los iconos siguen siendo destinos propios. */}
       <div
-        className={`absolute inset-x-0 bottom-0 flex flex-col gap-2 opacity-100 transition-[opacity,transform] duration-500 ease-out [@media(hover:hover)]:translate-y-[3px] [@media(hover:hover)]:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 motion-reduce:transition-none motion-reduce:translate-y-0 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 opacity-100 transition-[opacity,transform] duration-500 ease-out [@media(hover:hover)]:translate-y-[3px] [@media(hover:hover)]:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 motion-reduce:transition-none motion-reduce:translate-y-0 ${
           featured
             ? 'p-[clamp(0.9rem,0.6vw+1.4svh,1.6rem)]'
             : 'p-[clamp(0.6rem,0.4vw+0.9svh,1rem)]'
@@ -175,7 +258,7 @@ export function MusicCard({
                 rel="noopener noreferrer"
                 title={`Escuchar ${release.title} en ${name}`}
                 aria-label={`Escuchar ${release.title} en ${name}`}
-                className="flex items-center justify-center rounded-full border border-amber-200/25 bg-black/55 text-amber-100/75 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/70 hover:text-amber-300 focus-visible:border-amber-400/70 focus-visible:text-amber-300 focus-visible:outline-none"
+                className="pointer-events-auto flex items-center justify-center rounded-full border border-amber-200/25 bg-black/55 text-amber-100/75 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/70 hover:text-amber-300 focus-visible:border-amber-400/70 focus-visible:text-amber-300 focus-visible:outline-none"
                 style={{
                   width: featured
                     ? 'clamp(1.9rem, 0.5vw + 2.2svh, 2.4rem)'

@@ -96,9 +96,42 @@ encima del shell. Crea **un único** elemento `Audio` en un efecto con dependenc
   necesita reproducir otra pista, se amplía el provider.
 - Silenciar **pausa**: play/pause y sound on/off gobiernan un único estado y no pueden
   contradecirse.
-- Consumidores actuales: `EntryScreen` (`enter`) y `TrackPlayer` (el resto).
-- `hasEntered` existe en la API y hoy no lo lee nadie: es el enganche previsto para
-  cuando un modal (vídeo) tenga que pausar el audio de fondo.
+- Consumidores actuales: `EntryScreen` (`enter`), `TrackPlayer` (el resto) y `SiteShell`
+  (`hasEntered`, para saber si detrás del telón hay que mostrar el destino final o el
+  hero — ver §3).
+- **Suspensión con contador:** `suspend(id)` / `release(id)` apartan la canción de fondo
+  sin pisar a quien la haya pausado a propósito. Al primer `suspend` se apunta si sonaba
+  (`wasPlayingRef`) y se pausa; los `id` activos viven en un `Set`, así que dos avisos de
+  suspensión no se pisan entre sí; al último `release` se reanuda **solo si sonaba**.
+  Su único consumidor es `YouTubeModal` (`src/components/music/`), con el id
+  `'youtube-modal'` — las previews muteadas de la cuadrícula NO deben llamarlo: un
+  `<iframe>` muted y el `<audio>` no compiten por nada.
+
+### YouTubeModal
+
+El videoclip a pantalla completa. **Su ciclo de vida es el montaje**: `MusicSection` lo
+renderiza solo mientras hay vídeo abierto, así que bloqueo de scroll, suspensión del audio
+y destrucción del reproductor son la limpieza de React y no tres apagados manuales.
+
+⚠️ **Es un `<iframe>` normal, NO la IFrame Player API (`YT.Player`), y es deliberado.** La
+API sirve para mandar sobre el reproductor desde fuera (silenciar, arrancar en un segundo
+concreto, coordinar varios); el modal no hace nada de eso. Traerla obliga a repartir el
+callback global único `onYouTubeIframeAPIReady`, a proteger un `destroy()` que no está
+documentado como idempotente ni como seguro antes de `onReady`, a cancelar la creación si
+el componente se desmonta durante la carga del script, y a meter una carga asíncrona entre
+el clic y el reproductor —lo que debilita la activación que el navegador exige para sonar—.
+Un `<iframe>` se destruye solo al desmontarse, que es justo lo que se quiere aquí.
+
+El cargador compartido de la API llegará con las **previews** de la cuadrícula, que sí lo
+necesitan. Contrapartida asumida: sin la API no se leen los códigos de error (101/150,
+vídeo no embebible); YouTube pinta su propio aviso con enlace, y no se puede sustituir.
+
+El dominio es `youtube-nocookie.com`, y el `autoplay=1` de la URL **necesita además**
+`allow="autoplay; …"` en el iframe o el navegador lo ignora.
+
+⚠️ El reproductor es un documento de otro origen: en cuanto el foco entra en él, ni Escape
+ni la trampa de foco pueden actuar desde dentro. Por eso el botón de cerrar va fuera del
+reproductor, recibe el foco al abrir, y el fondo también cierra.
 
 ### EntryScreen
 
@@ -111,6 +144,15 @@ con un clic real — `.click()` de JS no cuenta como gesto y el navegador bloque
 
 Al entrar directamente por una ruta de sección el telón también aparece: es correcto, el
 gesto de audio sigue siendo necesario.
+
+**Bloqueo de scroll compartido.** Mientras el telón está visible no debe poder
+desplazarse la página, pero `document.body` es un recurso único: si otra pieza (un modal
+de vídeo) también lo bloqueara escribiendo `overflow` a mano, la primera en soltarlo
+restauraría el scroll con la segunda todavía abierta. Por eso `EntryScreen` no toca
+`document.body.style.overflow` directamente — usa `useScrollLock(activo)`
+(`src/hooks/useScrollLock.ts`), que lleva un contador de módulo: solo el primer bloqueo
+guarda el valor original y solo el último lo restaura. Cualquier pieza nueva que necesite
+bloquear el scroll debe pasar por el mismo hook.
 
 ---
 
@@ -242,6 +284,25 @@ comprueban por **hostname completo** —un enlace de Amazon pegado en la columna
 puede acabar bajo el icono de Apple— y `youtube_id` solo se acepta como identificador de
 11 caracteres, nunca como HTML.
 
+**`cover_url` acepta dos formas**, resueltas por `parseCoverReference()`: una URL
+`http(s)` externa, o una ruta interna bajo `/images/covers/` (con `${bp}` aplicado para
+GitHub Pages). Cualquier otra ruta, `//dominio` disfrazado de ruta local, o un `..` se
+descarta. El Apps Script valida lo mismo en su lado (`cleanUrlOrLocalPath` con prefijo,
+en `apps-script/Validation.js`) — la portada solo se sube al Sheet si ambas capas la
+aceptarían, pero la web nunca confía en que el Apps Script ya lo hizo.
+
+**De la portada sale además cómo se PINTA la pieza, no solo su imagen.**
+`releasePresentation()` (`src/data/music-releases.ts`) es un eje aparte de
+`releaseKind()`: `kind` (`'video' | 'audio'`) dice si hay videoclip reproducible;
+`presentation` (`'window' | 'object'`) dice si hay portada propia. Con portada, la pieza
+es un OBJETO (funda cuadrada + vinilo) porque las portadas se entregan cuadradas y a
+sangre perderían el título; sin ella, es una VENTANA a la miniatura de YouTube
+(`i.ytimg.com/vi/<id>/maxresdefault.jpg`, con respaldo a `hqdefault.jpg`), que ya nace en
+16:9. `ReleaseVisual.tsx` pinta las portadas con `<img>` y no `next/image`: con
+`images.unoptimized` (obligado por el export estático) `next/image` no optimiza nada pero
+sigue exigiendo declarar cada host remoto en `remotePatterns`, y `cover_url` puede apuntar
+a cualquier alojamiento que Hosman decida usar.
+
 ### Patrón obligatorio para nuevas hojas del CMS
 
 Al conectar una hoja nueva (`02_EVENTOS`, `03_CONFIG_GLOBAL`…), replicar lo ya hecho en
@@ -339,10 +400,11 @@ src/
 │   ├── sections/           una escena por archivo · JSX presentacional, sin estado global
 │   ├── hero/               WebGL · autónomo (§6)
 │   ├── audio/              AudioProvider · TrackPlayer · EntryScreen (§4)
+│   ├── music/              MusicCard · ReleaseVisual · YouTubeModal (§4)
 │   ├── icons/              SVG de marca inline (Simple Icons)
 │   └── …                   menú, tickets, redes, plataformas
 ├── data/                   contenido + tipos (§8)
-└── hooks/                  useReducedMotion
+└── hooks/                  useReducedMotion · useScrollLock (contador compartido, §4)
 ```
 
 **Sentido de las dependencias:**
