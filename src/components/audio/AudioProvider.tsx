@@ -28,6 +28,12 @@ export interface AudioApi {
   play: () => Promise<void>;
   pause: () => void;
   toggle: () => void;
+  /** Aparta la canción mientras suene otra cosa (un videoclip a pantalla
+   *  completa). Idempotente por `id`. Ver «Suspensión» más abajo. */
+  suspend: (id: string) => void;
+  /** Devuelve el turno. Cuando lo devuelve el último, la canción se reanuda
+   *  SOLO si estaba sonando al apartarla. */
+  release: (id: string) => void;
   mute: () => void;
   unmute: () => void;
   toggleMute: () => void;
@@ -132,6 +138,42 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     else pause();
   }, [play, pause]);
 
+  /* --- Suspensión ---------------------------------------------------------
+     Un videoclip a pantalla completa no puede sonar encima de la canción de
+     fondo, pero `pause()` al abrirlo y `play()` al cerrarlo arrancaría la
+     música también a quien la había parado a propósito. Por eso se apunta si
+     estaba sonando y solo entonces se reanuda.
+
+     Y se lleva por conjunto de `id`, no con un booleano: si dos piezas la
+     apartan a la vez, la primera en soltarla no debe devolver el sonido
+     mientras la otra sigue abierta.
+
+     Las previews silenciosas de la cuadrícula NO pasan por aquí: un iframe
+     muted y este `<audio>` no compiten. Solo el vídeo real suspende. */
+  const suspendersRef = useRef<Set<string>>(new Set());
+  const wasPlayingRef = useRef(false);
+
+  const suspend = useCallback(
+    (id: string) => {
+      if (suspendersRef.current.size === 0) {
+        wasPlayingRef.current = !!audioRef.current && !audioRef.current.paused;
+      }
+      suspendersRef.current.add(id);
+      pause();
+    },
+    [pause]
+  );
+
+  const release = useCallback(
+    (id: string) => {
+      if (!suspendersRef.current.delete(id)) return;
+      if (suspendersRef.current.size > 0) return;
+      if (wasPlayingRef.current) void play();
+      wasPlayingRef.current = false;
+    },
+    [play]
+  );
+
   const applyMuted = useCallback((value: boolean) => {
     const audio = audioRef.current;
     if (audio) audio.muted = value;
@@ -148,11 +190,24 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       play,
       pause,
       toggle,
+      suspend,
+      release,
       mute: () => applyMuted(true),
       unmute: () => applyMuted(false),
       toggleMute: () => applyMuted(!isMuted),
     }),
-    [hasEntered, isPlaying, isMuted, enter, play, pause, toggle, applyMuted]
+    [
+      hasEntered,
+      isPlaying,
+      isMuted,
+      enter,
+      play,
+      pause,
+      toggle,
+      suspend,
+      release,
+      applyMuted,
+    ]
   );
 
   return <AudioContext.Provider value={value}>{children}</AudioContext.Provider>;

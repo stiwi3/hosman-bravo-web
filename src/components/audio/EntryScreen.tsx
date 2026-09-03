@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation';
 import { useAudio } from './AudioProvider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import { hosmanData } from '@/data/hosman-data';
 import { DIRECT_ENTRY_SECTIONS, type SectionId } from '@/data/types';
 
@@ -176,15 +177,13 @@ export function EntryScreen() {
    *  va directo a la apertura completa. */
   const [peeking, setPeeking] = useState(false);
 
-  // Mientras la portada está visible no debe poder desplazarse la página.
-  useEffect(() => {
-    if (gone) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [gone]);
+  /* Mientras la portada está visible no debe poder desplazarse la página.
+     El bloqueo pasa por `useScrollLock` —y no por un `body.style.overflow`
+     escrito aquí— porque el modal de vídeo de MÚSICA bloquea el mismo body:
+     sin contador compartido, el primero en soltarlo restauraría el scroll
+     con el otro todavía abierto. Los recorridos y la calibración del telón
+     no se han tocado. */
+  useScrollLock(!gone);
 
   useEffect(() => {
     if (!leaving) return;
