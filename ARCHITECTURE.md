@@ -133,6 +133,61 @@ El dominio es `youtube-nocookie.com`, y el `autoplay=1` de la URL **necesita ade
 ni la trampa de foco pueden actuar desde dentro. Por eso el botón de cerrar va fuera del
 reproductor, recibe el foco al abrir, y el fondo también cierra.
 
+### Previews de MÚSICA
+
+Capa visual sobre la portada, **siempre con `pointer-events: none`**: no le quita el clic
+al disparador del modal ni tapa los enlaces de plataforma. La portada nunca se retira, así
+que cualquier fallo degrada a lo que ya había.
+
+Cascada de `ReleasePreview`: **clip propio → YouTube → portada**.
+
+- **Clip propio** (`previewVideoUrl`, ruta bajo `/videos/previews/`): `<video muted loop
+  playsinline>`. ⚠️ El `<video>` **no se monta hasta la primera activación** — montarlo
+  siempre haría que el navegador descargase todos los clips al entrar en la sección.
+- **YouTube** (`src/lib/youtube-api.ts`): cargador **singleton** con promesa cacheada a
+  nivel de módulo. Resuelve los dos problemas del callback global único
+  `onYouTubeIframeAPIReady`: que un consumidor pise a otro (se encadena el anterior) y que
+  YouTube solo lo llame una vez (de ahí la comprobación inmediata de `window.YT.Player`).
+- **`preview_start_sec`** entra como `playerVars.start` y solo aplica al camino de
+  YouTube: con clip propio, el recorte ya lo eligió quien lo hizo.
+
+**El fundido se dispara con el estado REPRODUCIENDO, no con `onReady`.** Entre «listo» y
+«hay imagen» está el buffering, que es cuando YouTube pinta su fondo negro; esperar al
+estado real es lo que garantiza que nunca se vea un hueco.
+
+⚠️ **`onReady` arranca la reproducción si en ese momento tocaba, consultando un ref.** No
+es redundante con el efecto de play/pausa: el reproductor se crea de forma ASÍNCRONA, así
+que una tarjeta que ya está activa en el primer render —la destacada— corre ese efecto
+cuando `playerRef` todavía es `null`, se va por la guarda, y sus dependencias no vuelven a
+cambiar nunca. Con `autoplay: 0`, sin esta línea la destacada no arranca jamás. Ya pasó.
+
+**Los clips propios se publican en H.264/MP4**, no en VP9/WebM, aunque pesen algo más: el
+soporte de VP9 en WebM ha sido irregular en iOS. El material fuente (originales sin
+recortar, variantes descartadas) vive en `public/references/`, que está en `.gitignore`.
+
+⚠️ **El recorte de 1,55× del iframe no es estético.** YouTube **no permite ocultar** el
+rótulo del título ni el botón central: `modestbranding` está obsoleto y lo ignoran, y
+`controls: 0` solo quita la barra inferior. La única salida es agrandar el iframe y
+centrarlo para que esas franjas caigan fuera del recorte de la tarjeta. En una caja 4:3 el
+iframe se declara al 133,34% de ancho para que el 16:9 CUBRA sin bandas negras. Los
+subtítulos tampoco se quitan con `cc_load_policy` si el espectador los tiene activados en
+su cuenta: hay que descargar el módulo (`unloadModule`) con el reproductor ya vivo.
+
+Quién reproduce lo decide `MusicSection`, no la tarjeta — es la única forma de garantizar
+**una secundaria activa a la vez**:
+
+- la destacada suena sola y **no se para** cuando una secundaria entra en hover;
+- las secundarias solo con `(hover: hover) and (pointer: fine)`; sin puntero fino la
+  tarjeta ni siquiera recibe manejador de hover;
+- la **precarga** de los reproductores de YouTube espera a que la sección esté pintada
+  (dos `requestAnimationFrame` encadenados) y va atada al puntero fino, porque en un móvil
+  esos reproductores no podrían activarse nunca;
+- con `prefers-reduced-motion` **no hay previews de ninguna clase**.
+
+**Las previews NO tocan `AudioProvider`.** Van mudas, y un `<iframe>`/`<video>` sin sonido
+no compite con el `<audio>`. `suspend`/`release` siguen teniendo un único consumidor: el
+modal.
+
 ### EntryScreen
 
 El telón no es solo estética: los navegadores no permiten reproducir audio sin un gesto
@@ -284,12 +339,14 @@ comprueban por **hostname completo** —un enlace de Amazon pegado en la columna
 puede acabar bajo el icono de Apple— y `youtube_id` solo se acepta como identificador de
 11 caracteres, nunca como HTML.
 
-**`cover_url` acepta dos formas**, resueltas por `parseCoverReference()`: una URL
-`http(s)` externa, o una ruta interna bajo `/images/covers/` (con `${bp}` aplicado para
-GitHub Pages). Cualquier otra ruta, `//dominio` disfrazado de ruta local, o un `..` se
-descarta. El Apps Script valida lo mismo en su lado (`cleanUrlOrLocalPath` con prefijo,
-en `apps-script/Validation.js`) — la portada solo se sube al Sheet si ambas capas la
-aceptarían, pero la web nunca confía en que el Apps Script ya lo hizo.
+**`cover_url` y `preview_video_url` aceptan dos formas**, resueltas por la misma
+`parseAssetReference(valor, carpeta)`: una URL `http(s)` externa, o una ruta interna
+acotada a su carpeta — `/images/covers/` y `/videos/previews/` respectivamente, con
+`${bp}` aplicado para GitHub Pages. Cualquier otra ruta, `//dominio` disfrazado de ruta
+local, o un `..` se descarta. El Apps Script valida lo mismo en su lado
+(`cleanUrlOrLocalPath` con prefijo, en `apps-script/Validation.js`) — el asset solo se
+sube al Sheet si ambas capas lo aceptarían, pero la web nunca confía en que el Apps Script
+ya lo hizo.
 
 **De la portada sale además cómo se PINTA la pieza, no solo su imagen.**
 `releasePresentation()` (`src/data/music-releases.ts`) es un eje aparte de
@@ -400,7 +457,7 @@ src/
 │   ├── sections/           una escena por archivo · JSX presentacional, sin estado global
 │   ├── hero/               WebGL · autónomo (§6)
 │   ├── audio/              AudioProvider · TrackPlayer · EntryScreen (§4)
-│   ├── music/              MusicCard · ReleaseVisual · YouTubeModal (§4)
+│   ├── music/              MusicCard · ReleaseVisual · ReleasePreview · YouTubeModal (§4)
 │   ├── icons/              SVG de marca inline (Simple Icons)
 │   └── …                   menú, tickets, redes, plataformas
 ├── data/                   contenido + tipos (§8)

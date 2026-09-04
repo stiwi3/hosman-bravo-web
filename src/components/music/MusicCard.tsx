@@ -9,6 +9,7 @@ import {
   AudiomackIcon
 } from '@/components/icons/PlatformIcons';
 import { ReleaseVisual } from './ReleaseVisual';
+import { ReleasePreview } from './ReleasePreview';
 import { releasePresentation } from '@/data/music-releases';
 import type { MusicRelease } from '@/data/types';
 
@@ -122,24 +123,47 @@ const BOX_GRID = 'aspect-[4/3]';
 export function MusicCard({
   release,
   featured = false,
-  onPlay
+  onPlay,
+  previewActiva = false,
+  precargarPreview = false,
+  onHoverChange
 }: {
   release: MusicRelease;
   featured?: boolean;
   /** Abre el videoclip. Solo llega si la pieza tiene uno. */
   onPlay?: () => void;
+  /** La preview debe estar reproduciéndose. Lo decide `MusicSection`. */
+  previewActiva?: boolean;
+  /** Adelantar la creación del reproductor de YouTube. */
+  precargarPreview?: boolean;
+  /** Solo llega en dispositivos con puntero fino: si no está, la tarjeta ni
+   *  siquiera escucha el hover. */
+  onHoverChange?: (dentro: boolean) => void;
 }) {
   const presentation = releasePresentation(release);
   const platforms = platformsOf(release);
 
   return (
     <article
+      onMouseEnter={onHoverChange && (() => onHoverChange(true))}
+      onMouseLeave={onHoverChange && (() => onHoverChange(false))}
       className={`group relative isolate overflow-hidden rounded-[3px] bg-[#0a0708] ring-1 ring-white/[0.06] transition-shadow duration-500 hover:ring-[#D4AF37]/25 focus-within:ring-[#D4AF37]/25 ${
         featured ? BOX_FEATURED : BOX_GRID
       }`}
     >
       {/* La imagen, la funda o el fallback. Es lo único que se ve en reposo. */}
       <ReleaseVisual release={release} presentation={presentation} />
+
+      {/* PREVIEW en movimiento, por ENCIMA de la portada y por DEBAJO de todo
+          lo demás: así el triángulo, el título y los iconos se siguen leyendo
+          sobre el vídeo. No quita la portada — se funde encima cuando de
+          verdad hay imagen, y si nunca la hay, no se nota que existió. */}
+      <ReleasePreview
+        release={release}
+        activa={previewActiva}
+        precargar={precargarPreview}
+        featured={featured}
+      />
 
       {/* SUPERFICIE DE DISPARO — solo si hay videoclip.
           `role="button"` + `tabIndex` en vez de un `<button>` real por lo que

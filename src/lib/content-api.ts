@@ -45,6 +45,7 @@ interface RawRelease {
   soundcloud_url?: unknown;
   audiomack_url?: unknown;
   audio_preview_url?: unknown;
+  preview_video_url?: unknown;
   preview_start_sec?: unknown;
   has_video?: unknown;
 }
@@ -149,26 +150,32 @@ function parseHttpUrl(value: unknown): URL | undefined {
 
 /** Carpeta única donde pueden vivir las portadas propias. */
 const COVER_DIR = '/images/covers/';
+/** Carpeta única donde pueden vivir los clips de preview propios. */
+const PREVIEW_DIR = '/videos/previews/';
 
 /**
- * Portada: URL externa http(s), o ruta interna bajo `/images/covers/`.
+ * Referencia a un asset nuestro: URL externa http(s), o ruta interna acotada
+ * a una carpeta concreta.
  *
- * Las rutas internas están acotadas a esa carpeta a propósito, igual que las
- * de audio en el Apps Script. `//dominio.com` NO es una ruta interna —el
- * navegador la resuelve como URL absoluta a otro dominio— y cualquier `..`
+ * Las rutas internas se limitan a su directorio a propósito, igual que hace el
+ * Apps Script con `cleanUrlOrLocalPath`. `//dominio.com` NO es una ruta interna
+ * —el navegador la resuelve como URL absoluta a otro dominio— y cualquier `..`
  * abre la puerta a salir del directorio previsto.
  *
  * La ruta interna sale con el prefijo `${bp}` aplicado, porque en GitHub Pages
  * el sitio vive en un subdirectorio: sin él, `/images/...` da 404 en
  * producción y funciona en local, que es el peor de los fallos posibles.
+ *
+ * La usan `cover_url` y `preview_video_url`, que solo se diferencian en su
+ * carpeta: la regla de seguridad es la misma y no debe escribirse dos veces.
  */
-function parseCoverReference(value: unknown): string | undefined {
+function parseAssetReference(value: unknown, dir: string): string | undefined {
   const raw = asTrimmedString(value);
   if (!raw) return undefined;
 
   if (raw.startsWith('/')) {
     if (raw.startsWith('//')) return undefined;
-    if (!raw.startsWith(COVER_DIR)) return undefined;
+    if (!raw.startsWith(dir)) return undefined;
     if (raw.split('/').includes('..')) return undefined;
     return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${raw}`;
   }
@@ -253,13 +260,26 @@ function mapRow(
   const coverRaw = asTrimmedString(row.cover_url);
   let coverUrl: string | undefined;
   if (coverRaw) {
-    const cover = parseCoverReference(coverRaw);
+    const cover = parseAssetReference(coverRaw, COVER_DIR);
     if (cover) coverUrl = cover;
     else
       rejectedFields.push({
         id,
         field: 'cover_url',
         reason: `Portada no válida: ${coverRaw}. Debe ser http(s) o una ruta bajo ${COVER_DIR}`
+      });
+  }
+
+  const previewVideoRaw = asTrimmedString(row.preview_video_url);
+  let previewVideoUrl: string | undefined;
+  if (previewVideoRaw) {
+    const clip = parseAssetReference(previewVideoRaw, PREVIEW_DIR);
+    if (clip) previewVideoUrl = clip;
+    else
+      rejectedFields.push({
+        id,
+        field: 'preview_video_url',
+        reason: `Clip no válido: ${previewVideoRaw}. Debe ser http(s) o una ruta bajo ${PREVIEW_DIR}`
       });
   }
 
@@ -294,6 +314,7 @@ function mapRow(
     soundcloudUrl: platform('soundcloud_url', row.soundcloud_url, 'soundcloud'),
     audiomackUrl: platform('audiomack_url', row.audiomack_url, 'audiomack'),
     audioPreviewUrl: previewUrl?.toString(),
+    previewVideoUrl,
     previewStartSec: parseStartSeconds(row.preview_start_sec)
   };
 }

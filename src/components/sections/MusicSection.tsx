@@ -5,6 +5,7 @@ import { MusicCard } from '@/components/music/MusicCard';
 import { YouTubeModal } from '@/components/music/YouTubeModal';
 import { releasesByDateDesc, releasePresentation, releaseKind } from '@/data/music-releases';
 import { useMusicReleases } from '@/hooks/useMusicReleases';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { MusicRelease } from '@/data/types';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
@@ -72,6 +73,52 @@ export function MusicSection() {
   const playHandler = (release: MusicRelease) =>
     releaseKind(release) === 'video' ? () => openVideo(release) : undefined;
 
+  /* --- PREVIEWS --------------------------------------------------------
+     Quién manda sobre las previews vive aquí, no en la tarjeta: solo desde
+     arriba se puede garantizar que haya UNA secundaria activa a la vez. */
+
+  const movimientoReducido = useReducedMotion();
+
+  /* El hover solo cuenta con puntero fino. En táctil el «hover» del navegador
+     es un fantasma del toque y encendería previews que nadie pidió, así que
+     allí no se escucha siquiera. Se mide tras montar, no en el render: en el
+     build del export estático no hay `matchMedia`. */
+  const [punteroFino, setPunteroFino] = useState(false);
+  useEffect(() => {
+    const consulta = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const sincroniza = () => setPunteroFino(consulta.matches);
+    sincroniza();
+    consulta.addEventListener('change', sincroniza);
+    return () => consulta.removeEventListener('change', sincroniza);
+  }, []);
+
+  /** Id de la secundaria que está reproduciendo. Una, o ninguna. */
+  const [secundariaActiva, setSecundariaActiva] = useState<string | null>(null);
+
+  /* La precarga de los reproductores de YouTube NO arranca con el montaje:
+     espera a que la sección esté pintada. Dos `requestAnimationFrame`
+     encadenados son la forma fiable de decir «después del primer pintado», y
+     así crear seis iframes no compite con la entrada en la escena. */
+  const [precargar, setPrecargar] = useState(false);
+  useEffect(() => {
+    if (movimientoReducido || source === 'loading') return;
+    let segundo = 0;
+    const primero = requestAnimationFrame(() => {
+      segundo = requestAnimationFrame(() => setPrecargar(true));
+    });
+    return () => {
+      cancelAnimationFrame(primero);
+      cancelAnimationFrame(segundo);
+    };
+  }, [movimientoReducido, source]);
+
+  /* Con movimiento reducido no hay previews de ninguna clase: un vídeo que
+     arranca solo es movimiento, y silenciarlo no lo cambia. */
+  const previewsActivas = !movimientoReducido;
+
+  const alHover = (id: string) => (dentro: boolean) =>
+    setSecundariaActiva((previa) => (dentro ? id : previa === id ? null : previa));
+
   /* Un single destacado se acota más que un videoclip: a 54rem de ancho una
      funda cuadrada sería una caja desproporcionada. Ambas son clases
      literales — el JIT de Tailwind no compila clases construidas en tiempo de
@@ -125,7 +172,17 @@ export function MusicSection() {
                  está solo y es mucho más grande que el resto. */
               <div className="mt-block flex justify-center">
                 <div className={`w-full ${featuredWidth}`}>
-                  <MusicCard release={latest} featured onPlay={playHandler(latest)} />
+                  {/* La destacada arranca sola y NO se para cuando una
+                      secundaria entra en hover: son piezas independientes.
+                      Quién es la destacada sale del orden por fecha, así que
+                      publicar una canción nueva cambia también su preview sin
+                      tocar código. */}
+                  <MusicCard
+                    release={latest}
+                    featured
+                    onPlay={playHandler(latest)}
+                    previewActiva={previewsActivas}
+                  />
                 </div>
               </div>
             )}
@@ -141,6 +198,16 @@ export function MusicSection() {
                     key={release.id}
                     release={release}
                     onPlay={playHandler(release)}
+                    previewActiva={previewsActivas && secundariaActiva === release.id}
+                    /* La precarga va atada al puntero fino: en un móvil las
+                       secundarias no se pueden activar nunca, así que crear
+                       sus reproductores sería gastar seis iframes para nada. */
+                    precargarPreview={previewsActivas && punteroFino && precargar}
+                    /* Sin puntero fino no se pasa manejador: la tarjeta ni
+                       siquiera escucha el hover en un móvil. */
+                    onHoverChange={
+                      previewsActivas && punteroFino ? alHover(release.id) : undefined
+                    }
                   />
                 ))}
               </div>

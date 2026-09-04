@@ -166,8 +166,17 @@ export interface MusicRelease {
   soundcloudUrl?: string;
   audiomackUrl?: string;
 
-  /* Preparado para la fase de previews; sin uso todavía. */
+  /* Preparado para una preview de AUDIO; sin uso todavía. */
   audioPreviewUrl?: string;
-  /** Segundo por el que debe arrancar la preview. */
+  /**
+   * Clip de vídeo mudo y corto para la preview de la tarjeta. Es el primer
+   * escalón de la cascada: si existe, se usa en vez del reproductor de YouTube.
+   * Ruta bajo `/videos/previews/` (ya con `${bp}`) o URL externa.
+   */
+  previewVideoUrl?: string;
+  /**
+   * Segundo por el que arranca la preview de YouTube cuando NO hay clip
+   * propio. Con clip local no se usa: el recorte ya lo decidió quien lo hizo.
+   */
   previewStartSec?: number;
 }
