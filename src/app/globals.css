@@ -313,18 +313,29 @@ body {
   --spacing-block: clamp(1.5rem, 1.04vw + 2.6svh, 3rem); /* 48 · 37 · 29 */
 
   /* Anchos de contenido. Son topes, no medidas fluidas: por debajo de ellos
-     manda `--spacing-scene-x`. Sustituyen a `max-w-6xl` / `max-w-xl`. */
+     manda `--spacing-scene-x`. Sustituyen a `max-w-6xl` / `max-w-xl`.
+
+     ⚠️ `--container-content` es el ancho de LECTURA. Sus 72rem existen porque
+     una línea de texto más larga se lee mal — es un límite tipográfico real, y
+     por eso no debe tocarse. */
   --container-content: 72rem;
   --container-narrow: 36rem;
 
-  /* Tope de la pieza destacada de MÚSICA (el último lanzamiento). Es un tope y
-     no una curva: por debajo manda el `w-full`, así que en móvil ocupa el ancho
-     disponible sola. 54rem sobre los 72rem de contenido deja aire a los lados
-     en escritorio, que es lo que la separa del resto de la cuadrícula.
-     La variante cuadrada existe porque un single sin videoclip destacado a
-     54rem de ancho sería una caja enorme: se acota más. */
-  --container-release: 54rem;
-  --container-release-square: 34rem;
+  /* Ancho de EXPOSICIÓN, para rejillas de piezas visuales.
+     Una cuadrícula de tarjetas no tiene el problema de longitud de línea del
+     texto, así que compartir tope con él la encerraba sin motivo: medido, en
+     2560px la sección usaba solo el 45% de la pantalla y la tarjeta medía lo
+     mismo (368px) que en 1280. Son dos responsabilidades distintas y ahora son
+     dos tokens distintos.
+     El tope sigue existiendo —no es «pegado a los bordes»—: en 2560 deja algo
+     más de 400px de margen a cada lado. */
+  --container-wide: 108rem;
+
+  /* (Aquí vivían `--container-release` y `--container-release-square`, los topes
+     en rem de la pieza destacada de MÚSICA. Se quedaron sin consumidor al pasar
+     la destacada a una proporción del contenedor —75% y 47%, exactamente las
+     mismas relaciones que tenían sobre los 72rem de antes—, que es lo que le
+     permite crecer con la sección en vez de detenerse en 864px.) */
 
   /* Escala tipográfica de sección. Reemplaza `text-3xl md:text-4xl`, que solo
      tenía dos escalones y ninguno reaccionaba al alto. */
@@ -357,6 +368,27 @@ a, button {
 /* (Aquí vivían `.hb-leather` y `.hb-leather:hover`, el cuero de los botones del
    reproductor. Quedaron sin usar: ese cuero lo resuelve la constante `LEATHER`
    en `TrackPlayer.tsx`, y las reglas CSS se quedaron atrás sin consumidor.) */
+
+/* El triángulo de play cede el paso al indicador de YouTube.
+   Cuando una tarjeta cae en el fallback de YouTube, su reproductor pinta su
+   propio botón durante los primeros segundos y no hay forma de quitarlo. En vez
+   de superponerse, nuestro triángulo se aparta y vuelve cuando el otro se ha
+   ido: oculto hasta el segundo 4 (el 80% de los 5s), fundido entre el 4 y el 5,
+   y ahí se queda por `forwards`.
+
+   Es una animación y NO un temporizador a propósito: al quitar la clase (salir
+   del hover) desaparece sola, al volver a ponerla arranca de cero, y no deja
+   nada vivo al desmontar. Ningún estado que se cruce entre tarjetas.
+   No aplica a las previews con clip propio, que no tienen ese conflicto. */
+@keyframes hb-play-tras-youtube {
+  0%,
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
 /* Respiración del botón de reproducción: un anillo dorado que se expande y
    se desvanece mientras suena. Muy tenue, sin llegar a resplandor. */

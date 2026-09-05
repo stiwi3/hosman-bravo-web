@@ -143,11 +143,22 @@ export function MusicCard({
   const presentation = releasePresentation(release);
   const platforms = platformsOf(release);
 
+  /* Misma cascada que resuelve `ReleasePreview`: hay clip propio, o se cae a
+     YouTube. Solo el segundo caso trae el botón de YouTube con el que nuestro
+     triángulo se solaparía. */
+  const previewEsYouTube = !release.previewVideoUrl && Boolean(release.youtubeId);
+  const cedeElPasoAYouTube = previewActiva && previewEsYouTube;
+
   return (
     <article
       onMouseEnter={onHoverChange && (() => onHoverChange(true))}
       onMouseLeave={onHoverChange && (() => onHoverChange(false))}
-      className={`group relative isolate overflow-hidden rounded-[3px] bg-[#0a0708] ring-1 ring-white/[0.06] transition-shadow duration-500 hover:ring-[#D4AF37]/25 focus-within:ring-[#D4AF37]/25 ${
+      /* `container-type: inline-size` convierte el ancho de la tarjeta en la
+         unidad de medida de lo que va dentro. Hacía falta desde que la rejilla
+         es fluida: la tarjeta pasó a medir entre 162 y 559px —antes iba de 169
+         a 375—, así que un tamaño atado al viewport ya no sirve para nada que
+         deba guardar proporción con ella. */
+      className={`group relative isolate overflow-hidden rounded-[3px] bg-[#0a0708] ring-1 ring-white/[0.06] transition-shadow duration-500 hover:ring-[#D4AF37]/25 focus-within:ring-[#D4AF37]/25 [container-type:inline-size] ${
         featured ? BOX_FEATURED : BOX_GRID
       }`}
     >
@@ -218,7 +229,15 @@ export function MusicCard({
       {onPlay && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-60 transition-[opacity,transform] duration-300 ease-out group-hover:scale-105 group-hover:opacity-100 peer-focus-visible:scale-105 peer-focus-visible:opacity-100 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:peer-focus-visible:scale-100"
+          /* Con el fallback de YouTube, el triángulo espera a que el
+             reproductor retire su propio botón (ver el keyframe en
+             `globals.css`). Con clip propio no hay conflicto y el
+             comportamiento aprobado se mantiene intacto.
+             Es una clase que se pone y se quita con el hover: al salir, la
+             animación desaparece; al volver, arranca de cero. Sin
+             temporizadores y sin estado que sobreviva al desmontaje. */
+          style={cedeElPasoAYouTube ? { animation: 'hb-play-tras-youtube 5s ease-out forwards' } : undefined}
+          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-60 transition-[opacity,transform] duration-300 ease-out group-hover:scale-105 group-hover:opacity-100 peer-focus-visible:scale-105 peer-focus-visible:opacity-100 motion-reduce:transition-none motion-reduce:animate-none motion-reduce:group-hover:scale-100 motion-reduce:peer-focus-visible:scale-100"
         >
           {/* El triángulo SOLO, sin círculo, placa ni fondo: la señal se apoya
               en la miniatura en vez de taparla con un botón.
@@ -240,10 +259,18 @@ export function MusicCard({
             viewBox="0 0 19 22"
             aria-hidden="true"
             className="w-auto [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.6))_drop-shadow(0_3px_11px_rgba(0,0,0,0.55))]"
+            /* Medido contra la TARJETA (`cqi`), no contra el viewport. Antes
+               era `vw + svh`, que valía cuando la tarjeta apenas variaba; con
+               la rejilla fluida el triángulo se quedaba en el 9% del ancho en
+               2560 cuando en 1280 era el 13,6%. Los porcentajes conservan la
+               proporción que ya estaba aprobada: ~13,5% en la cuadrícula y ~7%
+               en la destacada, que es mucho más ancha y no admite el mismo
+               peso relativo. Los suelos evitan que se pierda en una tarjeta
+               pequeña de móvil. */
             style={{
               height: featured
-                ? 'clamp(3.2rem, 1vw + 3.7svh, 4.7rem)'
-                : 'clamp(2.3rem, 0.55vw + 2.5svh, 3.2rem)'
+                ? 'clamp(38px, 7cqi, 6rem)'
+                : 'clamp(30px, 13.5cqi, 5rem)'
             }}
           >
             <path

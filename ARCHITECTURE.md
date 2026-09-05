@@ -278,6 +278,31 @@ pieza. `svh` y no `vh`, porque INICIO ya usa `100svh`.
 sobre el `<header>` real (en `SiteShell`). Así la reserva superior de las escenas con
 scroll conoce la altura de verdad de los dos flancos de la cabecera, que no es simétrica.
 
+### Dos anchos, dos responsabilidades
+
+`--container-content` (72rem) es el ancho de **LECTURA**: su tope existe porque una línea
+de texto larga se lee mal. Es un límite tipográfico real y no debe subirse.
+
+`--container-wide` (108rem) es el ancho de **EXPOSICIÓN**, para secciones cuyo contenido
+son piezas visuales en rejilla. No tienen problema de longitud de línea, así que compartir
+tope con el texto las encerraba sin motivo: medido, MÚSICA usaba el 45% de una pantalla de
+2560 y su tarjeta medía lo mismo (368px) que en 1280. Lo aplica `SCENE_SHOWCASE`
+(`sections/scene.ts`), que además declara `container-type: inline-size`.
+
+⚠️ **Las columnas se deciden por el CONTENEDOR, no por el viewport.** La rejilla de MÚSICA
+usa `repeat(auto-fill, minmax(clamp(155px, 29cqw, 30rem), 1fr))`. El `29cqw` es lo que
+mantiene estable el número de columnas en todo el tramo fluido: numerador y denominador
+escalan juntos. Antes era `lg:grid-cols-3`, un umbral de viewport, y producía una
+discontinuidad medida de 312px → 447px al pasar de 1024 a 960 — la tarjeta se hacía un 43%
+MÁS grande al encoger la ventana.
+
+⚠️ **El segundo término del `minmax` tiene que ser `1fr`.** Con una longitud definida, la
+especificación de Grid cuenta las columnas usando ese máximo y no el mínimo: se probó
+`minmax(base, base*1.2)` y daba 2 columnas de 576px en 1920 en vez de 3.
+
+Queda un salto residual de ×1,48 a ~520px de ventana, inevitable si la rejilla ocupa todo
+el ancho; está fuera del rango de escritorio a propósito.
+
 ### Reglas al escribir medidas nuevas
 
 1. **Buscar primero si ya existe token.** Las escenas con scroll parten de `SCENE`,
