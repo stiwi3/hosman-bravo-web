@@ -2,6 +2,68 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ===========================================================================
+   LAS TRES CONDICIONES ESTRUCTURALES DE LA ESCENA
+
+   Son las UNICAS reglas por viewport de todo el sistema. Todo lo demas escala
+   con `clamp()` o con unidades de contenedor. Estan aqui, juntas y con nombre,
+   para que nadie tenga que deducir su significado leyendo un numero suelto.
+
+   `escenario` — LA COMPOSICION SUPERPUESTA (escritorio ancho).
+   El video sangra de borde a borde en vertical —sus bordes los difumina la
+   mascara, por eso no se lee como recorte— y cabecera, shows y redes flotan
+   encima, en las esquinas. Solo cede por los FLANCOS que reclaman los modulos
+   de esquina, que es lo que impide que se les meta debajo.
+
+   EL LIMITE ES UNA PROPORCION, NO UN ANCHO, y el numero no es de gusto: 6/5 es
+   donde las dos composiciones producen EL MISMO video, asi que al cruzarlo no
+   se ve un salto. Medido en la aplicacion real: a 1300x1080 y a 1290x1080 el
+   video mide lo mismo, y lo mismo a 965x800 y 955x800.
+
+   Un umbral por ancho no puede hacer eso, porque el punto de cruce se mueve
+   con el alto: ~960px en una ventana de 800 de alto, ~1300px en una de 1080.
+   En proporcion es constante, porque todos los tokens escalan con `svh` y el
+   sistema entero es invariante de escala.
+
+   (Un primer intento puso el limite en 4/3. Salio de un banco de pruebas con
+   una cabecera y un pie simulados, mas bajos que los de verdad; en la
+   aplicacion real el video daba un salto del 25% al cruzarlo. El numero se
+   recalculo midiendo la composicion montada, no el modelo.)
+
+   LAS DOS CONDICIONES DE TAMANO SON EXCLUSIONES, NO MEDIDAS DE DISENO, y las
+   dos salieron de una revision que encontro huecos reales:
+
+   · `min-width: 60rem` — el flanco tiene SUELO (el ticket no baja de 300px),
+     asi que por debajo de ~960px reclama mas ancho del que hay. Sin esta
+     guarda, a 768x640 la proporcion daba 1,2, se activaba `escenario` y el
+     video se quedaba en 80px; a 641x533 el ancho disponible salia NEGATIVO y
+     el video desaparecia. 960 es donde los dos flancos y un centro utilizable
+     vuelven a caber, y a 800px de alto coincide casi exactamente con el punto
+     de cruce de la proporcion, asi que no introduce un salto nuevo.
+   · `min-height: 34rem` frente al `max-height: 32rem` del apaisado — dejan una
+     franja muerta a proposito. Con el mismo numero en las dos, las medias son
+     inclusivas por los dos lados y a 512px de alto se activaban LAS DOS: el
+     hero quedaba posicionado como escritorio y ademas recibia el alto del
+     apaisado, que `overflow-hidden` recortaba.
+
+   `movil` — LA COMPOSICION DE LA REFERENCIA: barra de una fila, rails
+   superpuestos, branding en el pie y hoja de eventos. Incluye el apaisado a
+   proposito: es la misma experiencia, no una interfaz distinta.
+
+   `apaisado` — LA UNICA EXCEPCION AL "sin scroll". Un movil tumbado no tiene
+   alto para una escena completa, y comprimirla dejaria a Hosman diminuto. Ahi
+   la escena crece por encima del viewport y se recorre desplazandose. Las tres
+   condiciones juntas (tumbado + estrecho + bajo) describen eso y solo eso: un
+   portatil de 1280x591 tiene 591 de alto y no entra; una ventana de escritorio
+   estrecha esta de pie y tampoco.
+   ------------------------------------------------------------------------ */
+/* ⚠️ La unión va con el operador `or` de Media Queries 4 y NO con una coma:
+   `@custom-variant` de Tailwind v4 parte el valor por comas y emite un
+   selector vacío que rompe la hoja entera. */
+@custom-variant escenario (@media (min-aspect-ratio: 6/5) and (min-width: 60rem) and (min-height: 34rem));
+@custom-variant movil (@media (max-width: 40rem) or ((orientation: landscape) and (max-width: 60rem) and (max-height: 32rem)));
+@custom-variant apaisado (@media (orientation: landscape) and (max-width: 60rem) and (max-height: 32rem));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -169,10 +231,17 @@ body {
    se recupera moviendo posición y separación (que siguen cediendo), nunca
    haciéndola más pequeña de lo que se puede leer o pulsar.
 
-   POR QUÉ `svh` Y NO `vh`
-   `vh` en móvil incluye la barra del navegador y salta al aparecer/desaparecer;
-   `svh` (small viewport height) es estable. INICIO ya usa `100svh`, así que los
-   tokens hablan la misma unidad que la escena que gobiernan.
+   POR QUÉ `svh` Y NO `vh` NI `dvh`
+   `vh` equivale al viewport GRANDE (con las barras del navegador retraídas):
+   no salta, pero mide de más, así que una escena a `100vh` no cabe mientras la
+   barra de direcciones está desplegada y aparece scroll. `dvh` sí sigue a la
+   barra, y ese es justamente su problema aquí: cada cambio redimensionaría la
+   escena, el `ResizeObserver` de `InteractiveSmoke` llamaría a `applySize` y
+   este a `simulation.resize()`, que destruye los búferes de densidad — mover
+   el dedo borraría el humo. `svh` (small viewport height) es la única estable:
+   mide el viewport pequeño, así que la escena siempre cabe y nunca se
+   redimensiona. El precio es una franja de fondo cuando la barra se retrae,
+   invisible porque el fondo es el mismo negro.
 
    POR QUÉ AQUÍ Y NO TODO EN `@theme`
    En `@theme` van los tokens que deben generar utilidades de Tailwind y se
@@ -194,9 +263,19 @@ body {
      breakpoint para el cuerpo del menú y cada cambio de ancho obligaba a
      recalcularlo. Ahora hay una sola fuente de verdad.
 
-     Suelo de 190px: por debajo, el panel de secciones que cuelga del menú deja
-     de poder mostrar sus seis entradas con texto legible. */
+     TRIGGER Y PANEL SON DOS MEDIDAS DISTINTAS. Lo eran ya en el asset —el
+     cuerpo del menú es 413px de ancho nativo y la cabecera 382, de ahí el
+     factor 1,082 con el que se dibuja el panel— pero compartían un único
+     suelo, y ese suelo lo marcaba el PANEL: 190px era lo mínimo para que sus
+     seis entradas se leyeran. El trigger cerrado no tiene texto HTML y no
+     necesita tanto; medido, aguanta hasta ~120px antes de dejar de ser
+     cómodo de pulsar.
+
+     Ahora el suelo vive donde le corresponde: el trigger tiene el suyo (táctil)
+     y el panel el suyo (legibilidad), y el 1,082 se conserva como lo que es,
+     la relación de escala entre los dos assets — no como un acoplamiento. */
   --hb-menu-w: clamp(190px, 6vw + 14svh, 266px); /* 266 · 208 · 190 */
+  --hb-menu-panel-w: max(calc(var(--hb-menu-w) * 1.082), 208px); /* 288 · 225 · 208 */
   --hb-header-pad: clamp(0.75rem, 0.6vw + 1.2svh, 1.5rem); /* 24 · 19 · 15 */
 
   /* 151/382 = 0,3953 es la proporción nativa del asset de cabecera. */
@@ -208,6 +287,29 @@ body {
      shows abajo-derecha). Sustituye a `bottom-8 left-8 md:bottom-10 md:left-10`,
      que no cedía ni un píxel al perder alto. */
   --hb-hero-inset: clamp(1rem, 0.62vw + 2.67svh, 2.5rem); /* 40 · 31 · 24 */
+
+  /* EL FLANCO — cuánto ancho reclaman a cada lado los módulos de esquina.
+     Es lo que impide que, al estrechar la ventana, el vídeo crezca hasta
+     meterse debajo del bloque de shows. Antes no existía: el vídeo solo
+     miraba al alto (`md:h-full md:w-auto`), así que a 960×1080 ocupaba el 84%
+     del ancho y Próximos Shows se le montaba encima 323px.
+
+     No es un número: se deriva de la pieza más ancha que vive ahí abajo. */
+  --hb-flanco: calc(var(--hb-ticket-w) + var(--hb-hero-inset) * 2);
+
+  /* ALTO DE LA ZONA HERO EN MÓVIL APAISADO.
+     Ahí la escena deja de caber en una pantalla a propósito (ver la variante
+     `apaisado`): en vez de comprimirla hasta dejar a Hosman diminuto, se le da
+     a la zona central un alto propio, mayor que el viewport, y el documento
+     crece. `118svh` es lo que hace que el vídeo mida más que si se ajustara al
+     alto disponible; los topes en `rem` evitan que se dispare en una ventana
+     de escritorio pequeña que cumpliera la condición por los pelos. */
+  --hb-hero-apaisado-h: clamp(20rem, 118svh, 30rem);
+
+  /* Separación de los rails al borde de la pantalla. Es pequeña a propósito:
+     los rails van SUPERPUESTOS al hero, no le restan columna, así que lo único
+     que hay que garantizar es que el dedo no se salga por el canto. */
+  --hb-rail-inset: clamp(0.125rem, 1.2vw, 0.5rem);
 
   /* --- CONTROLES REDONDOS PERSISTENTES ------------------------------------
      Plataformas y redes comparten lenguaje visual pero NO tamaño: las
@@ -262,6 +364,24 @@ body {
      actual (segunda fecha + promocional) no debería llegar a activarse en
      ninguno de los tres viewports de control — verificado. */
   --hb-shows-panel-max: calc(56svh - var(--hb-hero-inset));
+}
+
+/* ===========================================================================
+   AJUSTES DE LA COMPOSICIÓN MÓVIL
+
+   Misma condición que la variante `movil` de arriba, escrita a mano porque las
+   variantes de Tailwind solo aplican a utilidades, no a declaraciones sueltas.
+   Aquí van SOLO los tokens cuyo valor cambia de significado en móvil; todo lo
+   demás sigue interpolando con la misma curva.
+   ------------------------------------------------------------------------ */
+@media (max-width: 40rem) or ((orientation: landscape) and (max-width: 60rem) and (max-height: 32rem)) {
+  :root {
+    /* El trigger cerrado baja a su suelo táctil real. En la barra superior
+       tiene que convivir con el reproductor en la MISMA fila, y con los 190px
+       de escritorio se quedaba con la mitad del ancho de un teléfono. El panel
+       abierto no le sigue: conserva sus 208px por `--hb-menu-panel-w`. */
+    --hb-menu-w: clamp(126px, 33vw, 150px); /* 126 · 129 · 142 (360/390/430) */
+  }
 }
 
 /* ===========================================================================
@@ -346,6 +466,74 @@ body {
   /* Navegación central de la cabecera. */
   --text-nav: clamp(0.625rem, 0.25vw + 0.75svh, 0.75rem); /* 12 · 10 · 10 */
   --text-nav--line-height: 1;
+}
+
+/* ===========================================================================
+   LA HOJA DE PRÓXIMOS EVENTOS (móvil)
+
+   Es un `<dialog>` abierto con `showModal()`: la capa superior no participa
+   del flujo, así que la hoja cubre la escena SIN que el documento gane alto —
+   que era el requisito— y además regala foco atrapado, `inert` sobre lo de
+   detrás y cierre con Escape.
+
+   El estilo lo desmonta de su apariencia por defecto (caja centrada con
+   margen y borde del navegador) y lo vuelve a montar como panel inferior.
+   ------------------------------------------------------------------------ */
+.hb-hoja {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+  /* `allow-discrete` mantiene el elemento pintado mientras el panel se va
+     hacia abajo; sin esto el cierre sería instantáneo. */
+  transition:
+    display 320ms allow-discrete,
+    overlay 320ms allow-discrete;
+}
+
+/* El `display` solo se toca cuando está abierto: cerrado manda la hoja de
+   estilos del navegador (`dialog:not([open]) { display: none }`). */
+.hb-hoja[open] {
+  display: flex;
+  align-items: flex-end;
+}
+
+.hb-hoja::backdrop {
+  background: rgba(5, 3, 4, 0.74);
+}
+
+.hb-hoja__panel {
+  display: flex;
+  width: 100%;
+  max-height: 88svh;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 1rem 1rem 0 0;
+  background: linear-gradient(to bottom, #150b0d 0%, #050304 62%);
+  box-shadow: 0 -18px 44px -14px rgba(0, 0, 0, 0.92);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hb-hoja__panel {
+    transition: translate 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .hb-hoja:not([open]) .hb-hoja__panel {
+    translate: 0 100%;
+  }
+  @starting-style {
+    .hb-hoja[open] .hb-hoja__panel {
+      translate: 0 100%;
+    }
+  }
 }
 
 /* Smooth transitions */

@@ -184,10 +184,19 @@ export function LeatherMenuPhoto({ items, current }: LeatherMenuPhotoProps) {
             top   = ancho × (151/382) × 0,86  = ancho × 0,340
             ancho = ancho × 1,082   (relación medida entre ambos assets)
           Comprobado contra los valores anteriores: con 266px de cabecera da
-          90,4px y 287,8px — los mismos 90/288 de antes. */}
+          90,4px y 287,8px — los mismos 90/288 de antes.
+
+          EL ANCHO YA NO SALE DE AQUÍ, SINO DE `--hb-menu-panel-w`. El 1,082
+          sigue siendo la relación entre los dos assets y sigue mandando
+          mientras hay sitio; lo que cambia es que el panel tiene ahora su
+          propio SUELO. Antes compartía el del trigger, y como el suelo lo
+          marcaba la legibilidad de las seis entradas del panel (190px), era el
+          panel quien impedía que el trigger cerrado —que no lleva texto HTML—
+          bajara en móvil de lo que necesita la barra superior. `top` sí sigue
+          derivándose del trigger: es su costura, no la del panel. */}
       <div
         aria-hidden={!open}
-        className="pointer-events-none absolute left-0 top-[calc(var(--hb-menu-w)*0.34)] w-[calc(var(--hb-menu-w)*1.082)]"
+        className="pointer-events-none absolute left-0 top-[calc(var(--hb-menu-w)*0.34)] w-[var(--hb-menu-panel-w)]"
         style={{
           opacity: open ? 1 : 0,
           transform: open ? 'none' : 'translateY(-10px) scale(0.985)',

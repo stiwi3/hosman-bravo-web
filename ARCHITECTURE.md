@@ -322,6 +322,66 @@ el ancho; está fuera del rango de escritorio a propósito.
 
 ---
 
+### Las tres condiciones estructurales de INICIO
+
+Todo el sistema responsive escala con `clamp()` y con unidades de contenedor. Las
+**únicas** reglas que miran el viewport son tres, declaradas juntas y con nombre como
+variantes de Tailwind en `globals.css`:
+
+| Variante | Condición | Qué compone |
+|---|---|---|
+| `escenario` | `min-aspect-ratio: 6/5` + `min-width: 60rem` + `min-height: 34rem` | Composición superpuesta: el vídeo sangra a todo el alto y cabecera, shows y redes flotan en las esquinas. |
+| `movil` | `max-width: 40rem` **or** móvil apaisado | Barra de una fila, rails superpuestos, branding en el pie, hoja de eventos. |
+| `apaisado` | `landscape` + `max-width: 60rem` + `max-height: 32rem` | La única excepción al «sin scroll»: la escena crece por encima del viewport. |
+
+**El 6/5 no es un número de gusto.** Es la proporción a la que las dos composiciones
+producen el MISMO vídeo, así que al cruzarla no se ve un salto. Medido en la aplicación
+montada: 1300×1080 → 418 px y 1290×1080 → 417 px; 965×800 → 256 px y 955×800 → 258 px, sin
+que cabecera, shows ni redes se muevan. Un umbral por ancho no puede hacer eso porque el
+punto de cruce se desplaza con el alto (~960 px en una ventana de 800, ~1300 px en una de
+1080); en proporción es constante, porque todos los tokens escalan con `svh`.
+
+⚠️ **`@custom-variant` de Tailwind v4 no admite listas separadas por coma**: parte el valor
+y emite un selector vacío que rompe la hoja entera, y el fallo aparece como un 500 sin
+mencionar la variante. La unión va con el operador `or` de Media Queries 4.
+
+⚠️ **Las dos condiciones de tamaño de `escenario` son exclusiones, y las dos tapan un
+agujero real.** `min-width: 60rem`: `--hb-flanco` tiene suelo (el ticket no baja de 300px),
+así que por debajo de ~960px reclamaba más ancho del que hay — a 768×640 el vídeo quedaba en
+80px y a 641×533 el ancho disponible salía negativo. `min-height: 34rem` frente al
+`max-height: 32rem` de `apaisado`: con el mismo número, las medias son inclusivas por los
+dos lados y a 512px de alto se activaban las dos variantes a la vez.
+
+### La ley del vídeo del hero
+
+La `<section>` de INICIO es una rejilla de tres filas —reserva de cabecera · zona hero ·
+pie— de `100svh`. La zona hero declara `container-type: size` y **es la fuente de
+geometría del vídeo**:
+
+```css
+width: min(100cqw, 75cqh);  aspect-ratio: 3 / 4;
+```
+
+`100cqw` es el límite por ancho disponible, `75cqh` el límite por alto disponible, y
+`min()` es «lo que quepa». El marco lleva además un SUELO —`max(min(100cqw, 13rem), …)`—
+para que en una ventana muy baja prefiera asomar por arriba y por abajo (sus bordes están
+difuminados) antes que encogerse hasta desaparecer. Es la misma declaración en todas las composiciones: lo que
+cambia es el TAMAÑO DE LA ZONA contra la que se mide. En `escenario` la zona ocupa toda la
+sección estrechada por `--hb-flanco`; en el resto, lo que dejan las bandas reservadas.
+
+⚠️ **No devolver el marco a `md:h-full md:w-auto`.** Esa forma mide solo por altura y era
+la causa de que a 960×1080 el vídeo ocupara el 84% del ancho y Próximos Shows se le montara
+encima 323 px.
+
+⚠️ **`svh`, nunca `dvh`.** Con `dvh` cada aparición de la barra del navegador
+redimensionaría la escena, el `ResizeObserver` de `InteractiveSmoke` llamaría a `applySize`
+y este a `simulation.resize()`, que destruye los búferes de densidad: mover el dedo
+borraría el humo.
+
+⚠️ **`min-h-svh` y no `min-h-screen` en `<main>`.** `min-h-screen` es `100vh`, el viewport
+GRANDE, así que el documento medía más que la pantalla mientras la barra de direcciones
+estaba desplegada y aparecía scroll en móvil. No se reproduce en escritorio.
+
 ## 8. Datos
 
 Hay **dos** orígenes, y no se mezclan:

@@ -7,6 +7,7 @@ import { useSelectedLayoutSegment } from 'next/navigation';
 import { EntryScreen } from '@/components/audio/EntryScreen';
 import { useAudio } from '@/components/audio/AudioProvider';
 import { TrackPlayer } from '@/components/audio/TrackPlayer';
+import { MobilePlayer } from '@/components/audio/MobilePlayer';
 import { MusicPlatforms } from '@/components/MusicPlatforms';
 import { LeatherMenuPhoto } from '@/components/LeatherMenuPhoto';
 import { HeroScene } from '@/components/HeroScene';
@@ -99,7 +100,13 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <>
       <EntryScreen />
 
-      <main className="bg-black text-white font-sans overflow-x-hidden min-h-screen">
+      {/* `min-h-svh` y NO `min-h-screen`. `min-h-screen` es `100vh`, que en
+          móvil equivale al viewport GRANDE —el que queda con las barras del
+          navegador retraídas—, así que el documento medía más que la pantalla
+          mientras la barra de direcciones estaba desplegada y aparecía scroll
+          aunque la escena estuviera a `100svh`. Ese scroll no se reproduce en
+          un navegador de escritorio, donde no hay barra dinámica. */}
+      <main className="bg-black text-white font-sans overflow-x-hidden min-h-svh">
         {/* HEADER FIJO
             Su padding sale del sistema fluido: es el mismo valor del que se
             deriva `--hb-header-h`, que a su vez marca dónde puede empezar el
@@ -117,7 +124,11 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               fijo, de modo que sube junto al resto cuando la cabecera encoge.
               Son `<Link>` y no `<button>` desde que las escenas son rutas
               reales: `next/link` aplica solo el `basePath`. */}
-          <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] text-nav tracking-widest space-x-3 md:space-x-5">
+          {/* En móvil desaparece: no se pierde navegación —las mismas seis
+              entradas están dentro del menú de cuero, que es el control
+              principal ahí— y su sitio lo necesita el reproductor para caber en
+              la misma fila que el menú. */}
+          <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] text-nav tracking-widest space-x-3 md:space-x-5 movil:hidden">
             {NAV_ITEMS.map(({ id, label, href }) => (
               <Link
                 key={id}
@@ -140,15 +151,30 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               despega de la cabecera y baja a una rejilla de 4×2, para no
               cruzarse con la navegación central — sigue siendo el mismo bloque,
               solo cambia su posición de anclaje. */}
-          <div className="absolute right-4 top-[74px] flex flex-col items-end gap-[var(--hb-music-gap)] md:static md:right-auto md:top-auto">
+          <div className="flex min-w-0 flex-1 flex-col items-end gap-[var(--hb-music-gap)]">
             {/* El reproductor manda sobre el audio global; debajo quedan los
-                accesos a las plataformas. */}
-            <div className="hidden sm:block">
+                accesos a las plataformas.
+
+                LOS DOS REPRODUCTORES ESTÁN EN EL DOM Y SOLO SE VE UNO. No es
+                estado duplicado —los dos leen y escriben en `AudioProvider`,
+                que es el único que tiene el audio— sino dos presentaciones. El
+                que no toca queda en `display:none`, que lo saca también del
+                árbol de accesibilidad, así que un lector de pantalla tampoco
+                ve dos. Elegir en JS obligaría a leer el tamaño de la ventana
+                para decidir el layout, que es justo lo que no se quiere. */}
+            <div className="movil:hidden">
               <TrackPlayer />
+            </div>
+            <div className="hidden w-full min-w-0 movil:block">
+              <MobilePlayer />
             </div>
             {/* La `key` remonta el bloque al cambiar de sección, de modo que
                 siempre aparece recogido al navegar. */}
-            <MusicPlatforms key={current} collapsible={!isHome} />
+            <MusicPlatforms
+              key={current}
+              colapso={isHome ? 'solo-movil' : 'siempre'}
+              railEnMovil={isHome}
+            />
           </div>
         </header>
 

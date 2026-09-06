@@ -1,84 +1,16 @@
 'use client';
 
-import { useAudio } from './AudioProvider';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+import {
+  Equalizer,
+  LEATHER,
+  PauseIcon,
+  PlayIcon,
+  useControlDeSonido,
+  type IconProps
+} from './playerParts';
 import { hosmanData } from '@/data/hosman-data';
 import { SpotifyIcon } from '../icons/PlatformIcons';
 import { YouTubeIcon } from '../icons/SocialIcons';
-
-/**
- * Alturas y ritmos distintos por barra: el conjunto no late al unísono.
- * Ocho barras y separación amplia dan una silueta apaisada de unos 51 px.
- */
-const BARS = [
-  { height: 7, duration: 1.1, delay: 0 },
-  { height: 13, duration: 0.85, delay: 0.22 },
-  { height: 9, duration: 1.35, delay: 0.41 },
-  { height: 15, duration: 0.95, delay: 0.09 },
-  { height: 8, duration: 1.25, delay: 0.5 },
-  { height: 12, duration: 0.9, delay: 0.31 },
-  { height: 10, duration: 1.45, delay: 0.16 },
-  { height: 14, duration: 1.05, delay: 0.55 },
-];
-
-/**
- * Cuero oscuro resuelto solo con CSS: dos tramas de puntos desfasadas sobre un
- * degradado burdeos. Se lee como grano, no como textura estampada, y no cuesta
- * ninguna imagen.
- */
-const LEATHER: React.CSSProperties = {
-  backgroundImage: [
-    'radial-gradient(circle at 30% 40%, rgba(242,238,232,0.035) 0.5px, transparent 0.5px)',
-    'radial-gradient(circle at 70% 65%, rgba(0,0,0,0.5) 0.5px, transparent 0.5px)',
-    'linear-gradient(145deg, #1a0a0d 0%, #0d0d0f 55%, #150609 100%)',
-  ].join(', '),
-  backgroundSize: '6px 6px, 9px 9px, 100% 100%',
-};
-
-function Equalizer({ active }: { active: boolean }) {
-  return (
-    <div className="flex h-4 items-end gap-[5px]" aria-hidden="true">
-      {BARS.map(({ height, duration, delay }, i) => (
-        <span
-          key={i}
-          className={`w-[2px] origin-bottom rounded-full transition-colors duration-500 ${
-            active ? 'bg-[#D4AF37]' : 'bg-[#D4AF37]/25'
-          }`}
-          style={{
-            height: `${height}px`,
-            transform: active ? undefined : 'scaleY(0.2)',
-            boxShadow: active ? '0 0 6px -1px rgba(212,175,55,0.55)' : undefined,
-            animation: active
-              ? `hb-equalizer ${duration}s ease-in-out ${delay}s infinite`
-              : undefined,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Todos los iconos aceptan `style` además de `className`: sus tamaños van en
- *  `cqw` (ver `P`), y una unidad de container query no se puede expresar como
- *  clase de utilidad sin generar una variante por cada valor. */
-type IconProps = { className?: string; style?: React.CSSProperties };
-
-function PlayIcon({ className, style }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className} style={style}>
-      <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l11.14-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
-    </svg>
-  );
-}
-
-function PauseIcon({ className, style }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className} style={style}>
-      <rect x="7" y="5" width="3.4" height="14" rx="1" />
-      <rect x="13.6" y="5" width="3.4" height="14" rx="1" />
-    </svg>
-  );
-}
 
 /** Altavoz con ondas: el sonido está activo. */
 function SoundOnIcon({ className, style }: IconProps) {
@@ -207,27 +139,11 @@ const PLAYER_GAP = 'max(7px, calc(var(--hb-player-w) * 0.0333))'; /* 10px sobre 
  * elemento de sonido.
  */
 export function TrackPlayer() {
-  const { isPlaying, isMuted, mute, unmute, play, pause, track } = useAudio();
-  const reducedMotion = useReducedMotion();
-
-  // El ecualizador solo se mueve si de verdad está sonando algo audible.
-  const soundingOut = isPlaying && !isMuted;
-  const animate = soundingOut && !reducedMotion;
-
-  /**
-   * Los dos controles gobiernan un único estado —si suena o no— y por eso
-   * jamás pueden contradecirse: silenciar pausa, y devolver el sonido reanuda.
-   */
-  const setSound = (on: boolean) => {
-    if (on) {
-      unmute();
-      void play();
-    } else {
-      pause();
-      mute();
-    }
-  };
-  const toggleSound = () => setSound(!soundingOut);
+  /* Todo el estado sale de `AudioProvider` a través del hook compartido: es el
+     mismo del que tira el reproductor compacto de móvil, así que los dos no
+     pueden contradecirse aunque estén los dos montados. */
+  const { sonando: soundingOut, animar: animate, alternar: toggleSound, track } =
+    useControlDeSonido();
 
   const artist = hosmanData.artist.name
     .split(' ')
@@ -306,7 +222,7 @@ export function TrackPlayer() {
             >
               {artist}
             </span>
-            <Equalizer active={animate} />
+            <Equalizer active={animate} className="h-4" />
           </div>
 
           {/* Acciones principales. Cada una se oculta si aún no tiene destino. */}

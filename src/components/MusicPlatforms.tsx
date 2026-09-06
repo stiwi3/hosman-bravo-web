@@ -73,56 +73,95 @@ function EllipsisIcon() {
 
 interface MusicPlatformsProps {
   /**
-   * Fuera de la portada el bloque se recoge: en las demás secciones la fila
-   * completa se cruzaba con el contenido de la página.
+   * Cuándo el bloque se recoge.
+   *
+   * · `nunca` — la fila completa, sin controles. Es lo que hace INICIO en
+   *   escritorio: ahí sobra espacio y las ocho plataformas caben.
+   * · `siempre` — recogido en cualquier tamaño. Fuera de la portada la fila
+   *   completa se cruzaba con el contenido de la página.
+   * · `solo-movil` — recogido únicamente en la composición móvil, donde el
+   *   bloque pasa a ser el rail vertical derecho y solo caben las cuatro
+   *   principales. Las demás siguen accesibles por el mismo desplegable.
+   *
+   * Lo decide la RUTA, no el viewport: el corte por tamaño lo resuelve el CSS
+   * con la variante `movil`, sin que React tenga que leer `innerWidth`.
    */
-  collapsible?: boolean;
+  colapso?: 'nunca' | 'siempre' | 'solo-movil';
+  /**
+   * En móvil el bloque abandona la cabecera y se convierte en el rail derecho,
+   * superpuesto al hero. Solo tiene sentido en INICIO — en las demás secciones
+   * se cruzaría con el contenido —, así que también lo decide la ruta.
+   */
+  railEnMovil?: boolean;
 }
 
 /**
  * Enlaces a las plataformas de streaming del artista.
  *
- * En escritorio forman una sola fila en la esquina superior derecha; en
- * pantallas estrechas pasan a una rejilla de cuatro columnas situada bajo la
- * cabecera, para no cruzarse con la navegación central.
+ * En escritorio forman una sola fila en la esquina superior derecha. En móvil,
+ * dentro de INICIO, el mismo bloque se convierte en el rail vertical derecho,
+ * superpuesto al hero: es una sola instancia con otra dirección de flujo, no un
+ * segundo componente — así no hay dos estados de despliegue que puedan
+ * contradecirse.
+ *
+ * Con `colapso: 'solo-movil'` se renderizan SIEMPRE las ocho y el recorte lo
+ * hace el CSS. Es la única forma de que la fila completa siga intacta en
+ * escritorio y el rail muestre cuatro sin que React tenga que consultar el
+ * tamaño de la ventana.
  */
-export function MusicPlatforms({ collapsible = false }: MusicPlatformsProps) {
+export function MusicPlatforms({
+  colapso = 'nunca',
+  railEnMovil = false
+}: MusicPlatformsProps) {
   // El llamante remonta el componente al cambiar de sección (con `key`), así
   // que basta con arrancar recogido: no hace falta reiniciar nada a mano.
   const [expanded, setExpanded] = useState(false);
 
-  const collapsed = collapsible && !expanded;
-  const platforms = collapsed
-    ? hosmanData.musicPlatforms.slice(0, COLLAPSED_COUNT)
-    : hosmanData.musicPlatforms;
-  const hidden = hosmanData.musicPlatforms.length - COLLAPSED_COUNT;
+  const recogido = colapso !== 'nunca' && !expanded;
+  const soloMovil = colapso === 'solo-movil';
+  const ocultas = hosmanData.musicPlatforms.length - COLLAPSED_COUNT;
+
+  /* Cuando el recorte es responsabilidad del CSS, los controles existen en el
+     DOM pero solo se ven en la composición móvil. `display:none` los saca
+     también del árbol de accesibilidad, así que en escritorio no hay un botón
+     «ver más» invisible esperando al tabulador. */
+  const claseControl = soloMovil ? `hidden movil:flex ${BUTTON_CLASS}` : BUTTON_CLASS;
 
   return (
     <div
-      className={
-        collapsible
-          ? `flex items-center ${ROW_GAP}`
-          : `grid grid-cols-4 ${ROW_GAP} md:flex`
-      }
+      className={`flex items-center ${ROW_GAP} ${
+        railEnMovil
+          ? // `max-height` + scroll interno: el rail es `fixed`, así que si al
+            // desplegarse las ocho plataformas midieran más que la pantalla,
+            // sus extremos quedarían fuera y NO habría forma de alcanzarlos —
+            // desplazar el documento no mueve un elemento fijo. Con 9 controles
+            // de 36px hacen falta 356px, y un móvil tumbado tiene 320-390.
+            'movil:fixed movil:right-[var(--hb-rail-inset)] movil:top-1/2 movil:z-40 movil:max-h-[calc(100svh-1.5rem)] movil:-translate-y-1/2 movil:flex-col movil:overflow-y-auto movil:overscroll-contain'
+          : 'movil:flex-wrap movil:justify-end'
+      }`}
     >
       {/* Abre y cierra la fila; la flecha gira para indicar el sentido. */}
-      {collapsible && (
+      {colapso !== 'nunca' && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          title={collapsed ? `Ver las ${hosmanData.musicPlatforms.length} plataformas` : 'Recoger'}
+          title={recogido ? `Ver las ${hosmanData.musicPlatforms.length} plataformas` : 'Recoger'}
           aria-label={
-            collapsed ? `Ver las ${hosmanData.musicPlatforms.length} plataformas` : 'Recoger'
+            recogido ? `Ver las ${hosmanData.musicPlatforms.length} plataformas` : 'Recoger'
           }
-          className={BUTTON_CLASS}
+          className={claseControl}
         >
           <ChevronIcon open={expanded} />
         </button>
       )}
 
-      {platforms.map(({ name, icon, url }) => {
+      {hosmanData.musicPlatforms.map(({ name, icon, url }, i) => {
         const Icon = ICONS[icon];
+        const sobrante = recogido && i >= COLLAPSED_COUNT;
+        // Con `siempre` el recorte es real (no se renderiza); con `solo-movil`
+        // lo hace el CSS, para que escritorio conserve la fila completa.
+        if (sobrante && !soloMovil) return null;
         return (
           <a
             key={name}
@@ -131,7 +170,7 @@ export function MusicPlatforms({ collapsible = false }: MusicPlatformsProps) {
             rel="noopener noreferrer"
             title={name}
             aria-label={`Escuchar a Hosman Bravo en ${name}`}
-            className={`group ${BUTTON_CLASS}`}
+            className={`group ${BUTTON_CLASS} ${sobrante ? 'movil:hidden' : ''}`}
           >
             <Icon className={`${ICON_CLASS} transition-colors duration-300`} />
           </a>
@@ -139,13 +178,13 @@ export function MusicPlatforms({ collapsible = false }: MusicPlatformsProps) {
       })}
 
       {/* Los puntos avisan de que la fila continúa; también despliegan. */}
-      {collapsed && (
+      {recogido && (
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          title={`Ver ${hidden} plataformas más`}
-          aria-label={`Ver ${hidden} plataformas más`}
-          className={BUTTON_CLASS}
+          title={`Ver ${ocultas} plataformas más`}
+          aria-label={`Ver ${ocultas} plataformas más`}
+          className={claseControl}
         >
           <EllipsisIcon />
         </button>
