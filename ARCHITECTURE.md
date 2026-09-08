@@ -107,6 +107,21 @@ encima del shell. Crea **un único** elemento `Audio` en un efecto con dependenc
   `'youtube-modal'` — las previews muteadas de la cuadrícula NO deben llamarlo: un
   `<iframe>` muted y el `<audio>` no compiten por nada.
 
+### ⚠️ El fundido de entrada es un punto único de fallo
+
+`AudioProvider` crea el audio con `volume = 0` y lo sube a `TARGET_VOLUME` (0,45) con un
+fundido de 1,8 s montado sobre `requestAnimationFrame`. **Si ese bucle no corre, la canción
+se reproduce en silencio y nada la recupera**: el único otro sitio que asigna el volumen es
+el `catch` de `play()`, que solo entra cuando el navegador rechaza la reproducción.
+
+Medido en producción (7 sep 2026): tras entrar por el telón el elemento está
+`paused: false`, `muted: false`, `currentTime` avanzando y **`volume: 0`**.
+
+En iOS `volume` es de solo lectura, así que allí el fundido se ignora y suena al volumen
+del sistema: el fallo solo puede manifestarse en Android o escritorio.
+
+Cualquier cambio aquí necesita permiso explícito de Danny — ver §12.
+
 ### YouTubeModal
 
 El videoclip a pantalla completa. **Su ciclo de vida es el montaje**: `MusicSection` lo
@@ -322,65 +337,114 @@ el ancho; está fuera del rango de escritorio a propósito.
 
 ---
 
-### Las tres condiciones estructurales de INICIO
+### Las dos composiciones de INICIO
 
 Todo el sistema responsive escala con `clamp()` y con unidades de contenedor. Las
-**únicas** reglas que miran el viewport son tres, declaradas juntas y con nombre como
+**únicas** reglas que miran el viewport son dos, declaradas juntas y con nombre como
 variantes de Tailwind en `globals.css`:
 
 | Variante | Condición | Qué compone |
 |---|---|---|
-| `escenario` | `min-aspect-ratio: 6/5` + `min-width: 60rem` + `min-height: 34rem` | Composición superpuesta: el vídeo sangra a todo el alto y cabecera, shows y redes flotan en las esquinas. |
-| `movil` | `max-width: 40rem` **or** móvil apaisado | Barra de una fila, rails superpuestos, branding en el pie, hoja de eventos. |
-| `apaisado` | `landscape` + `max-width: 60rem` + `max-height: 32rem` | La única excepción al «sin scroll»: la escena crece por encima del viewport. |
+| *(base)* | — | **Composición compacta.** Barra superior de una fila (`MobilePlayer`), bandas que reservan alto de verdad, escena que crece si hace falta. |
+| `abierta` | `min-aspect-ratio: 13/10` + `min-width: 58rem` + `min-height: 34rem` | **Composición superpuesta.** El vídeo sangra a todo el alto; cabecera, shows y redes flotan en las esquinas. Solo cede por los flancos. |
+| `rails` | `max-width: 40rem` | Dentro de la compacta: los grupos de iconos pasan a rails verticales superpuestos y el pie lo ocupan branding y tirador. |
 
-**El 6/5 no es un número de gusto.** Es la proporción a la que las dos composiciones
-producen el MISMO vídeo, así que al cruzarla no se ve un salto. Medido en la aplicación
-montada: 1300×1080 → 418 px y 1290×1080 → 417 px; 965×800 → 256 px y 955×800 → 258 px, sin
-que cabecera, shows ni redes se muevan. Un umbral por ancho no puede hacer eso porque el
-punto de cruce se desplaza con el alto (~960 px en una ventana de 800, ~1300 px en una de
-1080); en proporción es constante, porque todos los tokens escalan con `svh`.
+**La base es la compacta, no la de escritorio.** Es la que funciona en cualquier
+geometría, así que el caso difícil es el camino por defecto y el fácil el que se pide
+expresamente.
 
-⚠️ **`@custom-variant` de Tailwind v4 no admite listas separadas por coma**: parte el valor
-y emite un selector vacío que rompe la hoja entera, y el fallo aparece como un 500 sin
-mencionar la variante. La unión va con el operador `or` de Media Queries 4.
+**La cabecera compacta no tiene condición propia**: va atada a la composición. En
+`abierta` la cabecera flota sobre el vídeo y no le cuesta alto al hero, así que ahí cabe
+el módulo completo de reproductor + plataformas; en la compacta cada píxel de cabecera se
+lo quita al hero. Medido: 225–280 px el módulo completo frente a 86 el compacto, y esos
+~140 px valen ~105 px de vídeo.
 
-⚠️ **Las dos condiciones de tamaño de `escenario` son exclusiones, y las dos tapan un
-agujero real.** `min-width: 60rem`: `--hb-flanco` tiene suelo (el ticket no baja de 300px),
-así que por debajo de ~960px reclamaba más ancho del que hay — a 768×640 el vídeo quedaba en
-80px y a 641×533 el ancho disponible salía negativo. `min-height: 34rem` frente al
-`max-height: 32rem` de `apaisado`: con el mismo número, las medias son inclusivas por los
-dos lados y a 512px de alto se activaban las dos variantes a la vez.
+⚠️ `@custom-variant` de Tailwind v4 **no admite listas separadas por coma**: parte el valor
+y emite un selector vacío que rompe la hoja entera, con un 500 que no menciona la variante.
 
-### La ley del vídeo del hero
+### La política: `fit` mientras quepa, crecer cuando no
 
-La `<section>` de INICIO es una rejilla de tres filas —reserva de cabecera · zona hero ·
-pie— de `100svh`. La zona hero declara `container-type: size` y **es la fuente de
-geometría del vídeo**:
+La escena es `min-height: 100svh` —no `height`— con
+`grid-template-rows: auto minmax(var(--hb-hero-min-h), 1fr) auto`.
+
+Si `cabecera + suelo del hero + pie` entra en la pantalla, el `1fr` absorbe el sobrante:
+una pantalla, sin scroll. Si no entra, la rejilla crece y el documento se desplaza — dentro
+de INICIO, porque en `/` la ruta devuelve `null` y el `<footer>` solo existe fuera de la
+portada: **debajo de la escena no hay nada**. No hay ninguna condición que escribir; lo
+resuelve el algoritmo de rejilla.
+
+`100svh` dejó de ser una obligación porque serlo tenía un precio medido: con la cabecera y
+el pie en sus mínimos, todo el déficit caía sobre el hero y este bajaba a 327 px en la
+franja intermedia, para recuperar 488 al entrar en móvil. La progresión `675 → 327 → 488`
+era la avería.
+
+### El suelo del hero
+
+`--hb-hero-min-w: 20rem` y `--hb-hero-min-h` derivado por la proporción 3:4. Es un token
+**propio del hero**, sin dependencia de ningún otro módulo: cambiar los tickets o la
+cabecera no debe mover por la puerta de atrás la geometría del protagonista.
+
+Actúa por un eje distinto en cada composición. En la compacta es el mínimo de la fila. En
+`abierta` la zona hero está **fuera del flujo** y el mínimo de fila no le llega, así que
+ahí cede el flanco: `min(var(--hb-flanco-ideal), max(0px, (100cqw - var(--hb-hero-min-w)) / 2))`.
+
+### La ley del vídeo
+
+Una sola declaración, la misma en las dos composiciones:
 
 ```css
 width: min(100cqw, 75cqh);  aspect-ratio: 3 / 4;
 ```
 
 `100cqw` es el límite por ancho disponible, `75cqh` el límite por alto disponible, y
-`min()` es «lo que quepa». El marco lleva además un SUELO —`max(min(100cqw, 13rem), …)`—
-para que en una ventana muy baja prefiera asomar por arriba y por abajo (sus bordes están
-difuminados) antes que encogerse hasta desaparecer. Es la misma declaración en todas las composiciones: lo que
-cambia es el TAMAÑO DE LA ZONA contra la que se mide. En `escenario` la zona ocupa toda la
-sección estrechada por `--hb-flanco`; en el resto, lo que dejan las bandas reservadas.
+`min()` es «lo que quepa». Lo que cambia entre composiciones no es la fórmula: es el
+**tamaño de la zona** contra la que se mide, que declara `container-type: size`.
 
-⚠️ **No devolver el marco a `md:h-full md:w-auto`.** Esa forma mide solo por altura y era
-la causa de que a 960×1080 el vídeo ocupara el 84% del ancho y Próximos Shows se le montara
-encima 323 px.
+⚠️ **No devolver el marco a `md:h-full md:w-auto`.** Esa forma mide solo por altura y era la
+causa de que a 960×1080 el vídeo ocupara el 84 % del ancho.
 
 ⚠️ **`svh`, nunca `dvh`.** Con `dvh` cada aparición de la barra del navegador
 redimensionaría la escena, el `ResizeObserver` de `InteractiveSmoke` llamaría a `applySize`
-y este a `simulation.resize()`, que destruye los búferes de densidad: mover el dedo
-borraría el humo.
+y este a `simulation.resize()`, que destruye los búferes de densidad.
 
 ⚠️ **`min-h-svh` y no `min-h-screen` en `<main>`.** `min-h-screen` es `100vh`, el viewport
-GRANDE, así que el documento medía más que la pantalla mientras la barra de direcciones
-estaba desplegada y aparecía scroll en móvil. No se reproduce en escritorio.
+grande, y hacía que el documento midiera más que la pantalla con la barra desplegada.
+
+### Dos reglas que protegen al humo
+
+El canvas es lo único de la escena que **no** puede depender del contenido: cada cambio de
+su tamaño reconstruye las texturas de densidad, que son la forma del humo.
+
+1. **El canvas va anclado a la primera pantalla** (`absolute inset-x-0 top-0 h-[100svh]`),
+   no a la escena. Su tamaño depende solo del ancho de la ventana y de `svh`, así que
+   crecer la escena o desplazarse no lo tocan.
+2. **El panel de Próximos Shows no participa en el reparto vertical** (`absolute
+   bottom-full`): se despliega hacia arriba sobre el hero. Cuando estaba en el flujo, en la
+   composición compacta su fila es `auto` y abrirlo le robaba el alto al hero — medido a
+   1000×900 sobre el commit 1734a99: el vídeo pasaba de 327 a 208 px.
+
+### Los rails van `fixed`: decisión consciente con coste conocido
+
+Con la variante `rails`, los dos grupos de iconos son `position: fixed`. **No es una
+limitación desconocida, es un trade-off medido y aceptado.**
+
+En una escena móvil excepcionalmente baja que crece por encima de `100svh`, **los rails
+permanecen ligados al viewport mientras el hero se desplaza con el scroll**. El desfase no
+puede superar nunca el crecimiento de la escena:
+
+| | 360×620 | 360×480 |
+|---|---|---|
+| Crecimiento y desfase | 22 px | 160 px |
+
+**En los tres teléfonos de referencia (360×780, 390×844, 430×932) la escena no crece, así
+que el desfase es cero.** A 844×390 tampoco ocurre: ahí `rails` no aplica y las redes van
+en el pie, en flujo, viajando con el hero.
+
+Se mantiene así porque corregirlo exigiría o una segunda instancia de `MusicPlatforms`
+—estado duplicado— o moverla fuera de la cabecera persistente, lo que obligaría a
+reconstruir su posición bajo el `TrackPlayer` desde fuera y añadiría un acoplamiento nuevo
+**en la composición de escritorio ya aprobada**. No se añade ninguna compensación para
+este caso: es deliberado.
 
 ## 8. Datos
 

@@ -47,7 +47,7 @@ function TitleOrnament({ flip = false }: { flip?: boolean }) {
       className="flex items-center"
       style={{ gap: '6px', transform: flip ? 'scaleX(-1)' : undefined }}
     >
-      <span className="block h-px w-8 bg-gradient-to-r from-transparent to-amber-400/50 sm:w-12" />
+      <span className="block h-px w-12 bg-gradient-to-r from-transparent to-amber-400/50" />
       <svg viewBox="0 0 10 10" className="h-[5px] w-[5px] shrink-0" fill="none">
         <path d="M5 0.6 9.4 5 5 9.4 0.6 5Z" stroke="#D4AF37" strokeWidth="1.6" />
       </svg>
@@ -107,13 +107,13 @@ export function UpcomingShows({
   };
 
   return (
-    <section aria-label="Próximos shows" className="flex flex-col items-center">
+    <section aria-label="Próximos shows" className="relative flex flex-col items-center">
       {/* TÍTULO — un par de puntos menos que antes (11/13px → 9/11px), mismo
           color, ornamentos y alineación: solo baja de protagonismo. */}
-      <h2 className="mb-3 flex items-center gap-3 sm:gap-4">
+      <h2 className="mb-3 flex items-center gap-4">
         <TitleOrnament />
         <span
-          className="font-serif text-[9px] uppercase tracking-[0.3em] text-amber-300/90 sm:text-[11px]"
+          className="font-serif text-[11px] uppercase tracking-[0.3em] text-amber-300/90"
           style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
         >
           Próximos shows
@@ -136,7 +136,31 @@ export function UpcomingShows({
           declarado inexistente. `inert` los saca del foco Y del árbol de
           accesibilidad de una vez. Es el mismo problema que `LeatherMenuPhoto`
           ya resolvía con `tabIndex={open ? 0 : -1}`. */}
-      <div id={panelId} style={panelStyle} aria-hidden={!open} inert={!open}>
+      {/* ⚠️ EL PANEL NO PARTICIPA EN EL REPARTO VERTICAL DE LA ESCENA.
+          Va `absolute` anclado por encima del bloque (`bottom-full`), así que
+          desplegarlo no cambia el alto de nada: se despliega sobre el hero.
+
+          El ancho es el del ticket más los 4rem de relleno que los dos
+          contenedores de dentro usan para que el `ClickHint` de cada entrada
+          pueda asomar por su flanco. Fuera de flujo, la caja ya no la estira
+          el bloque: hay que declararla, o el recorte se come el saliente.
+
+          Antes estaba en el flujo, y en la composición compacta su fila es
+          `auto`: al abrirse le robaba el alto a la fila del hero. Medido a
+          1000×900 sobre el commit 1734a99: el bloque pasaba de 179 a 417px y
+          el vídeo de 327 a 208 — un 36% menos de Hosman por pulsar «ver más
+          fechas». En la composición abierta no se notaba porque ahí el pie ya
+          está fuera de flujo; el fallo solo aparecía al reservar de verdad.
+
+          Además impide que abrir eventos haga crecer la escena, y con ella el
+          canvas del humo, cuya redimensión destruye las texturas de densidad. */}
+      <div
+        id={panelId}
+        style={panelStyle}
+        aria-hidden={!open}
+        inert={!open}
+        className="absolute bottom-full left-1/2 z-10 w-[calc(var(--hb-ticket-w)+4rem)] -translate-x-1/2"
+      >
         {/* `min-h-0` es imprescindible: sin él el hijo de la rejilla conserva
             su altura mínima de contenido y la fila nunca llega a colapsar a 0.
             `px-8`: el `ClickHint` de la promocional sobresale hasta 8cqw
@@ -166,7 +190,7 @@ export function UpcomingShows({
               PADDING, así que este relleno le devuelve el sitio; va simétrico
               en horizontal para no descentrar las entradas. */}
           <div
-            className="flex flex-col items-center gap-3 overflow-y-auto px-6 pb-6 pt-3 sm:gap-4 sm:pt-4"
+            className="flex flex-col items-center gap-4 overflow-y-auto px-6 pb-6 pt-4"
             style={{ maxHeight: 'var(--hb-shows-panel-max)' }}
           >
             {hasSecond && (
@@ -188,7 +212,7 @@ export function UpcomingShows({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="mt-3 flex items-center gap-2.5 border border-amber-400/35 bg-black/45 px-5 py-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-200/85 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/65 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70 sm:mt-4 sm:text-[10px]"
+        className="mt-4 flex items-center gap-2.5 border border-amber-400/35 bg-black/45 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/85 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/65 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70"
       >
         {open ? 'Ocultar fechas' : 'Ver más fechas'}
         <ChevronIcon open={open} />

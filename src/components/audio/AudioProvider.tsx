@@ -94,7 +94,27 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       const from = audio.volume;
       const start = performance.now();
       const step = (now: number) => {
-        const t = Math.min((now - start) / FADE_IN_MS, 1);
+        /* EL TOPE INFERIOR NO ES DEFENSIVO POR GUSTO: sin el `max(…, 0)` este
+           fundido tiene un modo de fallo PERMANENTE. Todos los callbacks de un
+           mismo fotograma reciben la marca de tiempo de su INICIO, tomada antes
+           de que corriera el código que los programó, así que `now` puede ser
+           anterior a `start`. Con `t` negativo y `from = 0` —el primer play tras
+           el telón— la interpolación da un volumen negativo, y asignar eso lanza
+           `IndexSizeError`. La excepción salta ANTES de la línea que reprograma
+           el siguiente fotograma: el bucle muere y el volumen se queda en 0 para
+           siempre, con la canción sonando en silencio y sin nada que la
+           recupere. Comprobado en navegador: t=-0,000167 → volumen -0,00015 →
+           IndexSizeError.
+
+           Con el tope, un `now` anterior solo produce `t = 0` (el volumen se
+           queda donde estaba) y el fotograma siguiente sigue la rampa normal.
+
+           ⚠️ ES UNA CORRECCIÓN DEFENSIVA, NO LA CAUSA CONFIRMADA DE NINGÚN
+           FALLO REPORTADO. Se ha demostrado que la ruta existe y que el
+           desenlace es un silencio permanente, pero NO que sea lo que ocurre en
+           el teléfono desde el que se reportó no oír la canción. Esa
+           investigación sigue abierta. */
+        const t = Math.min(Math.max((now - start) / FADE_IN_MS, 0), 1);
         // Curva suave: arranca despacio y se asienta sin salto al final.
         audio.volume = from + (TARGET_VOLUME - from) * (t * (2 - t));
         if (t < 1) fadeRef.current = requestAnimationFrame(step);

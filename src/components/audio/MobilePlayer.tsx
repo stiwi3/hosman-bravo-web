@@ -5,17 +5,22 @@ import { SpotifyIcon } from '../icons/PlatformIcons';
 import { YouTubeIcon } from '../icons/SocialIcons';
 
 /* ---------------------------------------------------------------------------
-   REPRODUCTOR COMPACTO — la mitad derecha de la barra superior en móvil.
+   REPRODUCTOR COMPACTO — la mitad derecha de la barra superior en la
+   composición compacta, que es la base del sistema (no solo teléfonos).
 
    NO es el `TrackPlayer` encogido: es otra composición. Convive con el menú de
    cuero en UNA sola fila, así que solo puede llevar lo imprescindible —el
    nombre de la canción y las dos acciones— y el ecualizador deja de ser un
    indicador aparte para integrarse alrededor del propio botón de play.
 
+   Existe por una razón geométrica, no de dispositivo: en la composición
+   compacta las bandas reservan alto de verdad, y cada píxel de cabecera se lo
+   quita al hero. Medido: el módulo completo ocupa 225-280px y este 86; esos
+   ~140px valen ~105px de vídeo.
+
    Fuera quedan, a propósito: el nombre del artista (ya está en el menú y en el
    rótulo del hero), el rótulo «ÚLTIMO LANZAMIENTO», el control «SOUND ON/OFF»
-   separado —el play ya gobierna el sonido— y el resto de plataformas, que en
-   móvil viven en el rail derecho.
+   separado —el play ya gobierna el sonido— y el resto de plataformas.
 
    El estado sale entero de `useControlDeSonido`, es decir de `AudioProvider`:
    este componente no tiene ni un `useState`. Por eso los dos reproductores no
@@ -25,7 +30,7 @@ import { YouTubeIcon } from '../icons/SocialIcons';
 /* ANCHO MÁXIMO DEL BLOQUE.
    No es decorativo: todo el interior se mide en `cqw` contra este bloque, así
    que sin tope el reproductor crece con el hueco que le quede en la fila. En
-   móvil apaisado (844px de ancho) el hueco es enorme y la cabecera llegó a
+   una pantalla tumbada (844px de ancho) el hueco es enorme y la cabecera llegó a
    medir 299px —el 77% de la pantalla— con un título de 56px. El tope mantiene
    el contenedor dentro del rango para el que están calibradas las medidas de
    abajo, y en un teléfono vertical no llega a activarse: ahí el menú ya deja

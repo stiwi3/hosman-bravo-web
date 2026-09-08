@@ -3,66 +3,47 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ===========================================================================
-   LAS TRES CONDICIONES ESTRUCTURALES DE LA ESCENA
+   LAS DOS CONDICIONES ESTRUCTURALES DE LA ESCENA
 
    Son las UNICAS reglas por viewport de todo el sistema. Todo lo demas escala
-   con `clamp()` o con unidades de contenedor. Estan aqui, juntas y con nombre,
-   para que nadie tenga que deducir su significado leyendo un numero suelto.
+   con `clamp()` o con unidades de contenedor.
 
-   `escenario` — LA COMPOSICION SUPERPUESTA (escritorio ancho).
+   LA BASE ES LA COMPOSICION COMPACTA. Es la que funciona en cualquier
+   geometria: barra superior de una fila, bandas que reservan su espacio de
+   verdad y una escena que crece si hace falta. Lo que se declara como
+   excepcion es la composicion ancha, no al reves — asi el caso dificil es el
+   camino por defecto y el facil el que se pide expresamente.
+
+   `abierta` — LA COMPOSICION SUPERPUESTA (escritorio ancho).
    El video sangra de borde a borde en vertical —sus bordes los difumina la
    mascara, por eso no se lee como recorte— y cabecera, shows y redes flotan
-   encima, en las esquinas. Solo cede por los FLANCOS que reclaman los modulos
-   de esquina, que es lo que impide que se les meta debajo.
+   encima, en las esquinas. La cabecera aqui NO LE CUESTA NADA al hero, y por
+   eso es la unica composicion que puede permitirse el modulo completo de
+   reproductor + plataformas. El video solo cede por los flancos.
 
-   EL LIMITE ES UNA PROPORCION, NO UN ANCHO, y el numero no es de gusto: 6/5 es
-   donde las dos composiciones producen EL MISMO video, asi que al cruzarlo no
-   se ve un salto. Medido en la aplicacion real: a 1300x1080 y a 1290x1080 el
-   video mide lo mismo, y lo mismo a 965x800 y 955x800.
+     · `min-aspect-ratio: 13/10` — por debajo de esta proporcion la composicion
+       superpuesta deja de rendir: el flanco se come mas ancho del que la
+       ventana puede pagar, y reservar en vertical da un hero mayor. Es una
+       proporcion y no un ancho porque el punto de cruce se mueve con el alto,
+       y en proporcion es casi constante: todos los tokens escalan con `svh`.
+     · `min-width: 58rem` — la composicion abierta necesita sitio para DOS
+       modulos de esquina y un hero entre ellos: 2x300 (el ancho minimo del
+       ticket) + 320 (la presencia minima del hero) = 920px. Por debajo, el
+       flanco tendria que ceder tanto que el bloque de shows volveria a
+       solaparse con el video. Comprobado a 708x544, donde sin esta guarda el
+       solape real era de 36px.
+     · `min-height: 34rem` — por debajo de este alto el modulo completo de
+       cabecera ya no cabe sobre la escena sin taparla. Excluye el movil
+       tumbado ancho (932x430), que pasaria las otras dos.
 
-   Un umbral por ancho no puede hacer eso, porque el punto de cruce se mueve
-   con el alto: ~960px en una ventana de 800 de alto, ~1300px en una de 1080.
-   En proporcion es constante, porque todos los tokens escalan con `svh` y el
-   sistema entero es invariante de escala.
-
-   (Un primer intento puso el limite en 4/3. Salio de un banco de pruebas con
-   una cabecera y un pie simulados, mas bajos que los de verdad; en la
-   aplicacion real el video daba un salto del 25% al cruzarlo. El numero se
-   recalculo midiendo la composicion montada, no el modelo.)
-
-   LAS DOS CONDICIONES DE TAMANO SON EXCLUSIONES, NO MEDIDAS DE DISENO, y las
-   dos salieron de una revision que encontro huecos reales:
-
-   · `min-width: 60rem` — el flanco tiene SUELO (el ticket no baja de 300px),
-     asi que por debajo de ~960px reclama mas ancho del que hay. Sin esta
-     guarda, a 768x640 la proporcion daba 1,2, se activaba `escenario` y el
-     video se quedaba en 80px; a 641x533 el ancho disponible salia NEGATIVO y
-     el video desaparecia. 960 es donde los dos flancos y un centro utilizable
-     vuelven a caber, y a 800px de alto coincide casi exactamente con el punto
-     de cruce de la proporcion, asi que no introduce un salto nuevo.
-   · `min-height: 34rem` frente al `max-height: 32rem` del apaisado — dejan una
-     franja muerta a proposito. Con el mismo numero en las dos, las medias son
-     inclusivas por los dos lados y a 512px de alto se activaban LAS DOS: el
-     hero quedaba posicionado como escritorio y ademas recibia el alto del
-     apaisado, que `overflow-hidden` recortaba.
-
-   `movil` — LA COMPOSICION DE LA REFERENCIA: barra de una fila, rails
-   superpuestos, branding en el pie y hoja de eventos. Incluye el apaisado a
-   proposito: es la misma experiencia, no una interfaz distinta.
-
-   `apaisado` — LA UNICA EXCEPCION AL "sin scroll". Un movil tumbado no tiene
-   alto para una escena completa, y comprimirla dejaria a Hosman diminuto. Ahi
-   la escena crece por encima del viewport y se recorre desplazandose. Las tres
-   condiciones juntas (tumbado + estrecho + bajo) describen eso y solo eso: un
-   portatil de 1280x591 tiene 591 de alto y no entra; una ventana de escritorio
-   estrecha esta de pie y tampoco.
+   `rails` — DENTRO DE LA COMPACTA, cuando el pie ya no puede sostener el
+   bloque de shows y las redes en sus dos esquinas. Los grupos de iconos pasan
+   a rails verticales superpuestos al hero y el pie lo ocupan el branding y el
+   tirador de eventos. No es una tercera composicion: es el pie adaptandose al
+   ancho que recibe.
    ------------------------------------------------------------------------ */
-/* ⚠️ La unión va con el operador `or` de Media Queries 4 y NO con una coma:
-   `@custom-variant` de Tailwind v4 parte el valor por comas y emite un
-   selector vacío que rompe la hoja entera. */
-@custom-variant escenario (@media (min-aspect-ratio: 6/5) and (min-width: 60rem) and (min-height: 34rem));
-@custom-variant movil (@media (max-width: 40rem) or ((orientation: landscape) and (max-width: 60rem) and (max-height: 32rem)));
-@custom-variant apaisado (@media (orientation: landscape) and (max-width: 60rem) and (max-height: 32rem));
+@custom-variant abierta (@media (min-aspect-ratio: 13/10) and (min-width: 58rem) and (min-height: 34rem));
+@custom-variant rails (@media (max-width: 40rem));
 
 @theme inline {
   --color-background: var(--background);
@@ -288,23 +269,33 @@ body {
      que no cedía ni un píxel al perder alto. */
   --hb-hero-inset: clamp(1rem, 0.62vw + 2.67svh, 2.5rem); /* 40 · 31 · 24 */
 
-  /* EL FLANCO — cuánto ancho reclaman a cada lado los módulos de esquina.
-     Es lo que impide que, al estrechar la ventana, el vídeo crezca hasta
-     meterse debajo del bloque de shows. Antes no existía: el vídeo solo
-     miraba al alto (`md:h-full md:w-auto`), así que a 960×1080 ocupaba el 84%
-     del ancho y Próximos Shows se le montaba encima 323px.
+  /* --- LA PRESENCIA MÍNIMA DEL PROTAGONISTA ------------------------------
+     Por debajo de este ancho, la figura dentro del encuadre 3:4 deja de leerse
+     como el sujeto de la escena y pasa a ser una viñeta: la máscara solo
+     mantiene opaco el 48% central, así que aquí Hosman y el caballo ocupan unos
+     150px. Es un juicio visual sobre ESTE vídeo — no se deriva de ningún otro
+     módulo, para que cambiar los tickets o la cabecera no mueva por la puerta
+     de atrás la geometría del hero.
 
-     No es un número: se deriva de la pieza más ancha que vive ahí abajo. */
-  --hb-flanco: calc(var(--hb-ticket-w) + var(--hb-hero-inset) * 2);
+     Su papel es el de un SUELO, no el de una medida: mientras haya sitio, el
+     hero mide lo que quepa; cuando la escena no pueda darle esto, no se sigue
+     encogiendo el hero — crece la escena. Va en `rem` para respetar el tamaño
+     de fuente del usuario, y nunca llega a activarse en los tres teléfonos de
+     referencia (360/390/430), que por eso siguen sin scroll. */
+  --hb-hero-min-w: 20rem; /* 320px */
+  --hb-hero-min-h: calc(var(--hb-hero-min-w) * 4 / 3); /* 426px */
 
-  /* ALTO DE LA ZONA HERO EN MÓVIL APAISADO.
-     Ahí la escena deja de caber en una pantalla a propósito (ver la variante
-     `apaisado`): en vez de comprimirla hasta dejar a Hosman diminuto, se le da
-     a la zona central un alto propio, mayor que el viewport, y el documento
-     crece. `118svh` es lo que hace que el vídeo mida más que si se ajustara al
-     alto disponible; los topes en `rem` evitan que se dispare en una ventana
-     de escritorio pequeña que cumpliera la condición por los pelos. */
-  --hb-hero-apaisado-h: clamp(20rem, 118svh, 30rem);
+  /* EL FLANCO — cuánto ancho reclaman a cada lado los módulos de esquina en la
+     composición abierta. Es lo que impide que, al estrechar la ventana, el
+     vídeo crezca hasta meterse debajo del bloque de shows: antes solo miraba
+     al alto y a 960×1080 ocupaba el 84% del ancho.
+
+     Es el valor IDEAL. Quien lo acota es el suelo del hero, y lo hace en
+     `HeroScene`, donde hay unidades de contenedor: en la composición abierta
+     el hero está fuera del flujo de la rejilla y no puede reservar alto, así
+     que quien cede es el flanco. Mismo suelo, dos mecanismos, uno por eje. */
+  --hb-flanco-ideal: calc(var(--hb-ticket-w) + var(--hb-hero-inset) * 2);
+
 
   /* Separación de los rails al borde de la pantalla. Es pequeña a propósito:
      los rails van SUPERPUESTOS al hero, no le restan columna, así que lo único
@@ -367,16 +358,22 @@ body {
 }
 
 /* ===========================================================================
-   AJUSTES DE LA COMPOSICIÓN MÓVIL
+   AJUSTES DE LA COMPOSICIÓN COMPACTA
 
-   Misma condición que la variante `movil` de arriba, escrita a mano porque las
-   variantes de Tailwind solo aplican a utilidades, no a declaraciones sueltas.
-   Aquí van SOLO los tokens cuyo valor cambia de significado en móvil; todo lo
-   demás sigue interpolando con la misma curva.
-   ------------------------------------------------------------------------ */
-@media (max-width: 40rem) or ((orientation: landscape) and (max-width: 60rem) and (max-height: 32rem)) {
+   Es la NEGACIÓN de la variante `abierta`, escrita a mano porque las variantes
+   de Tailwind solo aplican a utilidades, no a declaraciones sueltas. Aquí van
+   SOLO los tokens cuyo valor cambia de significado en la composición compacta;
+   todo lo demás sigue interpolando con la misma curva.
+
+   ⚠️ Si se toca la condición de `abierta`, hay que copiarla también aquí. Es el
+   único sitio del sistema donde una condición estructural está duplicada, y no
+   tiene alternativa: no existe forma de aplicar una variante a un token.
+   `not all and (…)` niega la CONJUNCIÓN ENTERA, así que el complemento es
+   exacto y no hay franjas intermedias con una composición y los tokens de la
+   otra. */
+@media not all and (min-aspect-ratio: 13/10) and (min-width: 58rem) and (min-height: 34rem) {
   :root {
-    /* El trigger cerrado baja a su suelo táctil real. En la barra superior
+    /* El trigger cerrado baja a su suelo táctil real. En la barra compacta
        tiene que convivir con el reproductor en la MISMA fila, y con los 190px
        de escritorio se quedaba con la mitad del ancho de un teléfono. El panel
        abierto no le sigue: conserva sus 208px por `--hb-menu-panel-w`. */

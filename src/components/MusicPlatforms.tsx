@@ -79,65 +79,66 @@ interface MusicPlatformsProps {
    *   escritorio: ahí sobra espacio y las ocho plataformas caben.
    * · `siempre` — recogido en cualquier tamaño. Fuera de la portada la fila
    *   completa se cruzaba con el contenido de la página.
-   * · `solo-movil` — recogido únicamente en la composición móvil, donde el
-   *   bloque pasa a ser el rail vertical derecho y solo caben las cuatro
-   *   principales. Las demás siguen accesibles por el mismo desplegable.
+   * · `solo-rail` — recogido únicamente cuando el bloque pasa a ser el rail
+   *   vertical derecho y solo caben las cuatro principales. Las demás siguen
+   *   accesibles por el mismo desplegable.
    *
    * Lo decide la RUTA, no el viewport: el corte por tamaño lo resuelve el CSS
-   * con la variante `movil`, sin que React tenga que leer `innerWidth`.
+   * con la variante `rails`, sin que React tenga que leer `innerWidth`.
    */
-  colapso?: 'nunca' | 'siempre' | 'solo-movil';
+  colapso?: 'nunca' | 'siempre' | 'solo-rail';
   /**
-   * En móvil el bloque abandona la cabecera y se convierte en el rail derecho,
-   * superpuesto al hero. Solo tiene sentido en INICIO — en las demás secciones
-   * se cruzaría con el contenido —, así que también lo decide la ruta.
+   * Cuando el pie ya no sostiene los módulos de esquina, el bloque abandona la
+   * cabecera y se convierte en el rail derecho, superpuesto al hero. Solo tiene
+   * sentido en INICIO — en las demás secciones se cruzaría con el contenido —,
+   * así que también lo decide la ruta.
    */
-  railEnMovil?: boolean;
+  enRail?: boolean;
 }
 
 /**
  * Enlaces a las plataformas de streaming del artista.
  *
- * En escritorio forman una sola fila en la esquina superior derecha. En móvil,
- * dentro de INICIO, el mismo bloque se convierte en el rail vertical derecho,
- * superpuesto al hero: es una sola instancia con otra dirección de flujo, no un
- * segundo componente — así no hay dos estados de despliegue que puedan
- * contradecirse.
+ * Una sola fila en la esquina superior derecha mientras hay sitio. Cuando el
+ * pie pasa a rails, dentro de INICIO, el mismo bloque se convierte en el rail
+ * vertical derecho, superpuesto al hero: es una sola instancia con otra
+ * dirección de flujo, no un segundo componente — así no hay dos estados de
+ * despliegue que puedan contradecirse.
  *
- * Con `colapso: 'solo-movil'` se renderizan SIEMPRE las ocho y el recorte lo
- * hace el CSS. Es la única forma de que la fila completa siga intacta en
- * escritorio y el rail muestre cuatro sin que React tenga que consultar el
- * tamaño de la ventana.
+ * Con `colapso: 'solo-rail'` se renderizan SIEMPRE las ocho y el recorte lo
+ * hace el CSS. Es la única forma de que la fila completa siga intacta mientras
+ * hay sitio y el rail muestre cuatro, sin que React consulte el tamaño de la
+ * ventana.
  */
 export function MusicPlatforms({
   colapso = 'nunca',
-  railEnMovil = false
+  enRail = false
 }: MusicPlatformsProps) {
   // El llamante remonta el componente al cambiar de sección (con `key`), así
   // que basta con arrancar recogido: no hace falta reiniciar nada a mano.
   const [expanded, setExpanded] = useState(false);
 
   const recogido = colapso !== 'nunca' && !expanded;
-  const soloMovil = colapso === 'solo-movil';
+  const soloRail = colapso === 'solo-rail';
   const ocultas = hosmanData.musicPlatforms.length - COLLAPSED_COUNT;
 
   /* Cuando el recorte es responsabilidad del CSS, los controles existen en el
      DOM pero solo se ven en la composición móvil. `display:none` los saca
      también del árbol de accesibilidad, así que en escritorio no hay un botón
      «ver más» invisible esperando al tabulador. */
-  const claseControl = soloMovil ? `hidden movil:flex ${BUTTON_CLASS}` : BUTTON_CLASS;
+  const claseControl = soloRail ? `hidden rails:flex ${BUTTON_CLASS}` : BUTTON_CLASS;
 
   return (
     <div
       className={`flex items-center ${ROW_GAP} ${
-        railEnMovil
+        enRail
           ? // `max-height` + scroll interno: el rail es `fixed`, así que si al
             // desplegarse las ocho plataformas midieran más que la pantalla,
             // sus extremos quedarían fuera y NO habría forma de alcanzarlos —
             // desplazar el documento no mueve un elemento fijo. Con 9 controles
-            // de 36px hacen falta 356px, y un móvil tumbado tiene 320-390.
-            'movil:fixed movil:right-[var(--hb-rail-inset)] movil:top-1/2 movil:z-40 movil:max-h-[calc(100svh-1.5rem)] movil:-translate-y-1/2 movil:flex-col movil:overflow-y-auto movil:overscroll-contain'
-          : 'movil:flex-wrap movil:justify-end'
+            // de 36px hacen falta 356px, y una pantalla baja tiene 320-390.
+            'rails:fixed rails:right-[var(--hb-rail-inset)] rails:top-1/2 rails:z-40 rails:max-h-[calc(100svh-1.5rem)] rails:-translate-y-1/2 rails:flex-col rails:overflow-y-auto rails:overscroll-contain'
+          : 'rails:flex-wrap rails:justify-end'
       }`}
     >
       {/* Abre y cierra la fila; la flecha gira para indicar el sentido. */}
@@ -159,9 +160,9 @@ export function MusicPlatforms({
       {hosmanData.musicPlatforms.map(({ name, icon, url }, i) => {
         const Icon = ICONS[icon];
         const sobrante = recogido && i >= COLLAPSED_COUNT;
-        // Con `siempre` el recorte es real (no se renderiza); con `solo-movil`
+        // Con `siempre` el recorte es real (no se renderiza); con `solo-rail`
         // lo hace el CSS, para que escritorio conserve la fila completa.
-        if (sobrante && !soloMovil) return null;
+        if (sobrante && !soloRail) return null;
         return (
           <a
             key={name}
@@ -170,7 +171,7 @@ export function MusicPlatforms({
             rel="noopener noreferrer"
             title={name}
             aria-label={`Escuchar a Hosman Bravo en ${name}`}
-            className={`group ${BUTTON_CLASS} ${sobrante ? 'movil:hidden' : ''}`}
+            className={`group ${BUTTON_CLASS} ${sobrante ? 'rails:hidden' : ''}`}
           >
             <Icon className={`${ICON_CLASS} transition-colors duration-300`} />
           </a>

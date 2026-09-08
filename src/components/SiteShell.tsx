@@ -124,11 +124,11 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               fijo, de modo que sube junto al resto cuando la cabecera encoge.
               Son `<Link>` y no `<button>` desde que las escenas son rutas
               reales: `next/link` aplica solo el `basePath`. */}
-          {/* En móvil desaparece: no se pierde navegación —las mismas seis
-              entradas están dentro del menú de cuero, que es el control
-              principal ahí— y su sitio lo necesita el reproductor para caber en
-              la misma fila que el menú. */}
-          <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] text-nav tracking-widest space-x-3 md:space-x-5 movil:hidden">
+          {/* Solo en la composición abierta. Fuera de ella no se pierde
+              navegación —las mismas seis entradas están dentro del menú de
+              cuero, que es el control principal— y su sitio lo necesita el
+              reproductor para caber en la misma fila que el menú. */}
+          <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] hidden text-nav tracking-widest space-x-5 abierta:block">
             {NAV_ITEMS.map(({ id, label, href }) => (
               <Link
                 key={id}
@@ -147,10 +147,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               su propia curva de escalado y el hueco entre ambos crezca o
               encoja por su cuenta sin relación con el resto del módulo (eso
               producía, según el viewport, o demasiado aire entre los dos o las
-              plataformas empujadas hacia abajo). En pantallas estrechas se
-              despega de la cabecera y baja a una rejilla de 4×2, para no
-              cruzarse con la navegación central — sigue siendo el mismo bloque,
-              solo cambia su posición de anclaje. */}
+              plataformas empujadas hacia abajo). */}
           <div className="flex min-w-0 flex-1 flex-col items-end gap-[var(--hb-music-gap)]">
             {/* El reproductor manda sobre el audio global; debajo quedan los
                 accesos a las plataformas.
@@ -161,19 +158,25 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                 que no toca queda en `display:none`, que lo saca también del
                 árbol de accesibilidad, así que un lector de pantalla tampoco
                 ve dos. Elegir en JS obligaría a leer el tamaño de la ventana
-                para decidir el layout, que es justo lo que no se quiere. */}
-            <div className="movil:hidden">
+                para decidir el layout, que es justo lo que no se quiere.
+
+                CUÁL SE VE NO ES UNA CONDICIÓN NUEVA: va atado a la
+                composición. En la abierta la cabecera flota sobre el vídeo
+                y no le cuesta alto al hero, así que ahí cabe el módulo
+                completo; en la compacta cada píxel de cabecera se lo quita
+                al hero, y por eso manda la presentación de una fila. */}
+            <div className="hidden abierta:block">
               <TrackPlayer />
             </div>
-            <div className="hidden w-full min-w-0 movil:block">
+            <div className="w-full min-w-0 abierta:hidden">
               <MobilePlayer />
             </div>
             {/* La `key` remonta el bloque al cambiar de sección, de modo que
                 siempre aparece recogido al navegar. */}
             <MusicPlatforms
               key={current}
-              colapso={isHome ? 'solo-movil' : 'siempre'}
-              railEnMovil={isHome}
+              colapso={isHome ? 'solo-rail' : 'siempre'}
+              enRail={isHome}
             />
           </div>
         </header>

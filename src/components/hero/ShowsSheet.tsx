@@ -57,6 +57,7 @@ export function ShowsSheet({
 }) {
   const [abierto, setAbierto] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const tiradorRef = useRef<HTMLButtonElement>(null);
 
   /* Copia ordenada: `sort` muta el array que recibe, y este viene de
      `hosmanData` — ordenarlo en sitio alteraría los datos compartidos. */
@@ -132,6 +133,47 @@ export function ShowsSheet({
     onContact();
   }, [cerrar, onContact]);
 
+  /* SI EL TIRADOR DEJA DE EXISTIR, LA HOJA SE CIERRA.
+     Esta hoja solo se muestra en la composición con rails. Al girar el teléfono
+     con ella abierta, su ancestro pasa a `display:none`: el `<dialog>` sigue en
+     la capa superior y sigue `open`, pero deja de pintarse — y `useScrollLock`
+     seguiría reteniendo el scroll del documento con nada visible que lo
+     explicara. La página quedaba bloqueada.
+
+     ⚠️ Pasa por `cerrar()`, NO por `setAbierto(false)`. Aquí no hay ningún
+     efecto que sincronice el estado con el elemento —eso es deliberado, ver
+     «UN SOLO CAMINO IMPERATIVO» arriba—, así que tocar solo el estado soltaría
+     el bloqueo de scroll pero dejaría el modal abierto en la capa superior,
+     invisible y capturando la interacción. Cerrar de verdad es lo único que
+     ejecuta el algoritmo de cierre del diálogo.
+
+     Se observa el TAMAÑO DEL TIRADOR y no la condición de la variante: así no
+     hay una tercera copia de una regla estructural en JavaScript, y sirve igual
+     para cualquier otro motivo por el que la hoja deje de aplicar. La primera
+     entrega del observador trae la caja real; si ya es 0×0 el diálogo tampoco
+     está abierto, y `cerrar()` es inocuo.
+
+     ⚠️ SIN VERIFICAR EN EJECUCIÓN. Que `ResizeObserver` notifique cuando un
+     ANCESTRO pasa a `display:none` está confirmado por especificación, pero el
+     panel de pruebas del entorno de desarrollo NO entrega `ResizeObserver` en
+     absoluto —comprobado con un elemento aislado— ni dispara los eventos
+     `change` de `matchMedia`, así que ninguna de las dos alternativas se puede
+     verificar ahí. Queda pendiente de comprobar en navegador y dispositivo
+     reales: abrir la hoja en vertical y girar el teléfono.
+
+     Se descartó `matchMedia` precisamente porque duplicaría la condición
+     `rails` en JavaScript sin ganar verificabilidad a cambio. */
+  useEffect(() => {
+    const tirador = tiradorRef.current;
+    if (!tirador) return;
+    const observer = new ResizeObserver(([entrada]) => {
+      const caja = entrada.contentRect;
+      if (caja.width === 0 && caja.height === 0) cerrar();
+    });
+    observer.observe(tirador);
+    return () => observer.disconnect();
+  }, [cerrar]);
+
   /* Un solo sitio decide si un arrastre cuenta y hacia dónde. `abierto` no se
      consulta aquí: cada tirador solo sabe abrir o solo cerrar, así que un
      gesto en el sentido contrario simplemente no hace nada. */
@@ -154,6 +196,7 @@ export function ShowsSheet({
           así que teclado y lector de pantalla funcionan sin añadir nada; el
           deslizamiento es una vía ADICIONAL sobre el mismo control. */}
       <button
+        ref={tiradorRef}
         type="button"
         onClick={abrir}
         aria-expanded={abierto}
