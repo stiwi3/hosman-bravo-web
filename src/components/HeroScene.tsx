@@ -172,32 +172,44 @@ export function HeroScene() {
         className="relative min-h-0 min-w-0 [container-type:size] abierta:absolute abierta:inset-y-0 abierta:left-[var(--hb-flanco)] abierta:right-[var(--hb-flanco)]"
         style={{ '--hb-flanco': FLANCO } as React.CSSProperties}
       >
-        {/* CAPA 2 — el vídeo, centrado y con su proporción intacta. */}
-        <div className={CENTRADO} style={{ ...ENCUADRE, ...MASCARA }}>
-          <video
-            src={`${data.basePath}/videos/Hero.mp4`}
-            poster={data.images.hero}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            aria-label="Hosman Bravo montado a caballo durante su espectáculo"
-            className="h-full w-full object-cover"
-          />
-        </div>
+        {/* LIENZO DEL HERO — en la compacta, el vídeo y su rótulo se miden contra
+            una caja que sube hasta el borde superior de la escena, por encima de
+            la reserva de cabecera. La cabecera solo ocupa sus dos esquinas y el
+            borde superior del vídeo es transparente (máscara), así que el hero
+            aprovecha ese alto sin pisar nada legible. Crece más donde la
+            cabecera pesa más en el alto (apaisado bajo) sin escribir umbrales.
+            Solo es visual: la zona, la rejilla y la reserva no cambian, así que
+            la frontera de scroll y las reservas del coordinador tampoco.
+            En `abierta` la zona ya ocupa todo el alto; en `rails` la cabecera es
+            una barra de lado a lado: en ambas, la caja es la zona. */}
+        <div className="absolute inset-x-0 bottom-0 top-[calc(-1*var(--hb-header-real-h,var(--hb-header-h)))] [container-type:size] abierta:top-0 rails:top-0">
+          {/* CAPA 2 — el vídeo, centrado y con su proporción intacta. */}
+          <div className={CENTRADO} style={{ ...ENCUADRE, ...MASCARA }}>
+            <video
+              src={`${data.basePath}/videos/Hero.mp4`}
+              poster={data.images.hero}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Hosman Bravo montado a caballo durante su espectáculo"
+              className="h-full w-full object-cover"
+            />
+          </div>
 
-        {/* CAPA 4 — rótulo, por delante del humo para que no se vele.
-            Va dentro de una caja idéntica a la del vídeo, de modo que las
-            medidas en porcentaje se refieren siempre al encuadre.
-            El PNG es una tira 3:1 cuyo contenido ocupa el 98,3% de su ancho y
-            está centrado en el 44,4% de su alto; de ahí salen la anchura y el
-            desplazamiento vertical.
-            Con los rails el vídeo no llega tan abajo y el rótulo se muda al
-            pie: esta copia desaparece con `display:none`, que también la saca
-            del árbol de accesibilidad. */}
-        <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} rails:hidden`} style={ENCUADRE}>
-          <Branding className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2" />
+          {/* CAPA 4 — rótulo, por delante del humo para que no se vele.
+              Va dentro de una caja idéntica a la del vídeo, de modo que las
+              medidas en porcentaje se refieren siempre al encuadre.
+              El PNG es una tira 3:1 cuyo contenido ocupa el 98,3% de su ancho y
+              está centrado en el 44,4% de su alto; de ahí salen la anchura y el
+              desplazamiento vertical.
+              Con los rails el vídeo no llega tan abajo y el rótulo se muda al
+              pie: esta copia desaparece con `display:none`, que también la saca
+              del árbol de accesibilidad. */}
+          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} rails:hidden`} style={ENCUADRE}>
+            <Branding className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2" />
+          </div>
         </div>
       </div>
 

@@ -254,11 +254,13 @@ export function useGeometriaPeriferica(escenaRef: React.RefObject<HTMLElement | 
          reserva de pie), no sobre el actual. Si se midiera el actual, ir bajo el
          rótulo encogería el hero, eso abriría hueco y volvería a lateral: un
          vaivén. El rótulo es una fracción fija del ancho del vídeo, y el vídeo
-         es `min(ancho de zona, 0,75 × alto de zona)`. */
+         es `min(ancho de zona, 0,75 × alto de su lienzo)`. El lienzo sube hasta
+         el borde superior de la escena (ver `HeroScene`), así que su alto NO
+         descuenta la reserva de cabecera. */
       const cajaZona = zona.getBoundingClientRect();
       const cajaEncuadre = $('rotulo')!.getBoundingClientRect();
       const fraccionRotulo = rotulo.getBoundingClientRect().width / cajaEncuadre.width;
-      const videoLateral = Math.min(cajaZona.width, 0.75 * (escenaLateral - reservaCabecera - pb));
+      const videoLateral = Math.min(cajaZona.width, 0.75 * (escenaLateral - pb));
       const rotuloIzqLateral = cajaZona.left + cajaZona.width / 2 - (fraccionRotulo * videoLateral) / 2;
       /* El ticket va CENTRADO bajo el título, que tiene ancho fijo (sus
          filetes). Mientras el ticket sea más estrecho que el título, su borde

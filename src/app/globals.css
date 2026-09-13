@@ -255,7 +255,14 @@ body {
      Ahora el suelo vive donde le corresponde: el trigger tiene el suyo (táctil)
      y el panel el suyo (legibilidad), y el 1,082 se conserva como lo que es,
      la relación de escala entre los dos assets — no como un acoplamiento. */
-  --hb-menu-w: clamp(190px, 6vw + 14svh, 266px); /* 266 · 208 · 190 */
+  /* UNA SOLA CURVA en las dos composiciones. Antes la compacta tenía su propio
+     valor (126–150px), y al cruzar a `abierta` el menú saltaba de 150 a 190.
+     El `min(33vw, …)` es lo único que depende del espacio: en la barra de
+     teléfono el trigger comparte fila con el reproductor y no puede quedarse
+     con más de un tercio del ancho; el `max(126px, …)` es su suelo táctil.
+     Solo se fija el ancho: el alto sale del asset, así que la proporción del
+     cuero se conserva siempre. */
+  --hb-menu-w: max(126px, min(33vw, clamp(190px, 6vw + 14svh, 266px))); /* 266 · 208 · 190 · 129 (390) */
   --hb-menu-panel-w: max(calc(var(--hb-menu-w) * 1.082), 208px); /* 288 · 225 · 208 */
   --hb-header-pad: clamp(0.75rem, 0.6vw + 1.2svh, 1.5rem); /* 24 · 19 · 15 */
 
@@ -310,10 +317,12 @@ body {
   --hb-flanco-ideal: calc(var(--hb-ticket-w) + var(--hb-hero-inset) * 2);
 
 
-  /* Separación de los rails al borde de la pantalla. Es pequeña a propósito:
-     los rails van SUPERPUESTOS al hero, no le restan columna, así que lo único
-     que hay que garantizar es que el dedo no se salga por el canto. */
-  --hb-rail-inset: clamp(0.125rem, 1.2vw, 0.5rem);
+  /* Separación de los rails al borde de la pantalla. Los rails van
+     SUPERPUESTOS al hero y no le restan columna, así que este margen es solo
+     respiración visual. Es el MISMO para los dos rails (redes a la izquierda,
+     plataformas a la derecha): son piezas opuestas y respiran igual. No es el
+     margen del menú, del isotipo ni de Próximos Shows. */
+  --hb-rail-inset: clamp(0.5rem, 1.5vw, 1.125rem); /* 18 · 12 (800) · 8 (390) */
 
   /* --- LOS RAILS SON PERMANENTES -------------------------------------------
      Redes a la izquierda y plataformas a la derecha, en vertical, en TODAS las
@@ -346,7 +355,9 @@ body {
   /* Tamaño OBJETIVO, un 60 % mayor que el anterior (52·38·28). En compacta y
      móvil el coordinador lo publica ya ajustado (`--hb-isotipo-real`): cede
      cuando la columna derecha no da para más, nunca por debajo del mínimo. */
-  --hb-isotipo: clamp(2.8rem, 1.92vw + 4.16svh, 5.2rem); /* 83 · 61 · 45 */
+  /* Curva algo más alta (≈ +25 % en el tramo medio) con techo contenido: gana
+     presencia sin volverse logotipo en escritorio. */
+  --hb-isotipo: clamp(3.25rem, 2.4vw + 5.2svh, 5.75rem); /* 92 · 80 (1600×800) · 52 */
   --hb-isotipo-min: 1.75rem;
 
   /* --- CONTROLES REDONDOS PERSISTENTES ------------------------------------
@@ -420,30 +431,6 @@ body {
      actual (segunda fecha + promocional) no debería llegar a activarse en
      ninguno de los tres viewports de control — verificado. */
   --hb-shows-panel-max: calc(56svh - var(--hb-hero-inset));
-}
-
-/* ===========================================================================
-   AJUSTES DE LA COMPOSICIÓN COMPACTA
-
-   Es la NEGACIÓN de la variante `abierta`, escrita a mano porque las variantes
-   de Tailwind solo aplican a utilidades, no a declaraciones sueltas. Aquí van
-   SOLO los tokens cuyo valor cambia de significado en la composición compacta;
-   todo lo demás sigue interpolando con la misma curva.
-
-   ⚠️ Si se toca la condición de `abierta`, hay que copiarla también aquí. Es el
-   único sitio del sistema donde una condición estructural está duplicada, y no
-   tiene alternativa: no existe forma de aplicar una variante a un token.
-   `not all and (…)` niega la CONJUNCIÓN ENTERA, así que el complemento es
-   exacto y no hay franjas intermedias con una composición y los tokens de la
-   otra. */
-@media not all and (min-aspect-ratio: 13/10) and (min-width: 58rem) and (min-height: 34rem) {
-  :root {
-    /* El trigger cerrado baja a su suelo táctil real. En la barra compacta
-       tiene que convivir con el reproductor en la MISMA fila, y con los 190px
-       de escritorio se quedaba con la mitad del ancho de un teléfono. El panel
-       abierto no le sigue: conserva sus 208px por `--hb-menu-panel-w`. */
-    --hb-menu-w: clamp(126px, 33vw, 150px); /* 126 · 129 · 142 (360/390/430) */
-  }
 }
 
 /* ===========================================================================

@@ -398,7 +398,25 @@ width: min(100cqw, 75cqh);  aspect-ratio: 3 / 4;
 
 `100cqw` es el límite por ancho disponible, `75cqh` el límite por alto disponible, y
 `min()` es «lo que quepa». Lo que cambia entre composiciones no es la fórmula: es el
-**tamaño de la zona** contra la que se mide, que declara `container-type: size`.
+**tamaño de la caja** contra la que se mide, que declara `container-type: size`.
+
+**El lienzo del hero.** En la compacta, vídeo y rótulo no se miden contra la zona sino
+contra una caja interior que sube hasta el borde superior de la escena
+(`top: -var(--hb-header-real-h)`). La cabecera solo ocupa sus dos esquinas y el borde
+superior del vídeo es transparente por la máscara, así que el hero aprovecha ese alto sin
+pisar nada legible. Crece más donde la cabecera pesa más en el alto (apaisado bajo:
+844×390 pasó de 216 a 281 px de ancho; 800×900, de 529 a 599) sin escribir ningún umbral.
+En `abierta` la zona ya ocupa todo el alto y en `rails` la cabecera es una barra de lado a
+lado: en ambas la caja vuelve a ser la zona (`abierta:top-0 rails:top-0`).
+
+Es **solo visual**: la zona, la rejilla y la reserva de cabecera no cambian, así que la
+frontera de scroll y las reservas del coordinador tampoco. La única consecuencia en
+`useGeometriaPeriferica` es la predicción del vídeo en lateral, que ya no descuenta la
+reserva de cabecera (el rótulo es fracción de ese vídeo y de él sale el hueco de Shows).
+⚠️ Si se cambia la altura del lienzo, cambiar también esa predicción.
+
+El rótulo no necesita regla propia: es el 54 % del encuadre y su bajada `2.9cqw` del
+rótulo con suelo de 9 px, así que acompaña al hero conservando la jerarquía.
 
 ⚠️ **No devolver el marco a `md:h-full md:w-auto`.** Esa forma mide solo por altura y era la
 causa de que a 960×1080 el vídeo ocupara el 84 % del ancho.
@@ -422,6 +440,20 @@ su tamaño reconstruye las texturas de densidad, que son la forma del humo.
    bottom-full`): se despliega hacia arriba sobre el hero. Cuando estaba en el flujo, en la
    composición compacta su fila es `auto` y abrirlo le robaba el alto al hero — medido a
    1000×900 sobre el commit 1734a99: el vídeo pasaba de 327 a 208 px.
+
+### Menú, isotipo y margen de los rails: una curva, sin excepciones
+
+- **Menú** — `--hb-menu-w` es UNA curva para las dos composiciones:
+  `max(126px, min(33vw, clamp(190px, 6vw + 14svh, 266px)))`. Antes la compacta tenía su
+  propio valor (126–150) y el menú saltaba de 150 a 190 al cruzar a `abierta`. El `33vw`
+  existe porque en la barra de teléfono el trigger comparte fila con el reproductor. Solo
+  se fija el ancho: la proporción del cuero sale del asset.
+- **Isotipo** — `clamp(3.25rem, 2.4vw + 5.2svh, 5.75rem)`; el coordinador lo reduce si su
+  columna no da para más. La frontera de scroll usa su MÍNIMO, no este objetivo.
+- **Rails** — `--hb-rail-inset` es el margen de los DOS rails (redes a la izquierda,
+  plataformas a la derecha), simétrico. **No** es el margen del menú, del isotipo ni de
+  Próximos Shows: Shows va pegado al borde a propósito (su filete ya hace de margen y cada
+  píxel retrasa la colisión con el rótulo).
 
 ### Los rails van `fixed`: decisión consciente con coste conocido
 
