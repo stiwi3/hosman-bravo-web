@@ -293,12 +293,15 @@ function RailPlataformas() {
       ref={bandaRef}
       className="pointer-events-none absolute right-[var(--hb-rail-inset)] top-[var(--hb-lim-sup-dcha,var(--hb-rail-dcha-arriba))] h-[max(0px,calc(var(--hb-lim-inf-dcha,100svh)-var(--hb-lim-sup-dcha,var(--hb-rail-dcha-arriba))))] z-40 flex w-[calc(2*var(--hb-control)+0.5rem)] flex-col items-end [container-type:size] [justify-content:safe_center] [--hb-plat-gap:clamp(0.25rem,0.8svh,0.5rem)] abierta:top-[var(--hb-rail-dcha-arriba)] abierta:bottom-[var(--hb-rail-dcha-abajo)] abierta:h-auto"
     >
-      <div
-        ref={reglaRef}
-        aria-hidden="true"
-        className="invisible absolute right-0 top-0 w-px"
-        style={{ height: `calc(${total} * var(--hb-control) + ${total - 1} * var(--hb-plat-gap))` }}
-      />
+      {/* Envoltorio de alto 0 recortado: la regla mide la columna de las ocho y
+          en una banda baja sobresalía de la escena, lo que añadía scroll. */}
+      <div aria-hidden="true" className="invisible absolute right-0 top-0 h-0 w-px overflow-hidden">
+        <div
+          ref={reglaRef}
+          className="w-px"
+          style={{ height: `calc(${total} * var(--hb-control) + ${total - 1} * var(--hb-plat-gap))` }}
+        />
+      </div>
       <div
         {...handlers}
         className={`pointer-events-auto grid justify-items-center gap-[var(--hb-plat-hueco)] [--hb-plat-hueco:min(var(--hb-plat-gap),2.5cqh)] [--hb-plat-btn:max(var(--hb-control-min),min(var(--hb-control),calc((100cqh-4*var(--hb-plat-hueco))/4.75)))] ${

@@ -375,8 +375,15 @@ export function HeroScene() {
       {/* REGLAS del coordinador: cajas invisibles con la medida exacta de un
           token, para leer en píxeles lo que CSS ya sabe calcular (ancho natural
           del ticket, alto natural del rail de redes, borde de seguridad y
-          separación con el rótulo). Pequeñas y dentro de la escena. */}
-      <div aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0">
+          separación con el rótulo).
+
+          ⚠️ `h-0 overflow-hidden`: apiladas miden ~570px (el suelo del hero
+          solo ya son 240). Sin recortar, en cuanto la escena medía menos que
+          eso la columna sobresalía por debajo y alimentaba un scroll FALSO —
+          aparecía a ~570px de alto de ventana, mucho antes de la frontera
+          real—. Recortar no cambia lo que miden: `offsetWidth/Height` de cada
+          regla es su caja propia, no la visible. */}
+      <div aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 h-0 overflow-hidden">
         <div data-hb-geo="regla-ticket" className="h-px w-[var(--hb-ticket-w)]" />
         <div data-hb-geo="regla-redes" className="h-[calc(4*var(--hb-control-social)+3*var(--hb-social-gap)+var(--hb-social-cta))] w-px" />
         <div data-hb-geo="regla-borde" className="h-[var(--hb-rail-borde)] w-px" />

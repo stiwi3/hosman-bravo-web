@@ -291,8 +291,13 @@ export function useGeometriaPeriferica(escenaRef: React.RefObject<HTMLElement | 
           seccionMinLateral?.querySelector('h2 span.font-serif')?.getBoundingClientRect().right ?? 0
         ) - cajaMinLateral.left;
       const minimoLateralValido = hueco >= tintaMinLateral;
-      const lateralCabe = escenaLateral <= vh && minimoLateralValido;
-      const bajoRotulo = bajoPorHisteresis && !(escenaBajoMin > vh && lateralCabe);
+      /* Si bajo el rótulo desborda y lateral es válido, manda la escena MÁS
+         BAJA: si lateral cabe, no hay scroll; si tampoco cabe, es la que menos
+         desborda. Sin lo segundo, al cruzar la frontera real la histéresis
+         volvía a bajo el rótulo y el scroll saltaba de 0 a 73px (700×340) en
+         vez de crecer desde 1: la geometría no quedaba congelada. */
+      const bajoRotulo =
+        bajoPorHisteresis && !(escenaBajoMin > vh && minimoLateralValido && escenaLateral < escenaBajoMin);
       // Lateral forzado por alto con un ticket que no cabe al lado: va mínimo.
       const minimaPorAncho = !bajoRotulo && anchoJuntoRotulo < SHOWS_ANCHO_MIN_LATERAL;
       // EJE 2 · PRESENTACIÓN — bajo el rótulo siempre es mínima; en lateral,

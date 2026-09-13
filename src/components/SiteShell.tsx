@@ -105,8 +105,15 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           navegador retraídas—, así que el documento medía más que la pantalla
           mientras la barra de direcciones estaba desplegada y aparecía scroll
           aunque la escena estuviera a `100svh`. Ese scroll no se reproduce en
-          un navegador de escritorio, donde no hay barra dinámica. */}
-      <main className="bg-black text-white font-sans overflow-x-hidden min-h-svh">
+          un navegador de escritorio, donde no hay barra dinámica.
+
+          `overflow-x-clip` y NO `overflow-x-hidden`: con `hidden` en un eje, el
+          otro se computa como `auto` y `<main>` pasaba a ser un contenedor de
+          scroll propio. Cualquier caja absoluta que sobresaliera de la escena
+          encendía una segunda barra DENTRO de `<main>`, invisible para
+          `documentElement.scrollHeight`. `clip` recorta igual sin crear
+          contenedor de scroll. */}
+      <main className="bg-black text-white font-sans overflow-x-clip min-h-svh">
         {/* HEADER FIJO
             Su padding sale del sistema fluido: es el mismo valor del que se
             deriva `--hb-header-h`, que a su vez marca dónde puede empezar el
