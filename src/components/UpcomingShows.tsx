@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { hosmanData } from '@/data/hosman-data';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAutoRecoger } from '@/hooks/useAutoRecoger';
 import { NextShowTicket } from './NextShowTicket';
 import { PromoTicket } from './PromoTicket';
 import type { ShowEvent } from '@/data/types';
@@ -76,14 +77,35 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 export function UpcomingShows({
   events = hosmanData.upcomingShows,
-  onContact
+  onContact,
+  variante = 'completa',
+  panelAlLado = false
 }: {
+  /**
+   * Abre el panel a la DERECHA del bloque, alineado abajo, en vez de encima.
+   * Lo pide el coordinador cuando, con el bloque ya pegado al borde inferior
+   * de una pantalla baja, encima no queda alto para las entradas.
+   */
+  panelAlLado?: boolean;
   events?: readonly ShowEvent[];
   onContact: () => void;
+  /**
+   * · `completa` — título + entrada protagonista + botón (la aprobada).
+   * · `minima` — solo título + botón. Es el suelo del bloque cuando el ticket
+   *   ya no cabe junto al rótulo del hero, o le quitaría demasiado alto a las
+   *   redes. Todas las entradas, la protagonista incluida, van en el panel,
+   *   que se abre como overlay y se recoge solo (`useAutoRecoger`).
+   *
+   * Quién elige la variante y a qué ancho se dibuja el ticket lo decide
+   * `HeroScene` (`useGeometriaPeriferica`); este componente no mide nada.
+   */
+  variante?: 'completa' | 'minima';
 }) {
   const [open, setOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const panelId = useId();
+  const esMinima = variante === 'minima';
+  const { handlers, programar, cancelar } = useAutoRecoger(open, setOpen);
 
   /* Copia ordenada: `sort` muta el array que recibe, y este viene de
      `hosmanData` — ordenarlo en sitio alteraría los datos compartidos para
@@ -107,10 +129,14 @@ export function UpcomingShows({
   };
 
   return (
-    <section aria-label="Próximos shows" className="relative flex flex-col items-center">
+    <section
+      aria-label="Próximos shows"
+      className="relative flex flex-col items-center"
+      {...(esMinima ? handlers : {})}
+    >
       {/* TÍTULO — un par de puntos menos que antes (11/13px → 9/11px), mismo
           color, ornamentos y alineación: solo baja de protagonismo. */}
-      <h2 className="mb-3 flex items-center gap-4">
+      <h2 className={`flex items-center gap-4 ${esMinima ? 'mb-2' : 'mb-3'}`}>
         <TitleOrnament />
         <span
           className="font-serif text-[11px] uppercase tracking-[0.3em] text-amber-300/90"
@@ -124,7 +150,7 @@ export function UpcomingShows({
       {/* ENTRADA PROTAGONISTA — el aspecto de cada asset por separado sigue
           aprobado y sin tocar; `stacked` solo elige cuál mostrar (apilado en
           cerrado, individual en abierto) cruzando su opacidad. */}
-      <NextShowTicket events={sorted} index={0} stacked={!open} />
+      {!esMinima && <NextShowTicket events={sorted} index={0} stacked={!open} />}
 
       {/* PANEL DESPLEGABLE
 
@@ -159,7 +185,13 @@ export function UpcomingShows({
         style={panelStyle}
         aria-hidden={!open}
         inert={!open}
-        className="absolute bottom-full left-1/2 z-10 w-[calc(var(--hb-ticket-w)+4rem)] -translate-x-1/2"
+        className={`absolute z-10 ${esMinima ? 'w-[calc(var(--hb-ticket-w)+4.5rem)]' : 'w-[calc(var(--hb-ticket-w)+4rem)]'} ${
+          // Al lado baja hasta el pie real del bloque (con su aviso legal), que
+          // el coordinador publica en `--hb-shows-panel-baja`.
+          panelAlLado
+            ? 'bottom-[calc(-1*var(--hb-shows-panel-baja,0px))] left-full'
+            : 'bottom-full left-1/2 -translate-x-1/2'
+        }`}
       >
         {/* `min-h-0` es imprescindible: sin él el hijo de la rejilla conserva
             su altura mínima de contenido y la fila nunca llega a colapsar a 0.
@@ -189,10 +221,15 @@ export function UpcomingShows({
               dos tercios de su ancho cortados. El recorte ocurre en la caja de
               PADDING, así que este relleno le devuelve el sitio; va simétrico
               en horizontal para no descentrar las entradas. */}
+          {/* En la variante mínima el ancho de las entradas lo ajusta el
+              coordinador (`--hb-ticket-w` local) para que el panel quepa entre
+              la cabecera y el bloque; `data-hb-geo` es lo que mide. */}
           <div
-            className="flex flex-col items-center gap-4 overflow-y-auto px-6 pb-6 pt-4"
+            data-hb-geo={esMinima ? 'panel-shows' : undefined}
+            className={`flex flex-col items-center gap-4 overflow-y-auto pb-6 pt-4 ${esMinima ? 'px-7' : 'px-6'}`}
             style={{ maxHeight: 'var(--hb-shows-panel-max)' }}
           >
+            {esMinima && <NextShowTicket events={sorted} index={0} />}
             {hasSecond && (
               <NextShowTicket
                 events={sorted}
@@ -209,10 +246,25 @@ export function UpcomingShows({
       {/* BOTÓN */}
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!esMinima) {
+            setOpen((v) => !v);
+            return;
+          }
+          // Mínima: recoger a mano es inmediato; al abrir arranca la cuenta
+          // (con ratón encima no arranca; con un toque, el `pointerleave` ya
+          // pasó antes del clic).
+          if (open) {
+            cancelar();
+            setOpen(false);
+          } else {
+            setOpen(true);
+            programar();
+          }
+        }}
         aria-expanded={open}
         aria-controls={panelId}
-        className="mt-4 flex items-center gap-2.5 border border-amber-400/35 bg-black/45 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/85 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/65 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70"
+        className={`${esMinima ? '' : 'mt-4'} flex items-center gap-2.5 border border-amber-400/35 bg-black/45 px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/85 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/65 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70`}
       >
         {open ? 'Ocultar fechas' : 'Ver más fechas'}
         <ChevronIcon open={open} />

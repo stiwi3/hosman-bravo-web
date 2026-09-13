@@ -165,17 +165,20 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                 y no le cuesta alto al hero, así que ahí cabe el módulo
                 completo; en la compacta cada píxel de cabecera se lo quita
                 al hero, y por eso manda la presentación de una fila. */}
-            <div className="hidden abierta:block">
+            {/* `data-hb-geo`: el borde inferior del reproductor visible es el
+                límite superior del rail de plataformas en INICIO (lo mide
+                `useGeometriaPeriferica`). */}
+            <div data-hb-geo="reproductor" className="hidden abierta:block">
               <TrackPlayer />
             </div>
-            <div className="w-full min-w-0 abierta:hidden">
+            <div data-hb-geo="reproductor" className="w-full min-w-0 abierta:hidden">
               <MobilePlayer />
             </div>
             {/* La `key` remonta el bloque al cambiar de sección, de modo que
                 siempre aparece recogido al navegar. */}
             <MusicPlatforms
               key={current}
-              colapso={isHome ? 'solo-rail' : 'siempre'}
+              colapso="siempre"
               enRail={isHome}
             />
           </div>

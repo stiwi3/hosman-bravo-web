@@ -285,6 +285,19 @@ body {
   --hb-hero-min-w: 20rem; /* 320px */
   --hb-hero-min-h: calc(var(--hb-hero-min-w) * 4 / 3); /* 426px */
 
+  /* SUELO DE LAYOUT DE LA FILA DEL HERO (composición compacta y móvil).
+     La fila es `minmax(este suelo, 1fr)`: mientras quepan cabecera + hero +
+     pie, el `1fr` ya vale exactamente `100svh − cabecera real − pie`, así que
+     el hero cede lo estrictamente necesario sin ninguna condición escrita.
+     Solo cuando ni siquiera este suelo cabe, la escena crece y hay scroll.
+
+     No es la medida del hero: es solo el punto a partir del cual el hero deja
+     de competir por alto y la escena prefiere desplazarse. 240px de alto
+     (180 de ancho) sigue leyendo la figura a caballo; por debajo, el vídeo
+     pasa a ser una viñeta. Antes era 426 y después 320, y en ambos casos
+     forzaba scroll con pantallas en las que todo cabía encogiendo un poco. */
+  --hb-hero-suelo: 15rem; /* 240px */
+
   /* EL FLANCO — cuánto ancho reclaman a cada lado los módulos de esquina en la
      composición abierta. Es lo que impide que, al estrechar la ventana, el
      vídeo crezca hasta meterse debajo del bloque de shows: antes solo miraba
@@ -302,14 +315,66 @@ body {
      que hay que garantizar es que el dedo no se salga por el canto. */
   --hb-rail-inset: clamp(0.125rem, 1.2vw, 0.5rem);
 
+  /* --- LOS RAILS SON PERMANENTES -------------------------------------------
+     Redes a la izquierda y plataformas a la derecha, en vertical, en TODAS las
+     composiciones — también en escritorio. Van `fixed` y SUPERPUESTOS: no
+     reservan columna, no entran en `--hb-flanco` y por tanto no le quitan ni un
+     píxel de ancho al hero. Su ancho no participa en ninguna cuenta de la
+     escena.
+
+     Lo único que se calcula es la BANDA VERTICAL dentro de la que se centra
+     cada rail, para que no pisen lo que vive arriba y abajo de su lateral.
+     Cada banda describe SU columna, no la cabecera entera:
+
+     · Izquierda — arriba solo está el menú de cuero, cuyo alto ya es
+       `--hb-header-h` (pad + trigger). Abajo está el bloque de Próximos Shows;
+       su alto real no es un token, así que se reserva una cota superior
+       derivada del ticket (medido: 179-205px de bloque para tickets de
+       302-380px, un 54-59% de su ancho; 0,62 deja margen). Esto sitúa el rail,
+       no dimensiona nada: el hero no lo lee.
+     · Derecha — arriba está el reproductor, que es lo que da el alto real de la
+       cabecera (`--hb-header-real-h`); abajo, el isotipo. */
+  --hb-rail-borde: clamp(0.5rem, 1.5svh, 1rem);
+  --hb-rail-izq-arriba: calc(var(--hb-header-h) + var(--hb-rail-borde));
+  --hb-rail-izq-abajo: calc(var(--hb-ticket-w) * 0.62 + var(--hb-hero-inset) * 1.5);
+  --hb-rail-dcha-arriba: calc(var(--hb-header-real-h, var(--hb-header-h)) + var(--hb-rail-borde));
+  --hb-rail-dcha-abajo: calc(var(--hb-isotipo) + var(--hb-hero-inset) * 2);
+
+  /* ISOTIPO — firma discreta en la esquina inferior derecha, donde antes
+     estaban las redes. Escala con la escena como los controles y se queda en
+     un tamaño de icono grande, nunca de logotipo: el protagonista es el hero. */
+  /* Tamaño OBJETIVO, un 60 % mayor que el anterior (52·38·28). En compacta y
+     móvil el coordinador lo publica ya ajustado (`--hb-isotipo-real`): cede
+     cuando la columna derecha no da para más, nunca por debajo del mínimo. */
+  --hb-isotipo: clamp(2.8rem, 1.92vw + 4.16svh, 5.2rem); /* 83 · 61 · 45 */
+  --hb-isotipo-min: 1.75rem;
+
   /* --- CONTROLES REDONDOS PERSISTENTES ------------------------------------
      Plataformas y redes comparten lenguaje visual pero NO tamaño: las
      plataformas mandan (son la fila principal de la cabecera) y las redes van
      un punto por debajo. De ahí que las redes se deriven de las plataformas
      con un factor, pero conserven un suelo propio: al llegar la cabecera a su
      mínimo, las redes aún tienen recorrido antes de dejar de ser pulsables. */
-  --hb-control: clamp(2.25rem, 0.72vw + 3.26svh, 3rem); /* 48 · 38 · 36 */
-  --hb-control-social: max(2rem, calc(var(--hb-control) * 0.92)); /* 44 · 35 · 33 */
+  /* Botón algo mayor que antes (48·38·36 → 50·40·38), pero la mayor parte del
+     aumento va al GLIFO de dentro (ver `MusicPlatforms` y `SocialLinks`): así
+     el icono se lee más grande sin que el rail entero crezca en proporción. El
+     suelo sube a 38px, más cerca de un área táctil cómoda. */
+  --hb-control: clamp(2.375rem, 0.76vw + 3.4svh, 3.125rem); /* 50 · 40 · 38 */
+  --hb-control-social: max(2.125rem, calc(var(--hb-control) * 0.92)); /* 46 · 37 · 35 */
+
+  /* SUELO DE LOS RAILS. Cuando su banda no da para más, redes y plataformas
+     encogen botón, glifo y hueco hasta aquí, y no más: 28px sigue siendo un
+     círculo legible y pulsable con cuidado. Por debajo, el orden de prioridad
+     ya ha pasado por contraer Próximos Shows y ceder parte del hero. */
+  --hb-control-min: 1.75rem;
+  /* Rail de redes: hueco normal entre iconos y el hueco extra bajo WhatsApp,
+     que es donde cuelga el bocadillo «CONTRATA TU SHOW». */
+  --hb-social-gap: clamp(0.25rem, 0.8svh, 0.5rem);
+  --hb-social-cta: 2.1rem;
+
+  /* Separación mínima entre el ticket lateral de Próximos Shows y el rótulo
+     del hero. Es la que decide cuánto ancho le queda al ticket. */
+  --hb-shows-separacion: calc(var(--hb-hero-inset) * 0.5);
 
   /* --- REPRODUCTOR GLOBAL -------------------------------------------------
      Es la pieza que peor llevaba el viewport corto: no tenía UNA sola clase

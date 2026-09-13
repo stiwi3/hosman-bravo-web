@@ -1,5 +1,8 @@
 'use client';
 
+import { useRef } from 'react';
+import Image from 'next/image';
+import { useGeometriaPeriferica } from '@/components/hero/useGeometriaPeriferica';
 import { useRouter } from 'next/navigation';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
 import { Branding } from '@/components/hero/Branding';
@@ -98,6 +101,20 @@ export function HeroScene() {
      en vez de mover un estado. */
   const goToContact = () => router.push('/contacto');
 
+  const escenaRef = useRef<HTMLElement>(null);
+  const geo = useGeometriaPeriferica(escenaRef);
+  const minimoBajoRotulo = geo.posicion === 'bajoRotulo';
+  const minimoLateral = geo.posicion === 'lateral' && geo.presentacion === 'minima';
+  const ticketLateral = geo.posicion === 'lateral' && geo.presentacion !== 'minima';
+  const estiloPanel =
+    geo.anchoPanel && geo.altoPanel
+      ? ({
+          '--hb-ticket-w': `${geo.anchoPanel}px`,
+          '--hb-shows-panel-max': `${geo.altoPanel}px`,
+          '--hb-shows-panel-baja': `${geo.bajaPanel}px`
+        } as React.CSSProperties)
+      : undefined;
+
   return (
     /* `min-h-svh` y no `h-`: ver «LA POLÍTICA» arriba. `svh` y no `dvh`: con
        `dvh` cada aparición de la barra del navegador redimensionaría la escena
@@ -105,7 +122,18 @@ export function HeroScene() {
        `container-type: inline-size` da a los hijos un `cqw` que es el ancho de
        la escena y no el del viewport — importante en cuanto hay barra de
        desplazamiento, que `100vw` sí incluye y `100cqw` no. */
-    <section className="relative grid min-h-svh grid-rows-[auto_minmax(var(--hb-hero-min-h),1fr)_auto] [container-type:inline-size]">
+    /* La fila del hero es `minmax(--hb-hero-suelo, 1fr)`: ver ese token. El
+       `1fr` ya es `100svh − cabecera − pie`, así que el hero cede solo lo que
+       haga falta para que el pie quepa en la primera pantalla, y la escena
+       crece únicamente si ni el suelo cabe. */
+    <section
+      ref={escenaRef}
+      data-hb-capa-rails=""
+      // `--hb-escena-min`: lo que piden las COLUMNAS laterales en su mínimo
+      // (menú → redes → Shows; reproductor → plataformas → logo), publicado por
+      // el coordinador. Solo supera `100svh` cuando ni así caben.
+      className="relative grid min-h-[max(100svh,var(--hb-escena-min,0px))] grid-rows-[auto_minmax(var(--hb-hero-suelo),1fr)_auto] [container-type:inline-size]"
+    >
       {/* CAPA 1 — fondo de la escena: negro con brasa roja muy apagada.
           Es la continuación de los laterales del vídeo hacia los bordes. */}
       <div aria-hidden="true" className="absolute inset-0 bg-[#050304]" />
@@ -140,6 +168,7 @@ export function HeroScene() {
           solo decide si se aplica: así el `min()/max()` se lee de una vez en
           `FLANCO` en lugar de repartido en dos valores arbitrarios. */}
       <div
+        data-hb-geo="zona"
         className="relative min-h-0 min-w-0 [container-type:size] abierta:absolute abierta:inset-y-0 abierta:left-[var(--hb-flanco)] abierta:right-[var(--hb-flanco)]"
         style={{ '--hb-flanco': FLANCO } as React.CSSProperties}
       >
@@ -167,7 +196,7 @@ export function HeroScene() {
             Con los rails el vídeo no llega tan abajo y el rótulo se muda al
             pie: esta copia desaparece con `display:none`, que también la saca
             del árbol de accesibilidad. */}
-        <div className={`pointer-events-none z-[6] ${CENTRADO} rails:hidden`} style={ENCUADRE}>
+        <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} rails:hidden`} style={ENCUADRE}>
           <Branding className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2" />
         </div>
       </div>
@@ -191,15 +220,75 @@ export function HeroScene() {
       </div>
 
       {/* FILA 3 — EL PIE.
-          En `abierta` sale del flujo y sus dos módulos quedan flotando en las
-          esquinas, exactamente donde estaban. En la compacta reserva su alto de
-          verdad, y por eso el vídeo deja de quedar por debajo de ellos. */}
-      <div className="relative z-20 flex items-end justify-between gap-3 px-[calc(var(--hb-hero-inset)*0.55)] pb-[var(--hb-hero-inset)] abierta:absolute abierta:inset-x-0 abierta:bottom-0">
-        {/* PRÓXIMOS SHOWS — el bloque completo, con el aviso legal recogido
-            justo debajo. Su panel desplegable va fuera de flujo (ver
-            `UpcomingShows`), así que abrirlo no le quita alto al hero. */}
-        <div className="flex flex-col items-center gap-2 rails:hidden">
+          En `abierta` sale del flujo y sus módulos quedan flotando en las
+          esquinas, exactamente donde estaban.
+
+          En la compacta la fila solo reserva alto cuando Shows va BAJO EL
+          RÓTULO (título + «ver más fechas» + aviso legal). En lateral, Shows y
+          el logo comparten franja con el hero en sus esquinas y la fila se
+          queda en el margen inferior: al contraerse, Shows libera de verdad el
+          espacio. Todo lo que no es esa reserva es overlay. Quién decide:
+          el coordinador (`useGeometriaPeriferica`). */}
+      <div
+        data-hb-geo="pie"
+        className="relative z-20 flex items-end justify-center gap-3 px-[calc(var(--hb-hero-inset)*0.55)] pb-[var(--hb-hero-inset)] abierta:absolute abierta:inset-x-0 abierta:bottom-0"
+      >
+        {/* Próximos Shows tiene DOS EJES independientes (`useGeometriaPeriferica`):
+            · presentación — completa · reducida · mínima (por ancho o por alto);
+            · posición — lateral · bajo el rótulo (SOLO por ancho).
+            Hay tres cajas, siempre montadas, y se ve la que toca; las otras
+            quedan `invisible` (conservan su caja, que es lo que se mide) e
+            `inert`. */}
+
+        {/* MÍNIMO BAJO EL RÓTULO — centrado bajo «MÚSICA POPULAR · SHOWS EN
+            VIVO». Es además la RESERVA del pie: en flujo siempre, visible o no. */}
+        <div
+          data-hb-geo="shows-minimo"
+          inert={!minimoBajoRotulo}
+          aria-hidden={!minimoBajoRotulo}
+          // Ancho de las entradas y tope de alto del panel, locales al bloque
+          // activo: el panel se ajusta al hueco real entre cabecera y bloque.
+          style={minimoBajoRotulo ? estiloPanel : undefined}
+          // En lateral sale del flujo: Shows y el logo comparten franja con el
+          // hero y el pie deja de reservar alto. Sigue montado para medirse.
+          className={`flex flex-col items-center gap-1.5 rails:hidden ${
+            minimoBajoRotulo ? '' : 'invisible absolute bottom-[var(--hb-hero-inset)] left-1/2 -translate-x-1/2'
+          }`}
+        >
+          <UpcomingShows variante="minima" onContact={goToContact} />
+          <p className="whitespace-nowrap text-center text-[7px] leading-tight tracking-wider text-gray-600">
+            © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN, COLOMBIA
+          </p>
+        </div>
+
+        {/* TICKET LATERAL — completo o reducido, anclado a la esquina inferior
+            izquierda y fuera de flujo. Su ancho (`--hb-ticket-w` local) lo
+            reduce el coordinador; el ticket escala entero con él. */}
+        <div
+          data-hb-geo="shows-lateral"
+          inert={!ticketLateral}
+          aria-hidden={!ticketLateral}
+          style={geo.anchoLateral ? ({ '--hb-ticket-w': `${geo.anchoLateral}px` } as React.CSSProperties) : undefined}
+          className={`absolute bottom-[var(--hb-hero-inset)] left-[calc(var(--hb-hero-inset)*0.55)] flex flex-col items-center gap-2 rails:hidden ${ticketLateral ? '' : 'invisible'}`}
+        >
           <UpcomingShows onContact={goToContact} />
+          <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
+            © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
+            COLOMBIA
+          </p>
+        </div>
+
+        {/* MÍNIMO LATERAL — cuando lo que falta es ALTO pero el ancho junto al
+            rótulo sigue sobrando: título + «ver más fechas» en la misma
+            esquina, bajo las redes, sin cambiar de sitio. */}
+        <div
+          data-hb-geo="shows-lateral-minimo"
+          inert={!minimoLateral}
+          aria-hidden={!minimoLateral}
+          style={minimoLateral ? estiloPanel : undefined}
+          className={`absolute bottom-[var(--hb-hero-inset)] left-[calc(var(--hb-hero-inset)*0.55)] flex flex-col items-center gap-1.5 rails:hidden ${minimoLateral ? '' : 'invisible'}`}
+        >
+          <UpcomingShows variante="minima" panelAlLado={geo.panelAlLado} onContact={goToContact} />
           <p className="max-w-[12rem] text-center text-[7px] leading-tight tracking-wider text-gray-600">
             © {new Date().getFullYear()} HOSMAN BRAVO · EL REY DE LOS CABALLOS · MEDELLÍN,
             COLOMBIA
@@ -210,38 +299,93 @@ export function HeroScene() {
             los dos módulos de esquina. El rótulo sigue leyéndose como parte del
             hero (mismo fondo, el humo lo cruza) y debajo queda la invitación a
             deslizar. */}
-        <div className="hidden min-w-0 flex-1 flex-col items-center gap-1 rails:flex">
+        <div data-hb-geo="pie-rails" className="hidden min-w-0 flex-1 flex-col items-center gap-1 rails:flex">
           <Branding className="w-[62%] max-w-[16rem]" />
-          <ShowsSheet onContact={goToContact} className="w-full max-w-[18rem]" />
+          {/* El tope descuenta el isotipo a ambos lados (el tirador va centrado):
+              sin él, a 360px de ancho su área táctil llegaba 5px por debajo del
+              isotipo. El texto visible no cambia —mide ~214px y sigue en una
+              línea—; solo se acorta la caja pulsable. */}
+          <ShowsSheet
+            onContact={goToContact}
+            className="w-full max-w-[min(18rem,calc(100%-2*(var(--hb-isotipo-real,var(--hb-isotipo))+0.5rem)))]"
+          />
         </div>
 
-        {/* REDES SOCIALES. El CTA de contrataciones cuelga del icono de
-            WhatsApp —el PRIMERO del grupo— como un bocadillo discreto en vez de
-            competir por espacio como bloque propio.
-            Con los rails el grupo se convierte en el RAIL IZQUIERDO, `fixed`
-            para quedar a la misma altura que el de plataformas, que vive en la
-            cabecera y no puede anclarse a esta zona sin duplicar su instancia.
-            Va superpuesto al hero a propósito: si fuera una columna de layout
-            le restaría ancho al caballo, que es justo lo que no se quiere. */}
-        <div className="relative rails:fixed rails:left-[var(--hb-rail-inset)] rails:top-1/2 rails:z-40 rails:-translate-y-1/2">
+        {/* ISOTIPO — firma discreta abajo a la derecha, donde antes estaban las
+            redes. Va FUERA DE FLUJO a propósito: si ocupara sitio en la fila del
+            pie, desplazaría el branding centrado de la composición con rails.
+            Decorativo (`alt=""`): el nombre del artista ya está en la escena. */}
+        <Image
+          src={data.images.logo.isotipoDorado}
+          alt=""
+          aria-hidden="true"
+          width={613}
+          height={647}
+          sizes="3.25rem"
+          className="pointer-events-none absolute bottom-[var(--hb-hero-inset)] right-[calc(var(--hb-hero-inset)*0.55)] h-auto w-[var(--hb-isotipo-real,var(--hb-isotipo))] opacity-90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
+        />
+      </div>
+
+      {/* RAIL IZQUIERDO — REDES SOCIALES, vertical en todas las composiciones.
+          El CTA de contrataciones cuelga del icono de WhatsApp —el PRIMERO del
+          grupo— como un bocadillo discreto.
+
+          Dos capas, igual que el rail de plataformas:
+          · la BANDA, fija, transparente y sin eventos, ocupa la franja libre de
+            este lateral —bajo el menú, sobre el bloque de shows— y centra el
+            rail con `justify-content: safe center` (el `safe` evita que, si no
+            cupiera, se suba bajo el menú);
+          · el GRUPO, con eventos, es el que se pulsa.
+          Va superpuesto al hero: no reserva columna, así que no le quita ancho
+          al caballo.
+
+          `z-[15]` y no `z-40`: POR ENCIMA del vídeo, el humo (5) y el rótulo
+          (6), pero POR DEBAJO del pie (20). Al desplegar Próximos Shows el panel
+          crece hacia arriba por este mismo lateral y a 1180×900 llegaba 11px
+          bajo el rail; con el rail encima, los iconos tapaban la entrada. Un
+          panel abierto es transitorio y debe quedar delante, igual que el menú
+          de cuero cuando se despliega. Con el panel cerrado no se tocan. */}
+      {/* BANDA: en `abierta`, los tokens de siempre. En compacta y móvil, los
+          límites reales del coordinador —bajo el menú de cuero, sobre lo que
+          ocupe Próximos Shows—. Es contenedor de tamaño: el GRUPO lee su alto
+          (`cqh`) y reparte cuatro botones, tres huecos y el hueco del
+          bocadillo; si no caben a su tamaño normal, encogen juntos hasta
+          `--hb-control-min`. Sin desplegable y sin scroll: las cuatro redes
+          están siempre. El ancho es el del bocadillo, que cuelga del grupo. */}
+      <div className="pointer-events-none absolute left-[var(--hb-rail-inset)] top-[var(--hb-lim-sup-izq,var(--hb-rail-izq-arriba))] h-[max(0px,calc(var(--hb-lim-inf-izq,100svh)-var(--hb-lim-sup-izq,var(--hb-rail-izq-arriba))))] z-[15] flex w-[4.5rem] flex-col items-start [container-type:size] [justify-content:safe_center] abierta:top-[var(--hb-rail-izq-arriba)] abierta:bottom-[var(--hb-rail-izq-abajo)] abierta:h-auto">
+        <div className="pointer-events-auto relative [--hb-social-hueco:min(var(--hb-social-gap),2cqh)] [--hb-social-btn:max(var(--hb-control-min),min(var(--hb-control-social),calc((100cqh-var(--hb-social-cta)-3*var(--hb-social-hueco))/4)))]">
           <SocialLinks />
           <button
             onClick={goToContact}
             // `rounded-lg` y no `rounded-full`: con la píldora completamente
             // redondeada el borde se curva justo donde hace falta apoyar la
             // colita, y esta queda desconectada del contorno.
-            className="group absolute -top-9 left-0 flex items-center gap-1 rounded-lg border border-amber-400/25 bg-black/55 px-2.5 py-1.5 text-[8px] font-semibold tracking-widest text-amber-200/80 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/60 hover:text-amber-300 rails:left-0 rails:top-[calc(var(--hb-control-social)+0.35rem)] rails:max-w-[4.5rem] rails:whitespace-normal rails:px-1.5 rails:py-1 rails:text-center rails:text-[7px] rails:leading-tight"
+            className="group absolute left-0 top-[calc(var(--hb-social-btn)+0.35rem)] flex max-w-[4.5rem] items-center gap-1 whitespace-normal rounded-lg border border-amber-400/25 bg-black/55 px-1.5 py-1 text-center text-[7px] font-semibold leading-tight tracking-widest text-amber-200/80 backdrop-blur-sm transition-colors duration-300 hover:border-amber-400/60 hover:text-amber-300"
           >
             CONTRATA TU SHOW
-            {/* Colita apuntando al icono de WhatsApp. Se ancla por la IZQUIERDA
-                porque WhatsApp es el primero del grupo. En el rail el bocadillo
-                queda DEBAJO del icono, así que la colita se da la vuelta. */}
+            {/* Colita apuntando al icono de WhatsApp, que queda justo encima. */}
             <span
               aria-hidden="true"
-              className="absolute -bottom-[4px] left-4 h-[8px] w-[8px] rotate-45 border-b border-r border-amber-400/25 bg-black/55 transition-colors duration-300 group-hover:border-amber-400/60 rails:-top-[4px] rails:bottom-auto rails:left-3 rails:border-t rails:border-l rails:border-b-0 rails:border-r-0 rails:border-t-amber-400/25 rails:border-l-amber-400/25"
+              className="absolute -top-[4px] left-3 h-[8px] w-[8px] rotate-45 border-l border-t border-amber-400/25 bg-black/55 transition-colors duration-300 group-hover:border-amber-400/60"
             />
           </button>
         </div>
+      </div>
+
+      {/* REGLAS del coordinador: cajas invisibles con la medida exacta de un
+          token, para leer en píxeles lo que CSS ya sabe calcular (ancho natural
+          del ticket, alto natural del rail de redes, borde de seguridad y
+          separación con el rótulo). Pequeñas y dentro de la escena. */}
+      <div aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0">
+        <div data-hb-geo="regla-ticket" className="h-px w-[var(--hb-ticket-w)]" />
+        <div data-hb-geo="regla-redes" className="h-[calc(4*var(--hb-control-social)+3*var(--hb-social-gap)+var(--hb-social-cta))] w-px" />
+        <div data-hb-geo="regla-borde" className="h-[var(--hb-rail-borde)] w-px" />
+        <div data-hb-geo="regla-separacion" className="h-px w-[var(--hb-shows-separacion)]" />
+        <div data-hb-geo="regla-control-min" className="h-[var(--hb-control-min)] w-px" />
+        <div data-hb-geo="regla-social-cta" className="h-[var(--hb-social-cta)] w-px" />
+        <div data-hb-geo="regla-logo" className="h-[var(--hb-isotipo)] w-px" />
+        <div data-hb-geo="regla-logo-min" className="h-[var(--hb-isotipo-min)] w-px" />
+        <div data-hb-geo="regla-hero-suelo" className="h-[var(--hb-hero-suelo)] w-px" />
       </div>
 
       {/* El rótulo "HOSMAN BRAVO" ya viene en el propio vídeo, así que aquí
