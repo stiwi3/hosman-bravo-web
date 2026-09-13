@@ -204,11 +204,12 @@ export function HeroScene() {
               El PNG es una tira 3:1 cuyo contenido ocupa el 98,3% de su ancho y
               está centrado en el 44,4% de su alto; de ahí salen la anchura y el
               desplazamiento vertical.
-              Con los rails el vídeo no llega tan abajo y el rótulo se muda al
-              pie: esta copia desaparece con `display:none`, que también la saca
-              del árbol de accesibilidad. */}
-          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} rails:hidden`} style={ENCUADRE}>
-            <Branding className="absolute left-1/2 top-[83%] w-[54%] -translate-x-1/2" />
+              Es el MISMO en todas las composiciones, también en `rails`: el
+              rótulo pertenece al hero (queda sobre los pies del caballo) y no al
+              borde inferior de la escena. Antes, con rails, se mudaba al pie y su
+              posición la gobernaba el fondo de la escena. */}
+          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO}`} style={ENCUADRE}>
+            <Branding className="absolute left-1/2 top-[83%] w-[calc(var(--hb-rotulo-fraccion)*100%)] -translate-x-1/2" />
           </div>
         </div>
       </div>
@@ -307,12 +308,15 @@ export function HeroScene() {
           </p>
         </div>
 
-        {/* BRANDING + TIRADOR DE EVENTOS — cuando el pie ya no puede sostener
-            los dos módulos de esquina. El rótulo sigue leyéndose como parte del
-            hero (mismo fondo, el humo lo cruza) y debajo queda la invitación a
-            deslizar. */}
-        <div data-hb-geo="pie-rails" className="hidden min-w-0 flex-1 flex-col items-center gap-1 rails:flex">
-          <Branding className="w-[62%] max-w-[16rem]" />
+        {/* TIRADOR DE EVENTOS — cuando el pie ya no puede sostener los dos
+            módulos de esquina. El pie solo lleva la invitación a deslizar: el
+            rótulo va dentro del encuadre del hero, justo encima.
+            Mide al menos lo que el isotipo, que comparte franja en su esquina,
+            con el tirador abajo: el borde superior de este bloque es el límite
+            inferior de los rails (`useGeometriaPeriferica`), así que tiene que
+            quedar por encima del isotipo; y el hueco sobre el tirador recoge la
+            bajada del rótulo cuando el hero está en su suelo. */}
+        <div data-hb-geo="pie-rails" className="hidden min-h-[var(--hb-isotipo-real,var(--hb-isotipo))] min-w-0 flex-1 flex-col items-center justify-end gap-1 rails:flex">
           {/* El tope descuenta el isotipo a ambos lados (el tirador va centrado):
               sin él, a 360px de ancho su área táctil llegaba 5px por debajo del
               isotipo. El texto visible no cambia —mide ~214px y sigue en una

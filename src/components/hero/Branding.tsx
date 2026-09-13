@@ -4,22 +4,13 @@ import { hosmanData } from '@/data/hosman-data';
 /* ---------------------------------------------------------------------------
    RÓTULO «HOSMAN BRAVO» + BAJADA.
 
-   Una sola implementación con DOS emplazamientos, porque su ancla cambia con
-   la composición:
-
-     · en escritorio cuelga del ENCUADRE DEL VÍDEO (al 83% de su alto), que es
-       donde queda justo bajo la figura de Hosman — por eso el llamante lo
-       coloca dentro de una caja 3:4 idéntica a la del vídeo y todas las
-       medidas se expresan en fracción de ese encuadre, sin offsets por
-       viewport;
-     · en móvil el vídeo no llega tan abajo y el rótulo pasa a la FILA INFERIOR
-       de la escena, sobre el tirador de eventos, como en la referencia.
-
-   Los dos emplazamientos se renderizan y el que no toca queda en
-   `display:none`, que sí lo saca del árbol de accesibilidad — así que no hay
-   contenido duplicado para un lector de pantalla. La bajada es la única parte
-   con texto real y va marcada `aria-hidden` en la copia móvil desde el
-   llamante si hiciera falta; hoy no hace falta porque solo una está visible.
+   Un solo emplazamiento en todas las composiciones: cuelga del ENCUADRE DEL
+   VÍDEO (al 83% de su alto), que es donde queda sobre los pies del caballo —
+   por eso el llamante lo coloca dentro de una caja 3:4 idéntica a la del
+   vídeo y todas las medidas se expresan en fracción de ese encuadre, sin
+   offsets por viewport. (Antes, en móvil, había una segunda copia en la fila
+   inferior de la escena; su posición la marcaba el borde de la escena y no
+   el hero.)
 
    `container-type: inline-size` hace que la bajada se mida en fracción del
    ANCHO DEL RÓTULO y no en píxeles fijos: con `text-xs` fijo, en un encuadre

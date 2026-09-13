@@ -347,7 +347,7 @@ variantes de Tailwind en `globals.css`:
 |---|---|---|
 | *(base)* | — | **Composición compacta.** Barra superior de una fila (`MobilePlayer`), bandas que reservan alto de verdad, escena que crece si hace falta. |
 | `abierta` | `min-aspect-ratio: 13/10` + `min-width: 58rem` + `min-height: 34rem` | **Composición superpuesta.** El vídeo sangra a todo el alto; cabecera, shows y redes flotan en las esquinas. Solo cede por los flancos. |
-| `rails` | `max-width: 40rem` | Dentro de la compacta: los grupos de iconos pasan a rails verticales superpuestos y el pie lo ocupan branding y tirador. |
+| `rails` | `max-width: 40rem` | Dentro de la compacta: los grupos de iconos pasan a rails verticales superpuestos y el pie lo ocupa el tirador de eventos. El rótulo sigue dentro del encuadre del hero, como en las demás composiciones. |
 
 **La base es la compacta, no la de escritorio.** Es la que funciona en cualquier
 geometría, así que el caso difícil es el camino por defecto y el fácil el que se pide
@@ -387,6 +387,24 @@ cabecera no debe mover por la puerta de atrás la geometría del protagonista.
 Actúa por un eje distinto en cada composición. En la compacta es el mínimo de la fila. En
 `abierta` la zona hero está **fuera del flujo** y el mínimo de fila no le llega, así que
 ahí cede el flanco: `min(var(--hb-flanco-ideal), max(0px, (100cqw - var(--hb-hero-min-w)) / 2))`.
+
+### El flanco protege el RÓTULO, no el vídeo
+
+En `abierta`, `--hb-flanco-ideal` reserva solo lo necesario para que el rótulo —centrado y
+al `--hb-rotulo-fraccion` (0,54) del ancho del vídeo— empiece donde acaba el ticket de
+Próximos Shows más su separación:
+`50cqw − (50cqw − hero-inset·0,55 − ticket-w − separación) / fracción`.
+
+Antes reservaba el ancho entero del ticket **a los dos lados**. Cerca de la frontera de
+`abierta` comprimía el hero (a 826 de alto bajaba de 620 a 365 al estrechar hasta 1080) y
+al pasar a la compacta volvía a crecer de golpe (598). Medido tras el cambio: el vídeo queda
+limitado por el alto en todo el rango de `abierta`; salto residual al cruzar a la compacta
+de ~3,5 % (la compacta descuenta el margen inferior del pie); separación mínima rótulo↔ticket
+13 px a 940×720, justo la separación prevista. Los bordes del vídeo pueden quedar bajo el
+ticket o la esquina del reproductor: la máscara los desvanece.
+
+`--hb-rotulo-fraccion` es la única fuente de verdad del ancho del rótulo: la usan el propio
+`Branding` en `HeroScene` y este flanco. El coordinador la lee del DOM.
 
 ### La ley del vídeo
 

@@ -38,9 +38,9 @@
 
    `rails` — DENTRO DE LA COMPACTA, cuando el pie ya no puede sostener el
    bloque de shows y las redes en sus dos esquinas. Los grupos de iconos pasan
-   a rails verticales superpuestos al hero y el pie lo ocupan el branding y el
-   tirador de eventos. No es una tercera composicion: es el pie adaptandose al
-   ancho que recibe.
+   a rails verticales superpuestos al hero y el pie lo ocupa el tirador de
+   eventos (el rotulo sigue dentro del encuadre del hero). No es una tercera
+   composicion: es el pie adaptandose al ancho que recibe.
    ------------------------------------------------------------------------ */
 @custom-variant abierta (@media (min-aspect-ratio: 13/10) and (min-width: 58rem) and (min-height: 34rem));
 @custom-variant rails (@media (max-width: 40rem));
@@ -305,16 +305,33 @@ body {
      forzaba scroll con pantallas en las que todo cabía encogiendo un poco. */
   --hb-hero-suelo: 15rem; /* 240px */
 
-  /* EL FLANCO — cuánto ancho reclaman a cada lado los módulos de esquina en la
-     composición abierta. Es lo que impide que, al estrechar la ventana, el
-     vídeo crezca hasta meterse debajo del bloque de shows: antes solo miraba
-     al alto y a 960×1080 ocupaba el 84% del ancho.
+  /* RÓTULO — fracción del ancho del encuadre del vídeo que ocupa «HOSMAN
+     BRAVO». Única fuente de verdad: la usan el propio rótulo (`HeroScene`) y
+     el flanco de abajo. */
+  --hb-rotulo-fraccion: 0.54;
+
+  /* EL FLANCO — cuánto se estrecha la zona del vídeo a cada lado en la
+     composición abierta. Lo que no puede tocar el bloque de Próximos Shows
+     (abajo a la izquierda) es el RÓTULO, no los bordes del vídeo, que la
+     máscara ya desvanece. Así que el flanco es solo lo necesario para que el
+     rótulo, centrado y al `--hb-rotulo-fraccion` del vídeo, empiece donde
+     acaba el ticket más su separación:
+       flanco = 50cqw − (50cqw − borde derecho del ticket − separación) / fracción
+     Antes reservaba el ancho entero del ticket A LOS DOS LADOS: cerca de la
+     frontera de `abierta` comprimía el hero (598 → 365 a 1080×826) y al pasar
+     a la compacta volvía a crecer de golpe. El borde derecho del ticket sale
+     de su posición (`left: hero-inset·0,55`) y su ancho.
 
      Es el valor IDEAL. Quien lo acota es el suelo del hero, y lo hace en
      `HeroScene`, donde hay unidades de contenedor: en la composición abierta
      el hero está fuera del flujo de la rejilla y no puede reservar alto, así
      que quien cede es el flanco. Mismo suelo, dos mecanismos, uno por eje. */
-  --hb-flanco-ideal: calc(var(--hb-ticket-w) + var(--hb-hero-inset) * 2);
+  --hb-flanco-ideal: max(
+    0px,
+    50cqw -
+      (50cqw - var(--hb-hero-inset) * 0.55 - var(--hb-ticket-w) - var(--hb-shows-separacion)) /
+      var(--hb-rotulo-fraccion)
+  );
 
 
   /* Separación de los rails al borde de la pantalla. Los rails van
