@@ -3,7 +3,7 @@
 //
 // La FORMA de estos datos vive en `./types.ts`, no aquí ni en los componentes.
 
-import type { Horse, ShowEvent, Song } from './types';
+import type { Horse, ShowEvent } from './types';
 
 // Prefijo de rutas cuando el sitio se publica en un subdirectorio
 // (ej: stiwi3.github.io/hosman-bravo-web). Vacío en desarrollo local.
@@ -298,15 +298,8 @@ export const hosmanData = {
       `${bp}/images/galeria/galeria-13.jpg`,
       `${bp}/images/galeria/galeria-14.jpg`
     ]
-  },
+  }
 
-  // Canciones (editables)
-  songs: [
-    { title: 'Borracho Todavía', year: 2026 },
-    { title: 'Ranchero Genuino', year: 2025 },
-    { title: 'Ya Perdiste', year: 2024 },
-    { title: 'No Lo Decidí', year: 2024 },
-    { title: 'Una Botella', year: 2022 },
-    { title: 'El Circo de Tu Amor', year: 2022 }
-  ] satisfies readonly Song[]
+  // (Aquí vivía `songs`, la lista de SOBRE MÍ escrita a mano. Ahora sale del
+  // snapshot publicado, igual que MÚSICA: ver `AboutSongs`.)
 }

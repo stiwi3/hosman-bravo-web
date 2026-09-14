@@ -12,8 +12,8 @@
    y enlaces que no existen— sin que nada avisara de que era un respaldo.
 
    No se ha sustituido por «datos reales» sacados de otro sitio del repositorio
-   porque no los hay: `hosmanData.songs` tiene títulos y años, pero no día ni
-   mes ni enlaces por canción, así que rellenarlo sería inventar igualmente.
+   porque no los hay: el snapshot es la única discografía con fechas y enlaces
+   (también la lista de SOBRE MÍ sale de él), así que rellenarlo sería inventar.
 
    Un array vacío es el estado seguro: si el snapshot falla, MÚSICA lo dice en
    una línea y no afirma nada falso. Ver el estado vacío de `MusicSection`.

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { hosmanData } from '@/data/hosman-data';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
+import { AboutSongs } from './AboutSongs';
 
 /** SOBRE MÍ — foto e información como una sola composición a dos columnas. */
 export function AboutSection() {
@@ -61,17 +62,7 @@ export function AboutSection() {
                 </p>
               </div>
 
-              <div>
-                <h3 className="text-sm font-black tracking-widest mb-3 text-red-600">MÚSICA</h3>
-                <ul className="text-sm leading-relaxed text-gray-400 space-y-1">
-                  {data.songs.map((song) => (
-                    <li key={song.title}>
-                      <span className="font-bold text-white">{song.title}</span>{' '}
-                      <span className="text-gray-600">({song.year})</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <AboutSongs />
 
               <div>
                 <h3 className="text-sm font-black tracking-widest mb-4 text-red-600">SÍGUEME</h3>

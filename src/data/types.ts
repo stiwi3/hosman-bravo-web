@@ -99,12 +99,6 @@ export interface Horse {
   color: string;
 }
 
-/** Una canción del listado de SOBRE MÍ. */
-export interface Song {
-  title: string;
-  year: number;
-}
-
 /* ---------------------------------------------------------------------------
    MÚSICA
 
