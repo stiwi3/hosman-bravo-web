@@ -364,8 +364,9 @@ y emite un selector vacío que rompe la hoja entera, con un 500 que no menciona 
 
 ### La política: `fit` mientras quepa, crecer cuando no
 
-La escena es `min-height: 100svh` —no `height`— con
-`grid-template-rows: auto minmax(var(--hb-hero-min-h), 1fr) auto`.
+La escena es `min-height: max(100svh, var(--hb-escena-min))` —no `height`— con
+`grid-template-rows: auto minmax(var(--hb-hero-suelo), 1fr) auto`. `--hb-escena-min` lo
+publica el coordinador con lo que piden las columnas laterales en su mínimo.
 
 Si `cabecera + suelo del hero + pie` entra en la pantalla, el `1fr` absorbe el sobrante:
 una pantalla, sin scroll. Si no entra, la rejilla crece y el documento se desplaza — dentro
@@ -380,13 +381,15 @@ era la avería.
 
 ### El suelo del hero
 
-`--hb-hero-min-w: 20rem` y `--hb-hero-min-h` derivado por la proporción 3:4. Es un token
-**propio del hero**, sin dependencia de ningún otro módulo: cambiar los tickets o la
-cabecera no debe mover por la puerta de atrás la geometría del protagonista.
+Dos tokens **propios del hero**, sin dependencia de ningún otro módulo (cambiar los
+tickets o la cabecera no debe mover por la puerta de atrás la geometría del protagonista),
+uno por eje:
 
-Actúa por un eje distinto en cada composición. En la compacta es el mínimo de la fila. En
-`abierta` la zona hero está **fuera del flujo** y el mínimo de fila no le llega, así que
-ahí cede el flanco: `min(var(--hb-flanco-ideal), max(0px, (100cqw - var(--hb-hero-min-w)) / 2))`.
+- **Compacta y `rails`** — `--hb-hero-suelo: 15rem` (240 px de alto) es el mínimo de la fila
+  central. Por debajo, la escena crece y hay scroll.
+- **`abierta`** — la zona hero está **fuera del flujo** y el mínimo de fila no le llega, así
+  que cede el flanco, con `--hb-hero-min-w: 20rem` como suelo de ancho:
+  `min(var(--hb-flanco-ideal), max(0px, (100cqw - var(--hb-hero-min-w)) / 2))`.
 
 ### El flanco protege el RÓTULO, no el vídeo
 
@@ -408,15 +411,17 @@ ticket o la esquina del reproductor: la máscara los desvanece.
 
 ### La ley del vídeo
 
-Una sola declaración, la misma en las dos composiciones:
+Una sola declaración para todas las composiciones:
 
 ```css
-width: min(100cqw, 75cqh);  aspect-ratio: 3 / 4;
+width: min(100cqw, var(--hb-hero-alto, 75cqh));  aspect-ratio: 3 / 4;
 ```
 
 `100cqw` es el límite por ancho disponible, `75cqh` el límite por alto disponible, y
 `min()` es «lo que quepa». Lo que cambia entre composiciones no es la fórmula: es el
-**tamaño de la caja** contra la que se mide, que declara `container-type: size`.
+**tamaño de la caja** contra la que se mide, que declara `container-type: size`. Solo
+`rails` declara `--hb-hero-alto` (presencia mínima en alto, ver «Hero, rótulo y menú en
+`rails`»); en abierta y compacta la variable no existe y el límite es `75cqh`.
 
 **El lienzo del hero.** En la compacta, vídeo y rótulo no se miden contra la zona sino
 contra una caja interior que sube hasta el borde superior de la escena
@@ -434,7 +439,8 @@ reserva de cabecera (el rótulo es fracción de ese vídeo y de él sale el huec
 ⚠️ Si se cambia la altura del lienzo, cambiar también esa predicción.
 
 El rótulo no necesita regla propia: es el 54 % del encuadre y su bajada `2.9cqw` del
-rótulo con suelo de 9 px, así que acompaña al hero conservando la jerarquía.
+rótulo con suelo de 9 px, así que acompaña al hero conservando la jerarquía. (En `rails`
+tiene ancho, anclaje y tope de bajada propios: ver «Hero, rótulo y menú en `rails`».)
 
 ⚠️ **No devolver el marco a `md:h-full md:w-auto`.** Esa forma mide solo por altura y era la
 causa de que a 960×1080 el vídeo ocupara el 84 % del ancho.
@@ -473,28 +479,41 @@ su tamaño reconstruye las texturas de densidad, que son la forma del humo.
   Próximos Shows: Shows va pegado al borde a propósito (su filete ya hace de margen y cada
   píxel retrasa la colisión con el rótulo).
 
-### Los rails van `fixed`: decisión consciente con coste conocido
+### Los rails van `absolute` dentro de la escena
 
-Con la variante `rails`, los dos grupos de iconos son `position: fixed`. **No es una
-limitación desconocida, es un trade-off medido y aceptado.**
+Los dos rails son permanentes (todas las composiciones) y van `position: absolute` DENTRO
+de la escena de INICIO: las redes directamente en `HeroScene`, las plataformas llevadas
+por `createPortal` a `[data-hb-capa-rails]`. Por eso **se desplazan con la escena** cuando
+esta crece por encima de `100svh`: tras la frontera de scroll, la geometría queda
+congelada y todo el conjunto se mueve junto (ver `useGeometriaPeriferica`).
 
-En una escena móvil excepcionalmente baja que crece por encima de `100svh`, **los rails
-permanecen ligados al viewport mientras el hero se desplaza con el scroll**. El desfase no
-puede superar nunca el crecimiento de la escena:
+(Hasta `fc343e8` iban `fixed` con la variante `rails` y, en escenas móviles muy bajas,
+quedaban ligados al viewport mientras el hero se desplazaba. Ese trade-off ya no existe.)
 
-| | 360×620 | 360×480 |
-|---|---|---|
-| Crecimiento y desfase | 22 px | 160 px |
+### Hero, rótulo y menú en `rails`
 
-**En los tres teléfonos de referencia (360×780, 390×844, 430×932) la escena no crece, así
-que el desfase es cero.** A 844×390 tampoco ocurre: ahí `rails` no aplica y las redes van
-en el pie, en flujo, viajando con el hero.
+Todo con la variante `rails:`; fuera de ella nada cambia (el flanco de `abierta` asume el
+rótulo al 54 %).
 
-Se mantiene así porque corregirlo exigiría o una segunda instancia de `MusicPlatforms`
-—estado duplicado— o moverla fuera de la cabecera persistente, lo que obligaría a
-reconstruir su posición bajo el `TrackPlayer` desde fuera y añadiría un acoplamiento nuevo
-**en la composición de escritorio ya aprobada**. No se añade ninguna compensación para
-este caso: es deliberado.
+- **Hero centrado** en su zona, con **presencia mínima en alto**: el encuadre usa
+  `min(100cqw, var(--hb-hero-alto, 75cqh))` y `rails` declara
+  `--hb-hero-alto: max(75cqh, 60.75svh)` (≈ 81 % del alto de pantalla). Con poca altura
+  (530×512: 262×350 → 311×415) desborda la zona por arriba y por abajo con los bordes que
+  la máscara desvanece; en teléfonos altos no cambia (manda el ancho). Solo visual: filas,
+  zona, pie y frontera de scroll no cambian. (Se probó alinearlo abajo: hundía la
+  composición en teléfonos altos.)
+- **Rótulo**: ancho `min(max(0,67·vídeo, --hb-rotulo-objetivo 256px), disponible)`, con
+  disponible = hueco entre rails CERRADOS a la altura del rótulo (margen + botón +
+  holgura). El bocadillo «CONTRATA TU SHOW» no se reserva: cuelga del primer icono y queda
+  ≥ 46 px por encima del rótulo en todos los barridos, incluida la frontera. Su borde
+  inferior es el final de la zona menos `hero-inset` (`bottom: calc((100% − 100cqh)/2 +
+  hero-inset)` dentro del encuadre centrado): con el hero limitado por alto queda sobre las
+  patas; en teléfonos altos cuelga bajo los pies. La bajada cede con `--hb-bajada-tope:
+  4cqw` si el rótulo se estrecha.
+- **Menú**: en la raíz de `LeatherMenuPhoto`,
+  `--hb-menu-w: max(126px, min(0,4·(100vw − 2·header-pad), curva de la compacta))`. Se
+  mide contra la fila de la cabecera y converge en altura con el reproductor, que ocupa
+  el resto de la fila y cede un poco (403: 236 → 226). En 640/641 enlaza con la compacta.
 
 ## 8. Datos
 

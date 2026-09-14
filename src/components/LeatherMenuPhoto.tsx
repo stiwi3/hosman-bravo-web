@@ -127,7 +127,15 @@ export function LeatherMenuPhoto({ items, current }: LeatherMenuPhotoProps) {
   const closeMenu = () => setOpen(false);
 
   return (
-    <div ref={rootRef} className="relative z-50">
+    // En `rails` el menú se mide contra la FILA de la cabecera (40 % del ancho
+    // menos márgenes), no contra un tercio del viewport: así gana presencia y
+    // converge con el reproductor, que ocupa el resto de la fila y cede un poco.
+    // Tope = la curva de la compacta, para que en 640/641 no haya salto. Solo
+    // redefine el token para este componente (trigger y costura del panel).
+    <div
+      ref={rootRef}
+      className="relative z-50 rails:[--hb-menu-w:max(126px,min(0.4*(100vw-2*var(--hb-header-pad)),clamp(190px,6vw+14svh,266px)))]"
+    >
       {/* Degradado de latón para los iconos: es tipografía/UI, no material
           de la pieza, así que se mantiene igual que en la versión CSS. */}
       <svg width="0" height="0" aria-hidden="true" className="absolute">

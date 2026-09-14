@@ -24,7 +24,7 @@ import { useEffect, useRef, useState } from 'react';
      mueven overlays: ninguna fila depende de ellos.
    · `--hb-escena-min` sale de la cabecera y de mínimos fijos, no del estado.
    · El ticket lateral es un overlay: su ancho no toca ninguna fila.
-   · Los rails son `fixed` y superpuestos: no se miden, solo leen.
+   · Los rails son `absolute` dentro de la escena y superpuestos: no se miden, solo leen.
 
    Lo que se mide del propio bloque de Shows son PROPORCIONES (alto del ticket
    por píxel de ancho, alto fijo del título y el botón), que no dependen del

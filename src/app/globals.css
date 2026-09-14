@@ -290,7 +290,6 @@ body {
      de fuente del usuario, y nunca llega a activarse en los tres teléfonos de
      referencia (360/390/430), que por eso siguen sin scroll. */
   --hb-hero-min-w: 20rem; /* 320px */
-  --hb-hero-min-h: calc(var(--hb-hero-min-w) * 4 / 3); /* 426px */
 
   /* SUELO DE LAYOUT DE LA FILA DEL HERO (composición compacta y móvil).
      La fila es `minmax(este suelo, 1fr)`: mientras quepan cabecera + hero +
@@ -309,6 +308,24 @@ body {
      BRAVO». Única fuente de verdad: la usan el propio rótulo (`HeroScene`) y
      el flanco de abajo. */
   --hb-rotulo-fraccion: 0.54;
+
+  /* RÓTULO EN `rails` — ninguna referencia es por viewport.
+     · FRACCIÓN: en rails el rótulo ocupa ~2/3 del ancho del vídeo (en
+       abierta/compacta sigue siendo `--hb-rotulo-fraccion`, 0,54).
+     · OBJETIVO: el ancho con el que la bajada «MÚSICA POPULAR · SHOWS EN VIVO»,
+       en su suelo de 9px (~181px con la fuente actual), ocupa ~70 % del
+       rótulo. Es una referencia de jerarquía, no una obligación: nunca pasa
+       del espacio disponible. En px porque el suelo de la bajada es px.
+     · DISPONIBLE: el hueco entre los rails CERRADOS a la altura del rótulo,
+       con el rótulo centrado: a cada lado, margen del rail + un botón + holgura.
+       El bocadillo «CONTRATA TU SHOW» no se reserva: cuelga del primer icono,
+       en la parte alta del grupo de redes, y el rótulo vive en la parte baja de
+       la zona (validado con barridos). El panel desplegado de plataformas es un
+       overlay transitorio y tampoco se reserva. `100cqw` resuelve contra el
+       lienzo del hero (en rails, el ancho de la escena). */
+  --hb-rotulo-fraccion-rails: 0.67;
+  --hb-rotulo-objetivo: 256px;
+  --hb-rotulo-rails-disponible: calc(100cqw - 2 * (var(--hb-rail-inset) + var(--hb-control) + 0.5rem));
 
   /* EL FLANCO — cuánto se estrecha la zona del vídeo a cada lado en la
      composición abierta. Lo que no puede tocar el bloque de Próximos Shows

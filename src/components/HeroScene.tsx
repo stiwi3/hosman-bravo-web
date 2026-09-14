@@ -42,12 +42,13 @@ import { hosmanData } from '@/data/hosman-data';
    `100cqw` es el límite por ancho disponible, `75cqh` el límite por alto
    disponible (75% porque la proporción es 3:4) y `min()` es «lo que quepa». Lo
    que cambia entre composiciones NO es la fórmula: es el TAMAÑO DE LA ZONA
-   contra la que se mide.
+   contra la que se mide. (En `rails` el límite por alto es
+   `var(--hb-hero-alto, 75cqh)`: ver `ALTO_EN_RAILS`.)
 
    LA POLÍTICA — `fit` mientras quepa, crecer cuando no.
 
    La escena es `min-height: 100svh`, no `height`. Su fila central tiene un
-   SUELO (`--hb-hero-min-h`). Si cabecera + suelo + pie entran en la pantalla,
+   SUELO (`--hb-hero-suelo`). Si cabecera + suelo + pie entran en la pantalla,
    el `1fr` absorbe el sobrante y la escena mide exactamente una pantalla, sin
    scroll. Si no entran, la rejilla crece y el documento se desplaza — dentro
    de INICIO, porque debajo no hay nada. No hay ninguna condición que escribir:
@@ -72,7 +73,7 @@ const FLANCO =
  *  las medidas en porcentaje del rótulo se refieren al vídeo, no al viewport,
  *  y por eso la alineación se mantiene sola sin offsets por breakpoint. */
 const ENCUADRE: React.CSSProperties = {
-  width: 'min(100cqw, 75cqh)',
+  width: 'min(100cqw, var(--hb-hero-alto, 75cqh))',
   aspectRatio: '3 / 4'
 };
 
@@ -89,6 +90,13 @@ const MASCARA: React.CSSProperties = {
 
 /** Centrado absoluto dentro de la zona hero, para el marco y para el rótulo. */
 const CENTRADO = 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2';
+/** PRESENCIA MÍNIMA EN ALTO del hero en `rails`: el límite por alto deja de ser
+ *  solo la zona (`75cqh`) y pasa a ser al menos el 81 % del alto de la pantalla
+ *  (0,75 × 81svh de ancho). Con poca altura el encuadre desborda la zona por
+ *  arriba y por abajo con sus bordes, que la máscara desvanece; en un teléfono
+ *  alto no cambia nada porque manda el ancho. Solo visual: filas, zona y pie
+ *  no cambian. Fuera de `rails` la variable no existe y el límite es `75cqh`. */
+const ALTO_EN_RAILS = 'rails:[--hb-hero-alto:max(75cqh,60.75svh)]';
 
 export function HeroScene() {
   const reducedMotion = useReducedMotion();
@@ -183,8 +191,10 @@ export function HeroScene() {
             En `abierta` la zona ya ocupa todo el alto; en `rails` la cabecera es
             una barra de lado a lado: en ambas, la caja es la zona. */}
         <div className="absolute inset-x-0 bottom-0 top-[calc(-1*var(--hb-header-real-h,var(--hb-header-h)))] [container-type:size] abierta:top-0 rails:top-0">
-          {/* CAPA 2 — el vídeo, centrado y con su proporción intacta. */}
-          <div className={CENTRADO} style={{ ...ENCUADRE, ...MASCARA }}>
+          {/* CAPA 2 — el vídeo, centrado y con su proporción intacta (también en
+              `rails`, donde además tiene presencia mínima en alto: ver
+              `ALTO_EN_RAILS`). */}
+          <div className={`${CENTRADO} ${ALTO_EN_RAILS}`} style={{ ...ENCUADRE, ...MASCARA }}>
             <video
               src={`${data.basePath}/videos/Hero.mp4`}
               poster={data.images.hero}
@@ -207,9 +217,20 @@ export function HeroScene() {
               Es el MISMO en todas las composiciones, también en `rails`: el
               rótulo pertenece al hero (queda sobre los pies del caballo) y no al
               borde inferior de la escena. Antes, con rails, se mudaba al pie y su
-              posición la gobernaba el fondo de la escena. */}
-          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO}`} style={ENCUADRE}>
-            <Branding className="absolute left-1/2 top-[83%] w-[calc(var(--hb-rotulo-fraccion)*100%)] -translate-x-1/2" />
+              posición la gobernaba el fondo de la escena.
+              En `rails`:
+              · ancho `min(max(fracción de rails × vídeo, objetivo), disponible
+                entre rails)`; si el hueco lo estrecha, la bajada cede con su
+                tope (`--hb-bajada-tope`, ver `Branding`);
+              · su borde inferior es el FINAL DE LA ZONA menos `hero-inset`
+                (`(100% − 100cqh)/2` convierte el encuadre, centrado, en la zona):
+                con el hero limitado por alto queda sobre las patas; en un
+                teléfono alto cuelga bajo los pies, en el sobrante del centrado,
+                y el tirador queda debajo con su separación natural.
+              Fuera de `rails` nada de esto aplica: el flanco de `abierta` asume
+              el rótulo al 54 %. */}
+          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} ${ALTO_EN_RAILS}`} style={ENCUADRE}>
+            <Branding className="absolute left-1/2 top-[83%] w-[calc(var(--hb-rotulo-fraccion)*100%)] -translate-x-1/2 rails:top-auto rails:bottom-[calc((100%-100cqh)/2+var(--hb-hero-inset))] rails:w-[min(max(calc(var(--hb-rotulo-fraccion-rails)*100%),var(--hb-rotulo-objetivo)),var(--hb-rotulo-rails-disponible))] rails:[--hb-bajada-tope:4cqw]" />
           </div>
         </div>
       </div>
