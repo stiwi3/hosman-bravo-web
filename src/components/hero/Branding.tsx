@@ -18,15 +18,21 @@ import { hosmanData } from '@/data/hosman-data';
    estrecho la línea partía en dos y empujaba el texto fuera. El suelo de 9px
    impide que se vuelva ilegible.
 
-   TOPE DE JERARQUÍA (`--hb-bajada-tope`, opcional): la bajada nunca debe
-   competir en anchura con «HOSMAN BRAVO». Si el llamante estrecha el rótulo
-   por debajo de lo que el suelo de 9px permite, el tope proporcional manda
-   sobre el suelo y la bajada cede lo justo. Sin tope declarado, el
-   comportamiento es el de siempre. Lo declara `HeroScene` solo en `rails`.
+   TOPE DE JERARQUÍA (`--hb-bajada-tope`): la bajada nunca debe competir en
+   anchura con «HOSMAN BRAVO». Cuando el rótulo es tan estrecho que el suelo
+   de 9px la haría más ancha que el título, el tope proporcional manda sobre
+   el suelo y la bajada cede lo justo. Solo toca la tipografía: la caja del
+   rótulo (la que mide el coordinador) no cambia.
+     · compacta (por defecto): 4.65cqw ≈ 95% de la tinta del título (la
+       bajada mide ~20,1 × su cuerpo y la tinta del PNG el 98,3% de su ancho).
+       Empieza a actuar con el rótulo por debajo de ~193px, donde 4.65cqw = 9px:
+       sin salto.
+     · rails: 4cqw, lo declara `HeroScene`.
+     · abierta: sin tope (su rótulo nunca baja de ~220px).
 --------------------------------------------------------------------------- */
 export function Branding({ className }: { className?: string }) {
   return (
-    <div className={`[container-type:inline-size] ${className ?? ''}`}>
+    <div className={`[container-type:inline-size] abierta:[--hb-bajada-tope:9999px] ${className ?? ''}`}>
       <Image
         src={hosmanData.images.heroLetters}
         alt=""
@@ -41,7 +47,7 @@ export function Branding({ className }: { className?: string }) {
           PNG lleva bajo el artwork (22,4% de su alto). */}
       <p
         className="-mt-[4%] whitespace-nowrap text-center tracking-widest text-gray-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]"
-        style={{ fontSize: 'min(max(9px, 2.9cqw), var(--hb-bajada-tope, 9999px))' }}
+        style={{ fontSize: 'min(max(9px, 2.9cqw), var(--hb-bajada-tope, 4.65cqw))' }}
       >
         MÚSICA POPULAR · SHOWS EN VIVO
       </p>
