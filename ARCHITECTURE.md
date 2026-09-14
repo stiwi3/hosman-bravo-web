@@ -457,9 +457,15 @@ grande, y hacía que el documento midiera más que la pantalla con la barra desp
 El canvas es lo único de la escena que **no** puede depender del contenido: cada cambio de
 su tamaño reconstruye las texturas de densidad, que son la forma del humo.
 
-1. **El canvas va anclado a la primera pantalla** (`absolute inset-x-0 top-0 h-[100svh]`),
-   no a la escena. Su tamaño depende solo del ancho de la ventana y de `svh`, así que
-   crecer la escena o desplazarse no lo tocan.
+1. **El canvas mide una pantalla, no la escena.** Velo y humo comparten una capa
+   `absolute inset-0` que cubre la escena entera y, dentro, una ventana
+   `sticky top-0 h-[100svh]`. Su tamaño depende solo del ancho de la ventana y de `svh`,
+   así que crecer la escena o desplazarse no lo tocan; y cuando la escena supera la
+   pantalla (alturas ≲ 407 px), la ventana se queda pegada al viewport y el pie no se
+   queda sin humo. `fixed` no sirve: el `container-type` de la escena la convierte en su
+   bloque contenedor. `sticky` funciona porque `<main>` usa `overflow-x: clip`, que no
+   crea contenedor de scroll — ⚠️ cambiarlo a `hidden` rompería el `sticky` sin avisar.
+   El `z-[5]` de la capa exterior conserva el orden de apilado anterior.
 2. **El panel de Próximos Shows no participa en el reparto vertical** (`absolute
    bottom-full`): se despliega hacia arriba sobre el hero. Cuando estaba en el flujo, en la
    composición compacta su fila es `auto` y abrirlo le robaba el alto al hero — medido a

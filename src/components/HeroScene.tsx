@@ -235,22 +235,33 @@ export function HeroScene() {
         </div>
       </div>
 
-      {/* Velo que iguala el brillo del vídeo con el del fondo, para que
-          el corte entre ambos no se lea por diferencia de luminosidad. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[100svh] bg-[linear-gradient(to_top,rgba(5,3,4,0.92)_0%,rgba(5,3,4,0.28)_26%,transparent_52%,transparent_74%,rgba(5,3,4,0.55)_100%)]"
-      />
-
-      {/* CAPA 3 — humo.
-          ⚠️ ANCLADO A LA PRIMERA PANTALLA, no a la escena. Si siguiera a la
-          escena, crecer la composición —o abrir los eventos, cuando el panel
+      {/* ATMÓSFERA — velo + humo, en una sola ventana de una pantalla.
+          ⚠️ El canvas NO sigue a la escena: mide siempre `100svh`. Si siguiera a
+          la escena, crecer la composición —o abrir los eventos, cuando el panel
           estaba en el flujo— redimensionaría el canvas, y cada redimensión
           reconstruye los búferes de densidad de la simulación. Con `100svh` su
-          tamaño depende solo del ancho y de `svh`: cambia en un
-          redimensionado o una rotación reales, y en nada más. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[100svh]">
-        <InteractiveSmoke reducedMotion={reducedMotion} />
+          tamaño depende solo del ancho y de `svh`: cambia en un redimensionado o
+          una rotación reales, y en nada más.
+          La capa exterior cubre la escena entera y la ventana interior es
+          `sticky`: cuando la escena supera la pantalla y se desplaza, velo y humo
+          se quedan pegados al viewport en vez de irse con el scroll y dejar el
+          pie sin atmósfera. `fixed` no serviría aquí: el `container-type` de la
+          escena la convierte en su bloque contenedor y se comportaría como
+          `absolute`. El `z-[5]` de la capa exterior conserva el orden de antes
+          (por encima de la zona hero; por debajo de rails y pie). */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
+        <div className="sticky top-0 h-[100svh]">
+          {/* Velo que iguala el brillo del vídeo con el del fondo, para que
+              el corte entre ambos no se lea por diferencia de luminosidad. */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(5,3,4,0.92)_0%,rgba(5,3,4,0.28)_26%,transparent_52%,transparent_74%,rgba(5,3,4,0.55)_100%)]" />
+
+          {/* CAPA 3 — humo. Su contenedor es el que observa el
+              `ResizeObserver` de `InteractiveSmoke`: mide lo mismo que la
+              ventana, una pantalla. */}
+          <div className="absolute inset-0">
+            <InteractiveSmoke reducedMotion={reducedMotion} />
+          </div>
+        </div>
       </div>
 
       {/* FILA 3 — EL PIE.
