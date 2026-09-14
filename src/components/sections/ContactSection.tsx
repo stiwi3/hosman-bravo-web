@@ -26,7 +26,7 @@ export function ContactSection() {
             className="w-32 h-auto object-contain"
           />
         </div>
-        <h2 className="text-section mb-block tracking-wide text-center">CONTRATACIONES</h2>
+        <h2 className="titulo-editorial mb-block tracking-wide text-center">CONTRATACIONES</h2>
 
         <ContactForm />
 

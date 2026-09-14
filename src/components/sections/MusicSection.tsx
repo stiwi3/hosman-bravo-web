@@ -175,7 +175,7 @@ export function MusicSection() {
   return (
     <section className={SCENE_FULL}>
       <div className={SCENE_SHOWCASE}>
-        <h2 className="text-section tracking-wide mb-3 text-center">
+        <h2 className="titulo-editorial tracking-wide mb-3 text-center">
           LA <span className="text-amber-400">MÚSICA</span>
         </h2>
         <p className="mx-auto max-w-xl text-center text-sm text-gray-400">

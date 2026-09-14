@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cinzel, Geist, Geist_Mono } from "next/font/google";
 import { AudioProvider } from "@/components/audio/AudioProvider";
 import { SiteShell } from "@/components/SiteShell";
 import { hosmanData } from "@/data/hosman-data";
@@ -12,6 +12,15 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Tipografía de marca para los títulos editoriales (BRAND.md §7). Solo el
+// peso que se usa: Bold. `next/font` la aloja con el sitio, sin pedirla a Google
+// al visitar la web.
+const cinzel = Cinzel({
+  variable: "--font-cinzel",
+  weight: "700",
   subsets: ["latin"],
 });
 
@@ -80,7 +89,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* El proveedor envuelve a la página entera: así la canción sigue

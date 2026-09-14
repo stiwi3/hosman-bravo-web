@@ -544,11 +544,26 @@ body {
      tenía dos escalones y ninguno reaccionaba al alto. */
   --text-section: clamp(1.6rem, 0.82vw + 1.875svh, 2.25rem); /* 36 · 28 · 26 */
   --text-section--line-height: 1.1;
-  --text-section--font-weight: 900;
+  /* 700 y no 900: los títulos van en Cinzel y solo se carga su Bold. */
+  --text-section--font-weight: 700;
 
   /* Navegación central de la cabecera. */
   --text-nav: clamp(0.625rem, 0.25vw + 0.75svh, 0.75rem); /* 12 · 10 · 10 */
   --text-nav--line-height: 1;
+}
+
+/* TÍTULO EDITORIAL PRINCIPAL — la única puerta de Cinzel en el sitio
+   (BRAND.md §7). Solo los títulos de sección: nada de UI, módulos, tarjetas ni
+   cuerpo de texto. Reúne familia y escala `--text-section` en una sola clase,
+   para que ningún componente declare la fuente por su cuenta (por eso Cinzel
+   no se registra como token `--font-*`: generaría una `font-*` suelta). La
+   variable la publica `next/font` en layout.tsx. Sin stroke: el de 2 pt del
+   manual es exclusivo del logotipo. */
+@utility titulo-editorial {
+  font-family: var(--font-cinzel), "Times New Roman", serif;
+  font-size: var(--text-section);
+  line-height: var(--text-section--line-height);
+  font-weight: var(--text-section--font-weight);
 }
 
 /* ===========================================================================

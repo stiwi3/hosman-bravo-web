@@ -9,7 +9,7 @@ export function GallerySection() {
   return (
     <section className={SCENE_FULL}>
       <div className={SCENE_CONTENT}>
-        <h2 className="text-section mb-3 tracking-wide">
+        <h2 className="titulo-editorial mb-3 tracking-wide">
           GALERÍA
         </h2>
         <p className="text-sm text-gray-400 mb-10">

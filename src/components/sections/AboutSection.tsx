@@ -48,7 +48,7 @@ export function AboutSection() {
               H
             </div>
             <div className="relative z-10 space-y-[clamp(1rem,0.6vw+2svh,2rem)]">
-              <h2 className="text-section tracking-wide">
+              <h2 className="titulo-editorial tracking-wide">
                 SOBRE <span className="text-amber-400">HOSMAN BRAVO</span>
               </h2>
 

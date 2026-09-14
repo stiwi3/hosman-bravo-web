@@ -211,6 +211,9 @@ export const hosmanData = {
       // material de la pieza.
       isotipoCuero: `${bp}/images/logo/isotipo-cuero.png`,
       logotipoDorado: `${bp}/images/logo/logotipo-dorado.png`,
+      // Vector extraído del manual de marca (ver BRAND.md §3): para el
+      // logotipo a tamaños que el PNG de 758px no cubre con nitidez.
+      logotipoDoradoSvg: `${bp}/images/logo/logotipo-dorado.svg`,
       logotipoBlanco: `${bp}/images/logo/logotipo-blanco.png`
     },
     // Grano real de cuero negro, usado como material de las piezas del menú

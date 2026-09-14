@@ -285,6 +285,12 @@ Dos capas en `src/app/globals.css`:
 - **`@theme`** — los que deben generar utilidad de Tailwind: `spacing-scene-x/-top/
   -bottom`, `spacing-block`, `container-content/-narrow`, `text-section`, `text-nav`.
 
+**Tipografía.** `layout.tsx` carga con `next/font/google` (autoalojadas en el build) Geist
+y Geist Mono para todo el sitio, y **Cinzel solo en Bold** (`--font-cinzel`). Cinzel entra
+únicamente por la utilidad `titulo-editorial` (`globals.css`), que añade la familia a la
+escala `--text-section` y es la que llevan los títulos editoriales principales de sección.
+Qué es un título editorial y qué no, y el resto de reglas de marca: [BRAND.md](BRAND.md).
+
 Fórmula: `clamp(mínimo, a·vw + b·svh, máximo)`. El **máximo** se calibra para devolver en
 2048×1023 exactamente el valor aprobado; el **mínimo** es el suelo de legibilidad de esa
 pieza. `svh` y no `vh`, porque INICIO ya usa `100svh`.

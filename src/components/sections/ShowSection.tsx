@@ -15,7 +15,7 @@ export function ShowSection() {
   return (
     <>
       <section className={`${SCENE} ${SCENE_CONTENT}`}>
-        <h2 className="text-section tracking-wide mb-3 text-center">
+        <h2 className="titulo-editorial tracking-wide mb-3 text-center">
           EL <span className="text-red-600">SHOW</span>
         </h2>
         <p className="text-sm text-gray-400 text-center max-w-2xl mx-auto mb-12">
@@ -51,7 +51,7 @@ export function ShowSection() {
           a continuación de la sección anterior. */}
       <section className="py-block px-scene-x bg-gradient-to-b from-black via-red-950/20 to-black">
         <div className={SCENE_CONTENT}>
-          <h2 className="text-section tracking-wide mb-block text-center">
+          <h2 className="titulo-editorial tracking-wide mb-block text-center">
             EL <span className="text-amber-400">ELENCO</span> ECUESTRE
           </h2>
           {/* 1 / 2 / 4 columnas. Con `md:grid-cols-3` y cuatro caballos el

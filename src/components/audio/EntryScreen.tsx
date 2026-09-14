@@ -278,8 +278,21 @@ export function EntryScreen() {
           reducedMotion ? 'duration-150' : 'duration-500'
         } ${leaving ? 'pointer-events-none scale-[1.04] opacity-0' : 'scale-100 opacity-100'}`}
       >
-        <h1 className="text-center text-4xl font-black tracking-[0.18em] text-amber-200/90 drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-5xl md:text-6xl">
-          HOSMAN BRAVO
+        {/* Firma: el logotipo derivado de los contornos vectoriales del manual
+            (BRAND.md §3), no texto con una fuente parecida. El `font-size` del h1 solo fija la escala:
+            10.4em es el ancho que ocupaba el rótulo de texto al que sustituye.
+            El alto sí cambia un poco (≈1.08em frente a 1em) y en móvil el
+            logotipo no parte en dos líneas como el texto. Sin sombra añadida:
+            el manual la prohíbe y el logotipo ya trae la suya. */}
+        <h1 className="max-w-full text-4xl leading-none sm:text-5xl md:text-6xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={hosmanData.images.logo.logotipoDoradoSvg}
+            alt="Hosman Bravo"
+            width={236}
+            height={25}
+            className="block h-auto w-[10.4em] max-w-full"
+          />
         </h1>
         <span className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
 
