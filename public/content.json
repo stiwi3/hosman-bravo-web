@@ -1,26 +1,8 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-03T17:36:25.722Z",
-  "publishedAt": "2026-09-03T17:36:25.722Z",
+  "contentVersion": "2026-09-15T09:32:07.397Z",
+  "publishedAt": "2026-09-15T09:32:07.397Z",
   "music": [
-    {
-      "id": "tomando-trago",
-      "title": "Tomando Trago",
-      "release_date": "05-08-2026",
-      "cover_url": null,
-      "youtube_id": "wOtsMOie4bw",
-      "spotify_url": "https://open.spotify.com/track/2uVmWqSks9Cf9ULXYPWJi0",
-      "apple_music_url": "https://music.apple.com/us/album/tomando-trago-single/6795512542",
-      "youtube_music_url": "https://music.youtube.com/watch?v=srpUMwEqviE&si=8PDzu3zR_mMltRMg",
-      "amazon_music_url": "https://music.amazon.es/albums/B0HBRXL3F6?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_zImZZmedrFBn7A4ifHC41XDxN",
-      "deezer_url": null,
-      "tidal_url": null,
-      "soundcloud_url": null,
-      "audiomack_url": "https://audiomack.com/hosman-bravo/song/tomando-trago",
-      "audio_preview_url": null,
-      "preview_start_sec": null,
-      "has_video": true
-    },
     {
       "id": "borracho-todavia",
       "title": "Borracho Todavía",
@@ -36,6 +18,7 @@
       "soundcloud_url": null,
       "audiomack_url": null,
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     },
@@ -54,6 +37,7 @@
       "soundcloud_url": null,
       "audiomack_url": "https://audiomack.com/hosman-bravo/song/ranchero-genuino",
       "audio_preview_url": null,
+      "preview_video_url": "/videos/previews/ranchero-genuino.mp4",
       "preview_start_sec": null,
       "has_video": true
     },
@@ -72,6 +56,7 @@
       "soundcloud_url": null,
       "audiomack_url": "https://audiomack.com/hosman-bravo/song/ya-perdiste",
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     },
@@ -90,6 +75,7 @@
       "soundcloud_url": null,
       "audiomack_url": "https://audiomack.com/hosman-bravo/song/no-lo-decidi",
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     },
@@ -108,6 +94,7 @@
       "soundcloud_url": null,
       "audiomack_url": "https://audiomack.com/hosman-bravo/song/una-botella",
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     },
@@ -126,6 +113,7 @@
       "soundcloud_url": null,
       "audiomack_url": "https://audiomack.com/hosman-bravo/song/el-circo-de-tu-amor",
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     },
@@ -144,6 +132,7 @@
       "soundcloud_url": null,
       "audiomack_url": null,
       "audio_preview_url": null,
+      "preview_video_url": null,
       "preview_start_sec": null,
       "has_video": true
     }
