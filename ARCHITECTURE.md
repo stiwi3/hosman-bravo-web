@@ -48,7 +48,7 @@ de sección y su entrada en `NAV_ITEMS` (`src/data/types.ts`).
 src/app/layout.tsx                  Server Component
 └── <AudioProvider>                 estado global de audio
     └── <SiteShell>                 Client Component · NUNCA se desmonta
-        ├── <EntryScreen />         telón z-100
+        ├── <EntryScreen />         mini-telón flotante z-80 (no bloquea la página; bajo los modales)
         ├── <header>                menú de cuero · nav central · TrackPlayer · MusicPlatforms
         ├── <HeroScene />           INICIO · SIEMPRE montado, se oculta con CSS
         ├── {children}              ← lo ÚNICO que cambia al navegar
@@ -96,9 +96,8 @@ encima del shell. Crea **un único** elemento `Audio` en un efecto con dependenc
   necesita reproducir otra pista, se amplía el provider.
 - Silenciar **pausa**: play/pause y sound on/off gobiernan un único estado y no pueden
   contradecirse.
-- Consumidores actuales: `EntryScreen` (`enter`), `TrackPlayer` (el resto) y `SiteShell`
-  (`hasEntered`, para saber si detrás del telón hay que mostrar el destino final o el
-  hero — ver §3).
+- Consumidores actuales: `EntryScreen` (`enter` e `isPlaying`) y los reproductores (el
+  resto). `hasEntered` sigue expuesto pero hoy no tiene consumidores.
 - **Suspensión con contador:** `suspend(id)` / `release(id)` apartan la canción de fondo
   sin pisar a quien la haya pausado a propósito. Al primer `suspend` se apunta si sonaba
   (`wasPlayingRef`) y se pausa; los `id` activos viven en un `Set`, así que dos avisos de
@@ -205,24 +204,44 @@ modal.
 
 ### EntryScreen
 
-El telón no es solo estética: los navegadores no permiten reproducir audio sin un gesto
-del usuario, y el clic en «ENTRAR A LA EXPERIENCIA» **es** ese gesto (dispara `enter()`).
+Mini-telón flotante. No es solo estética: los navegadores no permiten reproducir audio sin
+un gesto del usuario, y el clic en «ENTRAR EN LA EXPERIENCIA» **es** ese gesto (dispara
+`enter()`).
 
-Consecuencia para cualquier automatización: `agent-browser open http://localhost:3000`
-muestra la prepágina, no INICIO. **Hay que pulsar el botón antes de medir o capturar**, y
-con un clic real — `.click()` de JS no cuenta como gesto y el navegador bloquea el audio.
+**Cada ruta es su propio destino.** No hay redirección a `/` ni hero forzado detrás del
+telón: quien entra por `/musica` ve MÚSICA desde el primer momento, y por la abertura de
+las cortinas se ve esa escena real (el telón no tiene fondo propio). No se duplica
+ninguna escena.
 
-Al entrar directamente por una ruta de sección el telón también aparece: es correcto, el
-gesto de audio sigue siendo necesario.
+**No bloquea la página.** El envoltorio `fixed inset-0` solo centra y es
+`pointer-events: none`; únicamente la caja del telón captura puntero. Sin bloqueo de
+scroll, sin `inert` sobre el contenido y sin velo. La caja tiene la proporción del lienzo
+del telón (`min(90vw, 46rem, (100svh − 2rem) × 2778/1533)`), así que los recorridos
+`closed / peek / open` calibrados en % del lienzo siguen valiendo.
 
-**Bloqueo de scroll compartido.** Mientras el telón está visible no debe poder
-desplazarse la página, pero `document.body` es un recurso único: si otra pieza (un modal
-de vídeo) también lo bloqueara escribiendo `overflow` a mano, la primera en soltarlo
-restauraría el scroll con la segunda todavía abierta. Por eso `EntryScreen` no toca
-`document.body.style.overflow` directamente — usa `useScrollLock(activo)`
-(`src/hooks/useScrollLock.ts`), que lleva un contador de módulo: solo el primer bloqueo
-guarda el valor original y solo el último lo restaura. Cualquier pieza nueva que necesite
-bloquear el scroll debe pasar por el mismo hook.
+**Tres salidas, de un solo sentido** (el estado vive en el `SiteShell` persistente: al
+navegar no vuelve; en una recarga documental sí):
+
+| Salida | Audio | Animación |
+|---|---|---|
+| ENTRAR | `enter()` (reinicia a 0 y fundido) | apertura cinematográfica completa |
+| Primera reproducción efectiva desde el reproductor (`isPlaying`) | no se toca: sin `enter()`, sin `currentTime` | la misma apertura (es solo visual) |
+| X o Escape | ninguno | fundido breve (280 ms), sin apertura |
+
+Al empezar cualquier salida la caja pasa a `inert` (solo ella): ENTRAR y la X dejan de ser
+enfocables. Escape se ignora si hay un `dialog[open]` o `[aria-modal="true"]` en la
+página, porque ese Escape es suyo.
+
+Consecuencia para cualquier automatización: la página ya es medible sin pasar el telón,
+pero el popup está por encima en el centro. Para audio, **hay que pulsar ENTRAR con un clic
+real** — `.click()` de JS no cuenta como gesto y el navegador bloquea el audio.
+
+**Bloqueo de scroll compartido.** `document.body` es un recurso único: si dos piezas
+(la hoja de próximos shows, el modal de vídeo) lo bloquearan escribiendo `overflow` a
+mano, la primera en soltarlo restauraría el scroll con la otra todavía abierta. Por eso se
+usa `useScrollLock(activo)` (`src/hooks/useScrollLock.ts`), que lleva un contador de
+módulo. El mini-telón ya **no** lo usa. Cualquier pieza nueva que necesite bloquear el
+scroll debe pasar por el mismo hook.
 
 ---
 
@@ -236,6 +255,10 @@ sí tienen scroll normal.
 
 Coste asumido de la persistencia: el Hero está montado también en `/contacto`, `/musica`,
 etc. (oculto). Es el precio de que el humo y el vídeo sobrevivan a la navegación.
+Si la carga empieza en una ruta profunda, el hero arranca oculto (0×0, sin simulación) y
+se inicializa al navegar a `/`: el humo no llega precalentado. Verificado el 15 sep 2026
+(`/musica` → cerrar telón → INICIO: vídeo reproduciendo, canvas al tamaño del viewport,
+humo visible).
 
 ---
 
@@ -783,6 +806,6 @@ arquitectura no debe crear dependencias de GitHub Pages:
 - **Verificar dentro del árbol completo**, no clonando el nodo aislado: un ancestro con
   `overflow-hidden` puede recortarlo. Y ojo: si un eje deja de ser `visible`, el navegador
   convierte el otro en `auto`.
-- Herramienta: `agent-browser` (instalado global). Recuerda pulsar el telón primero (§4).
+- Herramienta: `agent-browser` (instalado global). El mini-telón queda encima en el centro: ciérralo (X/Escape) o pulsa ENTRAR con clic real si hace falta audio (§4).
 - ⚠️ **Si se ha corrido `npm run check`/`build`, borrar `.next` antes de volver al dev
   server** — puede seguir sirviendo el CSS de la build de producción sin ningún aviso.
