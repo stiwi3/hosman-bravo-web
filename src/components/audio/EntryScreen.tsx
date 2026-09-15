@@ -40,7 +40,8 @@ const FADE_SPAN = 0.65;
 
    · El envoltorio `fixed inset-0` solo centra: es `pointer-events: none`.
      Únicamente la caja del telón captura puntero. Sin bloqueo de scroll, sin
-     `inert` sobre la página y sin velo que oscurezca o desenfoque el contenido.
+     `inert` sobre la página y sin desenfoque; solo una penumbra ligera que no
+     captura nada (ver «INTEGRACIÓN EN LA ESCENA»).
    · La caja tiene la proporción exacta del lienzo (2778/1533 = 1,8121), así
      que el ESCENARIO la llena sin recortar ni deformar, y los recorridos de
      abajo —calibrados en porcentaje del lienzo— valen igual que a pantalla
@@ -102,17 +103,88 @@ const TRAVEL = {
 const CURTAIN_GRADE = 'brightness(0.76) contrast(1.04)';
 
 /**
- * Tamaño de la caja: una sola regla fluida, sin valores por resolución.
+ * Tamaño y posición de la caja: una sola ley fluida, sin valores por resolución.
  *
- * Es el MENOR de tres límites, con la proporción del lienzo fija:
+ * El ancho es el MENOR de tres límites, con la proporción del lienzo fija:
  * · `90vw` — en pantallas estrechas deja ver la página a los lados;
- * · `46rem` — en escritorio es un popup, no un telón a pantalla completa;
- * · `(100svh − 2rem) × proporción` — en apaisados bajos nunca desborda en alto.
+ * · `48rem` — en escritorio es un popup, no un telón a pantalla completa;
+ * · `52svh × proporción` — TECHO DE ALTURA: la caja nunca pasa del 52 % del alto
+ *   de la pantalla. En apaisados bajos manda este límite y el popup se reduce
+ *   de verdad en vez de comerse casi todo el alto (antes el techo era
+ *   `100svh − 2rem`).
+ *
+ * POSICIÓN: centrada y subida un 20 % del ALTO LIBRE (pantalla − caja). Con la
+ * escena de INICIO detrás, el galón intercepta la zona de la cara en vez de
+ * empezar justo debajo. Es proporcional al hueco libre y no un valor fijo
+ * porque en ventanas altas el hero va limitado por el ancho y la cara queda más
+ * arriba en proporción; en apaisados bajos, con poco hueco, apenas se mueve.
+ * Nunca sale por arriba: el borde superior queda en el 30 % del hueco libre.
+ * Va en `translate` y no en `transform` para no pisar la reducción del cierre
+ * discreto.
  */
+const BOX_WIDTH = `min(90vw, 48rem, calc(52svh * ${CANVAS.w} / ${CANVAS.h}))`;
 const BOX_STYLE: React.CSSProperties = {
-  width: `min(90vw, 46rem, calc((100svh - 2rem) * ${CANVAS.w} / ${CANVAS.h}))`,
-  aspectRatio: `${CANVAS.w} / ${CANVAS.h}`
+  width: BOX_WIDTH,
+  aspectRatio: `${CANVAS.w} / ${CANVAS.h}`,
+  translate: `0 calc((100svh - ${BOX_WIDTH} * ${CANVAS.h} / ${CANVAS.w}) * -0.2)`
 };
+
+/* ---------------------------------------------------------------------------
+   INTEGRACIÓN EN LA ESCENA — que el popup no se lea como una caja pegada.
+
+   · FEATHER: una máscara desvanece solo el perímetro de la caja (unos pocos %
+     por lado). El centro del telón queda nítido; no hay ningún blur.
+   · PENUMBRA: negro ligero sobre la página, `pointer-events: none`. No bloquea
+     clics ni scroll: es luz de escena, no un modal. Con el hover o el foco de
+     ENTRAR casi desaparece (la experiencia empieza a revelarse) y en cualquier
+     salida se va junto con el telón.
+   · SOMBRA AMBIENTAL: halo negro amplio y blando alrededor de la caja.
+
+   REGLA: EL TELÓN NUNCA SE OSCURECE. Penumbra y halo afectan solo a la página
+   de detrás. Las piezas del telón son semitransparentes en sus zonas oscuras,
+   así que cualquier velo DEBAJO de la caja se vería a través de ellas y
+   cambiaría su luz entre reposo y peek. Por eso las dos capas son `box-shadow`
+   de un HUECO con la forma de la caja: una sombra exterior no se pinta nunca
+   bajo su propio elemento. El hueco llega justo hasta donde empieza el
+   feather, de modo que la franja desvanecida del perímetro sí se funde hacia
+   la sombra, y todo lo que queda dentro —arte, logo, CTA, X— conserva siempre
+   la misma luminosidad. Ni opacidad, ni filtro, ni transición de estas capas
+   toca la caja.
+--------------------------------------------------------------------------- */
+
+/** Opacidad del negro de la penumbra en reposo. */
+const PENUMBRA_ALPHA = 0.28;
+/** Fracción de la penumbra que queda durante el peek (hover/foco de ENTRAR). */
+const PENUMBRA_PEEK = 0.12;
+/** Fracción del halo que queda durante el peek: la página junto a la caja
+ *  también recupera luz. */
+const HALO_PEEK = 0.35;
+
+/** Ancho del feather por eje, en % de la caja. Lo usan la máscara y el hueco. */
+const FEATHER_X = 3.5;
+const FEATHER_Y = 5;
+
+const FEATHER_MASK = `linear-gradient(to right, transparent 0%, #000 ${FEATHER_X}%, #000 ${100 - FEATHER_X}%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 ${FEATHER_Y}%, #000 ${100 - FEATHER_Y}%, transparent 100%)`;
+
+const FEATHER_STYLE: React.CSSProperties = {
+  maskImage: FEATHER_MASK,
+  WebkitMaskImage: FEATHER_MASK,
+  maskComposite: 'intersect',
+  WebkitMaskComposite: 'source-in'
+};
+
+/** El hueco: la caja menos la franja del feather. Base de penumbra y halo. */
+const HUECO_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  inset: `${FEATHER_Y}% ${FEATHER_X}%`
+};
+
+/** Penumbra: una sombra sin desenfoque que se extiende más allá de cualquier
+ *  pantalla. Cubre toda la página excepto el hueco. */
+const PENUMBRA_SHADOW = `0 0 0 250vmax rgba(0, 0, 0, ${PENUMBRA_ALPHA})`;
+
+/** Halo: sombra blanda que cae desde el borde del hueco hacia la página. */
+const HALO_SHADOW = '0 0 9vmin 3.5vmin rgba(0, 0, 0, 0.55), 0 1.5vmin 18vmin 6vmin rgba(0, 0, 0, 0.3)';
 
 /** El escenario llena la caja, que ya tiene la proporción del lienzo. */
 const STAGE_STYLE: React.CSSProperties = {
@@ -294,6 +366,30 @@ export function EntryScreen() {
           }
         : undefined;
 
+  /* Penumbra: reposo → casi nada con el peek → nada al salir. Sigue los mismos
+     tiempos que el telón para moverse con él. */
+  const penumbraOpacity = exiting ? 0 : peeking ? PENUMBRA_PEEK : 1;
+  const haloOpacity = exiting ? 0 : peeking ? HALO_PEEK : 1;
+  const penumbraMs = reducedMotion
+    ? 60
+    : leaving
+      ? Math.round(EXIT_MS * (FADE_START + FADE_SPAN))
+      : closing
+        ? DISMISS_MS
+        : 620;
+  const penumbraStyle: React.CSSProperties = {
+    ...HUECO_STYLE,
+    boxShadow: PENUMBRA_SHADOW,
+    opacity: penumbraOpacity,
+    transition: `opacity ${penumbraMs}ms ease-out`
+  };
+  const haloStyle: React.CSSProperties = {
+    ...HUECO_STYLE,
+    boxShadow: HALO_SHADOW,
+    opacity: haloOpacity,
+    transition: `opacity ${penumbraMs}ms ease-out`
+  };
+
   return (
     /* Solo centra. `pointer-events-none`: fuera de la caja la página recibe
        clics, scroll y foco con normalidad.
@@ -302,106 +398,128 @@ export function EntryScreen() {
        navegador). Ahora que la página es usable con el telón puesto, un
        videoclip puede abrirse antes de entrar, y debe quedar por delante. */
     <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center p-4">
-      <div
-        role="dialog"
-        aria-modal="false"
-        aria-label="Entrada a la experiencia"
-        aria-hidden={exiting || undefined}
-        /* `inert` SOLO sobre la propia caja y solo al salir: ENTRAR y la X dejan
-           de ser enfocables y clicables en cuanto empieza cualquier salida. */
-        inert={exiting}
-        className={`relative overflow-hidden rounded-[3px] shadow-[0_28px_70px_-18px_rgba(0,0,0,0.95),0_0_0_1px_rgba(214,178,110,0.22)] [container-type:inline-size] ${
-          exiting ? 'pointer-events-none' : 'pointer-events-auto'
-        }`}
-        style={{ ...BOX_STYLE, ...boxExitStyle }}
-      >
-        {/* El telón NO lleva fondo opaco propio: la página real queda por debajo
-            y tiene que verse de verdad por la abertura. Las propias piezas son
-            semitransparentes en sus zonas oscuras, así que en CLOSED ya se
-            intuye lo que hay detrás — es del asset, no un efecto añadido. */}
-        <div style={STAGE_STYLE}>
-          <CurtainLayer
-            src={hosmanData.images.curtain.leftBack}
-            z={10}
-            shiftPct={travel.left}
-            duration={moveMs}
-          />
-          <CurtainLayer
-            src={hosmanData.images.curtain.rightBack}
-            z={10}
-            shiftPct={travel.right}
-            duration={moveMs}
-          />
+      {/* Marco de posición: lleva el tamaño, la posición y el fundido de salida,
+          y agrupa penumbra y halo con la caja para que se vayan juntos. */}
+      <div className="pointer-events-none relative" style={{ ...BOX_STYLE, ...boxExitStyle }}>
+        {/* PENUMBRA y HALO — sombras del hueco, nunca debajo del arte. Ver
+            «INTEGRACIÓN EN LA ESCENA». Decorativas y sin puntero. */}
+        <div aria-hidden="true" className="pointer-events-none" style={penumbraStyle} />
+        <div aria-hidden="true" className="pointer-events-none" style={haloStyle} />
 
-          {/* Marco lateral recogido y galón: fijos, por delante. Son los que
-              esconden a las traseras al final del recorrido. */}
-          <CurtainLayer src={hosmanData.images.curtain.leftFront} z={20} />
-          <CurtainLayer src={hosmanData.images.curtain.rightFront} z={20} />
-          <CurtainLayer src={hosmanData.images.curtain.top} z={30} />
-        </div>
-
-        {/* BRANDING + ACCESO — por delante del telón, se desvanece al abrir para
-            dejar el escenario limpio mientras las cortinas terminan su recorrido.
-            Las medidas van en `cqw` de la caja: todo escala con el popup. */}
         <div
-          className={`absolute inset-0 z-40 flex flex-col items-center justify-center px-[6cqw] pt-[5cqw] transition-all ease-out ${
-            reducedMotion ? 'duration-150' : 'duration-500'
-          } ${leaving ? 'pointer-events-none scale-[1.04] opacity-0' : 'scale-100 opacity-100'}`}
+          role="dialog"
+          aria-modal="false"
+          aria-label="Entrada a la experiencia"
+          aria-hidden={exiting || undefined}
+          /* `inert` SOLO sobre la propia caja y solo al salir: ENTRAR y la X dejan
+             de ser enfocables y clicables en cuanto empieza cualquier salida. */
+          inert={exiting}
+          className={`absolute inset-0 overflow-hidden [container-type:inline-size] ${
+            exiting ? 'pointer-events-none' : 'pointer-events-auto'
+          }`}
+          style={FEATHER_STYLE}
         >
-          {/* Firma: el logotipo derivado de los contornos vectoriales del manual
-              (BRAND.md §3), no texto con una fuente parecida. Sin sombra
-              añadida: el manual la prohíbe y el logotipo ya trae la suya.
-              `p` y no `h1`: la página que queda detrás ya tiene su propio
-              encabezado principal y el popup no debe competir con él. */}
-          <p className="w-[46cqw] max-w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={hosmanData.images.logo.logotipoDoradoSvg}
-              alt="Hosman Bravo"
-              width={236}
-              height={25}
-              className="block h-auto w-full"
+          {/* El telón NO lleva fondo opaco propio: la página real queda por debajo
+              y tiene que verse de verdad por la abertura. Las propias piezas son
+              semitransparentes en sus zonas oscuras, así que en CLOSED ya se
+              intuye lo que hay detrás — es del asset, no un efecto añadido. */}
+          <div style={STAGE_STYLE}>
+            <CurtainLayer
+              src={hosmanData.images.curtain.leftBack}
+              z={10}
+              shiftPct={travel.left}
+              duration={moveMs}
             />
-          </p>
-          <span className="mt-[2.2cqw] h-px w-[14cqw] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+            <CurtainLayer
+              src={hosmanData.images.curtain.rightBack}
+              z={10}
+              shiftPct={travel.right}
+              duration={moveMs}
+            />
 
+            {/* Marco lateral recogido y galón: fijos, por delante. Son los que
+                esconden a las traseras al final del recorrido. */}
+            <CurtainLayer src={hosmanData.images.curtain.leftFront} z={20} />
+            <CurtainLayer src={hosmanData.images.curtain.rightFront} z={20} />
+            <CurtainLayer src={hosmanData.images.curtain.top} z={30} />
+          </div>
+
+          {/* BRANDING + ACCESO — por delante del telón, se desvanece al abrir para
+              dejar el escenario limpio mientras las cortinas terminan su recorrido.
+              Las medidas van en `cqw` de la caja: todo escala con el popup. */}
+          <div
+            className={`absolute inset-0 z-40 flex flex-col items-center justify-center px-[6cqw] pt-[5cqw] transition-all ease-out ${
+              reducedMotion ? 'duration-150' : 'duration-500'
+            } ${leaving ? 'pointer-events-none scale-[1.04] opacity-0' : 'scale-100 opacity-100'}`}
+          >
+            {/* Firma: el logotipo derivado de los contornos vectoriales del manual
+                (BRAND.md §3), no texto con una fuente parecida. Sin sombra
+                añadida: el manual la prohíbe y el logotipo ya trae la suya.
+                `p` y no `h1`: la página que queda detrás ya tiene su propio
+                encabezado principal y el popup no debe competir con él. */}
+            <p className="w-[46cqw] max-w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hosmanData.images.logo.logotipoDoradoSvg}
+                alt="Hosman Bravo"
+                width={236}
+                height={25}
+                className="block h-auto w-full"
+              />
+            </p>
+            <span className="mt-[2.2cqw] h-px w-[14cqw] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+
+            <button
+              type="button"
+              onClick={handleEnter}
+              onPointerEnter={(e) => {
+                // `pointerType` distingue ratón de dedo: en táctil el navegador
+                // emite un `enter` sintético justo antes del tap, y sin este
+                // filtro el telón haría el gesto de PEEK durante la apertura.
+                if (e.pointerType === 'mouse') setPeeking(true);
+              }}
+              onPointerLeave={() => setPeeking(false)}
+              onFocus={() => setPeeking(true)}
+              onBlur={() => setPeeking(false)}
+              /* Mismo cristal traslúcido del telón a pantalla completa, con las
+                 medidas pasadas a la escala de la caja (`cqw`) y un suelo para
+                 que siga siendo legible y pulsable en un móvil. */
+              className="mt-[4.5cqw] rounded-full border-2 border-amber-200/45 bg-black/65 px-[max(1rem,4.5cqw)] py-[max(0.55rem,1.9cqw)] text-[max(9px,1.65cqw)] font-bold tracking-[0.28em] text-amber-100/95 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.03] hover:border-amber-400/80 hover:text-amber-300 hover:shadow-[0_0_26px_-4px_rgba(200,150,60,0.55)] focus-visible:border-amber-400/80 focus-visible:text-amber-300 focus-visible:outline-none"
+            >
+              ENTRAR EN LA EXPERIENCIA
+            </button>
+
+            {/* Pista de que al entrar sonará música. Decorativa: el botón ya
+                tiene nombre claro y el icono no aporta información accesible. */}
+            <SpeakerIcon className="pointer-events-none mt-[1.8cqw] h-[max(11px,2.1cqw)] w-[max(11px,2.1cqw)] text-amber-100/55" />
+          </div>
+
+          {/* CERRAR SIN SONIDO — pequeña y secundaria, en la esquina superior
+              derecha, donde se espera un cierre. Después de ENTRAR en el orden de
+              tabulación.
+              · Vertical: el área empieza justo bajo el galón, que en el lienzo
+                ocupa y 0–230 de 1533 (15 % del alto = 8,28cqw).
+              · Horizontal: centrada a 6,5cqw del borde derecho, así el glifo
+                queda fuera de la franja del feather (3,5cqw).
+              · El ÁREA táctil mide al menos 44 px; el GLIFO conserva el tamaño
+                de antes (máx. 15,4 px / 2,42cqw). Sin círculo ni placa: solo
+                cambia el color al pasar o enfocar. */}
           <button
             type="button"
-            onClick={handleEnter}
-            onPointerEnter={(e) => {
-              // `pointerType` distingue ratón de dedo: en táctil el navegador
-              // emite un `enter` sintético justo antes del tap, y sin este
-              // filtro el telón haría el gesto de PEEK durante la apertura.
-              if (e.pointerType === 'mouse') setPeeking(true);
-            }}
-            onPointerLeave={() => setPeeking(false)}
-            onFocus={() => setPeeking(true)}
-            onBlur={() => setPeeking(false)}
-            /* Mismo cristal traslúcido del telón a pantalla completa, con las
-               medidas pasadas a la escala de la caja (`cqw`) y un suelo para
-               que siga siendo legible y pulsable en un móvil. */
-            className="mt-[4.5cqw] rounded-full border-2 border-amber-200/45 bg-black/65 px-[max(1rem,4.5cqw)] py-[max(0.55rem,1.9cqw)] text-[max(9px,1.65cqw)] font-bold tracking-[0.28em] text-amber-100/95 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.03] hover:border-amber-400/80 hover:text-amber-300 hover:shadow-[0_0_26px_-4px_rgba(200,150,60,0.55)] focus-visible:border-amber-400/80 focus-visible:text-amber-300 focus-visible:outline-none"
+            onClick={dismiss}
+            aria-label="Cerrar sin activar la música"
+            className="absolute right-[6.5cqw] top-[calc(8.6cqw+max(22px,2.75cqw))] z-50 flex h-[max(44px,5.5cqw)] w-[max(44px,5.5cqw)] -translate-y-1/2 translate-x-1/2 items-center justify-center text-amber-100/60 transition-colors duration-200 hover:text-amber-200 focus-visible:text-amber-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-10px] focus-visible:outline-amber-300/60"
           >
-            ENTRAR EN LA EXPERIENCIA
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              className="h-[max(15.4px,2.42cqw)] w-[max(15.4px,2.42cqw)]"
+            >
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
-
-          {/* Pista de que al entrar sonará música. Decorativa: el botón ya
-              tiene nombre claro y el icono no aporta información accesible. */}
-          <SpeakerIcon className="pointer-events-none mt-[1.8cqw] h-[max(11px,2.1cqw)] w-[max(11px,2.1cqw)] text-amber-100/55" />
         </div>
-
-        {/* CERRAR SIN SONIDO — pequeña y secundaria, sobre el marco derecho y bajo
-            el galón. Después de ENTRAR en el orden de tabulación. */}
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Cerrar sin activar la música"
-          className="absolute right-[2.4cqw] top-[10.5cqw] z-50 flex h-[max(28px,4.4cqw)] w-[max(28px,4.4cqw)] items-center justify-center rounded-full text-amber-100/60 transition-colors duration-200 hover:bg-black/40 hover:text-amber-200 focus-visible:bg-black/40 focus-visible:text-amber-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-300/70"
-        >
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[55%] w-[55%]">
-            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </button>
       </div>
     </div>
   );
