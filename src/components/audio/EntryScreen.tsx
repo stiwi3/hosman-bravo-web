@@ -77,12 +77,47 @@ const CANVAS = { w: 2778, h: 1533 };
 
 const TRAVEL = {
   closed: { left: 0, right: 0 },
-  /* 60% del recorrido de PEEK que había antes (±4,5%), a petición de Danny:
-     el guiño del hover queda más contenido. Abertura resultante 3,24% en vez
-     del 8,64% de la referencia «telon poco abierto». */
-  peek: { left: -2.7, right: 2.7 },
+  /* Peek fuerte (hover/foco de ENTRAR): ±4,5 %, a petición de Danny para que la
+     diferencia con el hover del telón sea evidente. Es el recorrido calibrado del
+     telón original: abertura 8,64 % (2 × 4,5 − 0,36 de solape) frente a la
+     referencia «telon poco abierto» (8,67 %). */
+  peek: { left: -4.5, right: 4.5 },
   open: { left: -43, right: 42 }
 } as const;
+
+/* ---------------------------------------------------------------------------
+   JERARQUÍA DE INTERACCIÓN — un único estado visual derivado:
+
+     idle  <  curtain  <  cta  <  leaving
+
+   · idle     — telón cerrado; penumbra y atmósfera; CTA estable.
+   · curtain  — cursor sobre el telón (solo con hover real: `(hover: hover) and
+                (pointer: fine)` y puntero de ratón). Apertura intermedia,
+                escena revelada y salto del CTA una vez por visita.
+   · cta      — hover o foco de TECLADO sobre ENTRAR. Apertura fuerte; la
+                escena sigue revelada (no hay segundo cambio de luz).
+   · leaving  — cualquier salida (ENTRAR, Play primero, X, Escape).
+
+   Se deriva de tres hechos de entrada independientes (hover telón, hover CTA,
+   foco visible del CTA): no hay combinaciones imposibles porque la prioridad
+   la decide la derivación. Al salir del botón sin salir del telón, `curtain`
+   sigue siendo cierto y se vuelve a la apertura intermedia, no a cerrado.
+
+   En táctil no existe `curtain`: el telón queda cerrado y tocar ENTRAR entra
+   directamente, sin toque previo de vista.
+--------------------------------------------------------------------------- */
+
+/** Apertura del hover sobre el telón, como fracción del PEEK. Parámetro de ajuste.
+ *  ±2,7 % sobre el peek de ±4,5 (abertura 5,04 % frente a 8,64 %): se ve que el
+ *  telón reacciona, sin llegar a lo que abre ENTRAR. */
+const CURTAIN_HOVER_FRACTION = 2.7 / 4.5;
+const TRAVEL_CURTAIN = {
+  left: TRAVEL.peek.left * CURTAIN_HOVER_FRACTION,
+  right: TRAVEL.peek.right * CURTAIN_HOVER_FRACTION
+};
+
+/** Consulta de capacidad (no de anchura) para el hover sobre el telón. */
+const HOVER_REAL = '(hover: hover) and (pointer: fine)';
 
 /**
  * Rebaja de luz del telón. Los assets vienen con una iluminación bastante
@@ -106,7 +141,9 @@ const CURTAIN_GRADE = 'brightness(0.76) contrast(1.04)';
  * Tamaño y posición de la caja: una sola ley fluida, sin valores por resolución.
  *
  * El ancho es el MENOR de tres límites, con la proporción del lienzo fija:
- * · `90vw` — en pantallas estrechas deja ver la página a los lados;
+ * · `80vw` — en pantallas estrechas deja ver la página a los lados y libera
+ *   los rails de redes y plataformas (a 390 px de ancho solo los roza la franja
+ *   del feather; con `90vw` el arte opaco tapaba el 67–78 % de cada icono);
  * · `48rem` — en escritorio es un popup, no un telón a pantalla completa;
  * · `52svh × proporción` — TECHO DE ALTURA: la caja nunca pasa del 52 % del alto
  *   de la pantalla. En apaisados bajos manda este límite y el popup se reduce
@@ -122,7 +159,7 @@ const CURTAIN_GRADE = 'brightness(0.76) contrast(1.04)';
  * Va en `translate` y no en `transform` para no pisar la reducción del cierre
  * discreto.
  */
-const BOX_WIDTH = `min(90vw, 48rem, calc(52svh * ${CANVAS.w} / ${CANVAS.h}))`;
+const BOX_WIDTH = `min(80vw, 48rem, calc(52svh * ${CANVAS.w} / ${CANVAS.h}))`;
 const BOX_STYLE: React.CSSProperties = {
   width: BOX_WIDTH,
   aspectRatio: `${CANVAS.w} / ${CANVAS.h}`,
@@ -135,9 +172,9 @@ const BOX_STYLE: React.CSSProperties = {
    · FEATHER: una máscara desvanece solo el perímetro de la caja (unos pocos %
      por lado). El centro del telón queda nítido; no hay ningún blur.
    · PENUMBRA: negro ligero sobre la página, `pointer-events: none`. No bloquea
-     clics ni scroll: es luz de escena, no un modal. Con el hover o el foco de
-     ENTRAR casi desaparece (la experiencia empieza a revelarse) y en cualquier
-     salida se va junto con el telón.
+     clics ni scroll: es luz de escena, no un modal. Con el telón activo (hover
+     del telón o de ENTRAR, foco de teclado) casi desaparece —la escena se
+     revela— y en cualquier salida se va junto con el telón.
    · SOMBRA AMBIENTAL: halo negro amplio y blando alrededor de la caja.
 
    REGLA: EL TELÓN NUNCA SE OSCURECE. Penumbra y halo afectan solo a la página
@@ -154,11 +191,17 @@ const BOX_STYLE: React.CSSProperties = {
 
 /** Opacidad del negro de la penumbra en reposo. */
 const PENUMBRA_ALPHA = 0.28;
-/** Fracción de la penumbra que queda durante el peek (hover/foco de ENTRAR). */
-const PENUMBRA_PEEK = 0.12;
-/** Fracción del halo que queda durante el peek: la página junto a la caja
- *  también recupera luz. */
-const HALO_PEEK = 0.35;
+/* ESCENA REVELADA — con el telón ACTIVO (`curtain` o `cta`) la página recupera su
+   luz: penumbra, halo y atmósfera caen prácticamente a cero en cuanto el cursor
+   entra en el telón, y NO vuelven a cambiar al pasar a ENTRAR ni al volver de él.
+   Solo regresan, despacio, cuando el cursor sale del telón (`idle`). El foco de
+   teclado en ENTRAR revela igual, porque va directo a `cta`. */
+/** Fracción de la penumbra que queda con el telón activo. */
+const PENUMBRA_REVELADA = 0.04;
+/** Fracción del halo que queda con el telón activo. */
+const HALO_REVELADO = 0.12;
+/** Duración de la vuelta a reposo (`idle`): más lenta que la revelación. */
+const VUELTA_REPOSO_MS = 900;
 
 /** Ancho del feather por eje, en % de la caja. Lo usan la máscara y el hueco. */
 const FEATHER_X = 3.5;
@@ -185,6 +228,137 @@ const PENUMBRA_SHADOW = `0 0 0 250vmax rgba(0, 0, 0, ${PENUMBRA_ALPHA})`;
 
 /** Halo: sombra blanda que cae desde el borde del hueco hacia la página. */
 const HALO_SHADOW = '0 0 9vmin 3.5vmin rgba(0, 0, 0, 0.55), 0 1.5vmin 18vmin 6vmin rgba(0, 0, 0, 0.3)';
+
+/* ---------------------------------------------------------------------------
+   ATMÓSFERA PERIFÉRICA DE ENTRADA — penumbra con profundidad en los bordes.
+
+   No pretende ser humo (el hero ya tiene humo real con Stable Fluids): cierra
+   visualmente el viewport y da profundidad. Paleta negro-burdeos y charcoal,
+   algo más luminosa que el fondo para que se perciba sin llamar la atención.
+   NO imita el humo del hero: no hay canvas, WebGL, partículas, vídeo
+   ni JavaScript por fotograma. Son CUATRO regiones fijas (inferior, izquierda,
+   derecha, superior), cada una un único gradiente elíptico oscuro, animadas
+   solo con `transform` por `@keyframes` en ciclos lentos. El navegador pinta
+   cada gradiente una vez y luego solo lo desplaza en el compositor.
+
+   · NO ES UNA BARRERA: `pointer-events: none` y `aria-hidden`. Densidad baja
+     (alfa máxima 0,55) y centro despejado: la página sigue legible y usable.
+   · EL TELÓN NO SE OSCURECE: el contenedor lleva una máscara estática con un
+     hueco del tamaño del arte (la caja menos el feather), igual que la
+     penumbra. El humo nunca pasa por debajo de las piezas.
+   · RESPONSIVE SIN BREAKPOINTS: grosores y recorridos en `vmin`, así que en
+     pantallas pequeñas o bajas las bandas son proporcionalmente más finas y
+     no convierten la superficie en una mancha.
+   · TELÓN ACTIVO (`curtain` o `cta`): casi desaparece y se abre hacia los bordes
+     (opacity + scale en un contenedor intermedio). Salidas: se va con la penumbra.
+   · REDUCED MOTION: sin animación continua; queda como atmósfera estática.
+--------------------------------------------------------------------------- */
+
+/** Presencia de la atmósfera que queda con el telón activo (ver «ESCENA REVELADA»). */
+const HUMO_REVELADO = 0.05;
+/** Cuánto se abre la atmósfera hacia los bordes al revelarse. */
+const HUMO_REVELADO_SCALE = 1.08;
+
+/* SALTO DEL CTA — al entrar con el ratón en el telón, ENTRAR da un pequeño salto
+   vertical (sube, vuelve y un rebote mínimo) para señalar dónde pulsar.
+
+   · Una vez por visita: se arma al alcanzar `curtain` y solo se desarma al salir
+     físicamente del telón. Pasar a ENTRAR y volver (`curtain → cta → curtain`)
+     no lo repite, porque la animación sigue aplicada (ya terminada) mientras el
+     cursor no abandone el telón.
+   · Va en el ENVOLTORIO del botón y solo con `transform`: el botón conserva su
+     propio hover (escala, borde, texto, sombra) sin que las dos animaciones
+     escriban la misma propiedad. Sin reflow y sin JS por fotograma.
+   · Sin salto con movimiento reducido, en táctil (no hay `curtain`) ni con foco
+     de teclado (va directo a `cta`).
+   · Desplazamiento `max(4px, 0,9cqw)`: ~6,9 px en escritorio, 4 px en cajas pequeñas. */
+const CTA_NUDGE = 'hb-cta-nudge 820ms cubic-bezier(0.33, 0, 0.25, 1) 1 both';
+
+const HUECO_W = `calc(${BOX_WIDTH} * ${1 - (2 * FEATHER_X) / 100})`;
+const HUECO_H = `calc(${BOX_WIDTH} * ${CANVAS.h} / ${CANVAS.w} * ${1 - (2 * FEATHER_Y) / 100})`;
+const HUECO_Y = `calc(50% + (100svh - ${BOX_WIDTH} * ${CANVAS.h} / ${CANVAS.w}) * -0.2)`;
+const HUMO_MASK = 'linear-gradient(#000 0 0), linear-gradient(#000 0 0)';
+
+/** Máscara del humo: todo el viewport menos el hueco del telón. */
+const HUMO_MASK_STYLE: React.CSSProperties = {
+  maskImage: HUMO_MASK,
+  WebkitMaskImage: HUMO_MASK,
+  maskSize: `100% 100%, ${HUECO_W} ${HUECO_H}`,
+  WebkitMaskSize: `100% 100%, ${HUECO_W} ${HUECO_H}`,
+  maskPosition: `0 0, 50% ${HUECO_Y}`,
+  WebkitMaskPosition: `0 0, 50% ${HUECO_Y}`,
+  maskRepeat: 'no-repeat',
+  WebkitMaskRepeat: 'no-repeat',
+  maskComposite: 'exclude',
+  WebkitMaskComposite: 'xor'
+};
+
+/** Las cuatro regiones: posición, gradiente y animación. */
+const HUMO_CAPAS: { style: React.CSSProperties; animation: string }[] = [
+  {
+    // Inferior: la de más presencia, sube desde el borde de abajo.
+    style: {
+      left: '-30vw',
+      right: '-30vw',
+      bottom: '-24vmin',
+      height: '56vmin',
+      background:
+        'radial-gradient(ellipse 50% 50% at 50% 62%, rgba(44,20,24,0.55) 0%, rgba(36,17,20,0.38) 34%, rgba(28,14,17,0.15) 60%, transparent 78%)'
+    },
+    animation: 'hb-humo-inf 34s ease-in-out infinite alternate'
+  },
+  {
+    // Izquierda: burdeos ennegrecido, algo más baja que el centro.
+    style: {
+      top: '-18vmin',
+      bottom: '-18vmin',
+      left: '-40vmin',
+      width: '76vmin',
+      background:
+        'radial-gradient(ellipse 50% 46% at 42% 62%, rgba(62,20,26,0.48) 0%, rgba(46,16,21,0.28) 40%, rgba(32,12,16,0.09) 66%, transparent 76%)'
+    },
+    animation: 'hb-humo-izq 28s ease-in-out infinite alternate'
+  },
+  {
+    // Derecha: charcoal, algo más alta que el centro.
+    style: {
+      top: '-18vmin',
+      bottom: '-18vmin',
+      right: '-40vmin',
+      width: '76vmin',
+      background:
+        'radial-gradient(ellipse 50% 46% at 58% 40%, rgba(40,35,37,0.48) 0%, rgba(34,29,31,0.28) 40%, rgba(24,20,22,0.09) 66%, transparent 76%)'
+    },
+    animation: 'hb-humo-dcha 38s ease-in-out infinite alternate'
+  },
+  {
+    // Superior: la más ligera, una caída de sombra desde arriba.
+    style: {
+      left: '-20vw',
+      right: '-20vw',
+      top: '-22vmin',
+      height: '44vmin',
+      background:
+        'radial-gradient(ellipse 50% 50% at 50% 38%, rgba(30,22,25,0.42) 0%, rgba(26,17,20,0.22) 42%, transparent 74%)'
+    },
+    animation: 'hb-humo-sup 44s ease-in-out infinite alternate'
+  }
+];
+
+/** Recorridos cortos en `vmin`: en móvil el movimiento es proporcionalmente menor. */
+const HUMO_KEYFRAMES = `
+@keyframes hb-humo-inf { from { transform: translate3d(-3vmin, 0, 0) scale(1); } to { transform: translate3d(3vmin, -2.5vmin, 0) scale(1.06); } }
+@keyframes hb-humo-izq { from { transform: translate3d(0, 3vmin, 0) scale(1); } to { transform: translate3d(2.5vmin, -3vmin, 0) scale(1.05); } }
+@keyframes hb-humo-dcha { from { transform: translate3d(0, -2.5vmin, 0) scale(1.04); } to { transform: translate3d(-2.5vmin, 3vmin, 0) scale(1); } }
+@keyframes hb-humo-sup { from { transform: translate3d(2vmin, 0, 0) scale(1); } to { transform: translate3d(-2vmin, 1.5vmin, 0) scale(1.05); } }
+@keyframes hb-cta-nudge {
+  0% { transform: translate3d(0, 0, 0); }
+  32% { transform: translate3d(0, calc(-1 * max(4px, 0.9cqw)), 0); }
+  62% { transform: translate3d(0, 0, 0); }
+  80% { transform: translate3d(0, calc(-0.22 * max(4px, 0.9cqw)), 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+`;
 
 /** El escenario llena la caja, que ya tiene la proporción del lienzo. */
 const STAGE_STYLE: React.CSSProperties = {
@@ -286,11 +460,30 @@ export function EntryScreen() {
   /** Cierre discreto en curso (X o Escape). */
   const [closing, setClosing] = useState(false);
   const [gone, setGone] = useState(false);
-  /** Solo se activa con hover real de puntero o con foco de teclado; en
-   *  táctil no existe y el tap va directo a la apertura completa. */
-  const [peeking, setPeeking] = useState(false);
+  /* Hechos de entrada (ver «JERARQUÍA DE INTERACCIÓN»). Ninguno decide el
+     aspecto por sí solo: el estado visual se DERIVA más abajo. */
+  /** Cursor de ratón dentro del telón, en un dispositivo con hover real. */
+  const [curtainHover, setCurtainHover] = useState(false);
+  /** Cursor de ratón sobre ENTRAR. */
+  const [ctaHover, setCtaHover] = useState(false);
+  /** Foco VISIBLE (teclado) en ENTRAR. Un clic o un toque no cuentan. */
+  const [ctaFocus, setCtaFocus] = useState(false);
 
   const exiting = leaving || closing;
+  const visual: 'idle' | 'curtain' | 'cta' | 'leaving' = exiting
+    ? 'leaving'
+    : ctaHover || ctaFocus
+      ? 'cta'
+      : curtainHover
+        ? 'curtain'
+        : 'idle';
+
+  /** Salto del CTA armado en esta visita al telón (ver «SALTO DEL CTA»). Se
+   *  ajusta durante el render, como `leaving` con Play primero: se arma al
+   *  alcanzar `curtain` y solo se desarma al salir físicamente del telón. */
+  const [nudgeArmado, setNudgeArmado] = useState(false);
+  if (visual === 'curtain' && !nudgeArmado) setNudgeArmado(true);
+  if (!curtainHover && nudgeArmado) setNudgeArmado(false);
 
   useEffect(() => {
     if (!exiting) return;
@@ -310,7 +503,6 @@ export function EntryScreen() {
 
   const dismiss = useCallback(() => {
     if (exiting) return;
-    setPeeking(false);
     setClosing(true);
   }, [exiting]);
 
@@ -339,10 +531,17 @@ export function EntryScreen() {
     void enter();
   };
 
-  /* CLOSED → PEEK (hover/foco) → OPEN (ENTRAR o primera reproducción). La
-     apertura manda siempre sobre el hover, para que soltar el ratón a media
-     apertura no la aborte. El cierre discreto deja las cortinas como están. */
-  const travel = leaving ? TRAVEL.open : peeking && !closing ? TRAVEL.peek : TRAVEL.closed;
+  /* CLOSED → CURTAIN (hover telón) → PEEK (hover/foco ENTRAR) → OPEN (ENTRAR o
+     primera reproducción). La apertura manda siempre sobre el hover, para que
+     soltar el ratón a media apertura no la aborte. El cierre discreto deja las
+     cortinas cerradas. */
+  const travel = leaving
+    ? TRAVEL.open
+    : visual === 'cta'
+      ? TRAVEL.peek
+      : visual === 'curtain'
+        ? TRAVEL_CURTAIN
+        : TRAVEL.closed;
   const moveMs = reducedMotion ? 0 : leaving ? EXIT_MS : 620;
 
   /* Fundido de la caja: largo y solapado con la apertura (ver `FADE_START` /
@@ -366,28 +565,46 @@ export function EntryScreen() {
           }
         : undefined;
 
-  /* Penumbra: reposo → casi nada con el peek → nada al salir. Sigue los mismos
-     tiempos que el telón para moverse con él. */
-  const penumbraOpacity = exiting ? 0 : peeking ? PENUMBRA_PEEK : 1;
-  const haloOpacity = exiting ? 0 : peeking ? HALO_PEEK : 1;
+  /* Iluminación de la escena: ver «ESCENA REVELADA». Un único valor para
+     `curtain` y `cta`, así que pasar entre ellos no produce ninguna transición. */
+  const revelada = visual === 'curtain' || visual === 'cta';
+  const segunEstado = (valorRevelado: number) =>
+    visual === 'leaving' ? 0 : revelada ? valorRevelado : 1;
+  const penumbraOpacity = segunEstado(PENUMBRA_REVELADA);
+  const haloOpacity = segunEstado(HALO_REVELADO);
   const penumbraMs = reducedMotion
     ? 60
     : leaving
       ? Math.round(EXIT_MS * (FADE_START + FADE_SPAN))
       : closing
         ? DISMISS_MS
-        : 620;
+        : revelada
+          ? 620
+          : VUELTA_REPOSO_MS;
   const penumbraStyle: React.CSSProperties = {
     ...HUECO_STYLE,
     boxShadow: PENUMBRA_SHADOW,
     opacity: penumbraOpacity,
     transition: `opacity ${penumbraMs}ms ease-out`
   };
+  const humoStyle: React.CSSProperties = {
+    opacity: segunEstado(HUMO_REVELADO),
+    transform: revelada && !reducedMotion ? `scale(${HUMO_REVELADO_SCALE})` : 'scale(1)',
+    transition: `opacity ${penumbraMs}ms ease-out, transform ${reducedMotion ? 0 : penumbraMs}ms ease-out`
+  };
   const haloStyle: React.CSSProperties = {
     ...HUECO_STYLE,
     boxShadow: HALO_SHADOW,
     opacity: haloOpacity,
     transition: `opacity ${penumbraMs}ms ease-out`
+  };
+  /* Salto del CTA: ver «SALTO DEL CTA». */
+  const ctaWrapperStyle: React.CSSProperties | undefined =
+    nudgeArmado && !reducedMotion && !exiting ? { animation: CTA_NUDGE } : undefined;
+
+  /** Hover sobre el telón: solo ratón en un dispositivo con hover real. */
+  const onCurtainEnter = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && window.matchMedia(HOVER_REAL).matches) setCurtainHover(true);
   };
 
   return (
@@ -398,6 +615,23 @@ export function EntryScreen() {
        navegador). Ahora que la página es usable con el telón puesto, un
        videoclip puede abrirse antes de entrar, y debe quedar por delante. */
     <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center p-4">
+      {/* HUMO DE ENTRADA — ver su bloque arriba. Por debajo del marco del telón:
+          el hueco de la máscara coincide con el arte, así que nunca lo cubre. */}
+      {/* Keyframes de la atmósfera y del salto del CTA. Con movimiento reducido no se
+          emiten: ninguna animación continua puede arrancar. */}
+      {!reducedMotion && <style>{HUMO_KEYFRAMES}</style>}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden" style={HUMO_MASK_STYLE}>
+        <div className="absolute inset-0" style={humoStyle}>
+          {HUMO_CAPAS.map((capa) => (
+            <div
+              key={capa.animation}
+              className="absolute"
+              style={{ ...capa.style, animation: reducedMotion ? undefined : capa.animation }}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Marco de posición: lleva el tamaño, la posición y el fundido de salida,
           y agrupa penumbra y halo con la caja para que se vayan juntos. */}
       <div className="pointer-events-none relative" style={{ ...BOX_STYLE, ...boxExitStyle }}>
@@ -414,6 +648,14 @@ export function EntryScreen() {
           /* `inert` SOLO sobre la propia caja y solo al salir: ENTRAR y la X dejan
              de ser enfocables y clicables en cuanto empieza cualquier salida. */
           inert={exiting}
+          /* Región lógica del telón: toda la caja. Aquí se detecta el hover
+             (`onCurtainEnter` filtra a ratón con hover real). En táctil el
+             diagnóstico mostró que lo que intercepta la caja está tapado de
+             verdad por el arte opaco (cortinas frontales y borlas), así que la
+             caja sigue capturando: dejar pasar esos toques abriría enlaces que
+             no se ven. */
+          onPointerEnter={onCurtainEnter}
+          onPointerLeave={() => setCurtainHover(false)}
           className={`absolute inset-0 overflow-hidden [container-type:inline-size] ${
             exiting ? 'pointer-events-none' : 'pointer-events-auto'
           }`}
@@ -469,6 +711,8 @@ export function EntryScreen() {
             </p>
             <span className="mt-[2.2cqw] h-px w-[14cqw] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
 
+            {/* Envoltorio: solo lleva el salto (`transform`); el botón, su hover. */}
+            <span className="relative mt-[4.5cqw] inline-flex" style={ctaWrapperStyle}>
             <button
               type="button"
               onClick={handleEnter}
@@ -476,18 +720,21 @@ export function EntryScreen() {
                 // `pointerType` distingue ratón de dedo: en táctil el navegador
                 // emite un `enter` sintético justo antes del tap, y sin este
                 // filtro el telón haría el gesto de PEEK durante la apertura.
-                if (e.pointerType === 'mouse') setPeeking(true);
+                if (e.pointerType === 'mouse') setCtaHover(true);
               }}
-              onPointerLeave={() => setPeeking(false)}
-              onFocus={() => setPeeking(true)}
-              onBlur={() => setPeeking(false)}
+              onPointerLeave={() => setCtaHover(false)}
+              // Solo el foco VISIBLE (teclado) abre el peek: el foco que deja un
+              // clic o un toque no debe dejar el telón entreabierto.
+              onFocus={(e) => setCtaFocus(e.currentTarget.matches(':focus-visible'))}
+              onBlur={() => setCtaFocus(false)}
               /* Mismo cristal traslúcido del telón a pantalla completa, con las
                  medidas pasadas a la escala de la caja (`cqw`) y un suelo para
                  que siga siendo legible y pulsable en un móvil. */
-              className="mt-[4.5cqw] rounded-full border-2 border-amber-200/45 bg-black/65 px-[max(1rem,4.5cqw)] py-[max(0.55rem,1.9cqw)] text-[max(9px,1.65cqw)] font-bold tracking-[0.28em] text-amber-100/95 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.03] hover:border-amber-400/80 hover:text-amber-300 hover:shadow-[0_0_26px_-4px_rgba(200,150,60,0.55)] focus-visible:border-amber-400/80 focus-visible:text-amber-300 focus-visible:outline-none"
+              className="relative rounded-full border-2 border-amber-200/45 bg-black/65 px-[max(1rem,4.5cqw)] py-[max(0.55rem,1.9cqw)] text-[max(9px,1.65cqw)] font-bold tracking-[0.28em] text-amber-100/95 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.95)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.03] hover:border-amber-400/80 hover:text-amber-300 hover:shadow-[0_0_26px_-4px_rgba(200,150,60,0.55)] focus-visible:border-amber-400/80 focus-visible:text-amber-300 focus-visible:outline-none"
             >
               ENTRAR EN LA EXPERIENCIA
             </button>
+            </span>
 
             {/* Pista de que al entrar sonará música. Decorativa: el botón ya
                 tiene nombre claro y el icono no aporta información accesible. */}

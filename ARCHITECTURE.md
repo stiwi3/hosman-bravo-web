@@ -215,9 +215,35 @@ ninguna escena.
 
 **No bloquea la página.** El envoltorio `fixed inset-0` solo centra y es
 `pointer-events: none`; únicamente la caja del telón captura puntero. Sin bloqueo de
-scroll, sin `inert` sobre el contenido y sin velo. La caja tiene la proporción del lienzo
-del telón (`min(90vw, 46rem, (100svh − 2rem) × 2778/1533)`), así que los recorridos
-`closed / peek / open` calibrados en % del lienzo siguen valiendo.
+scroll ni `inert` sobre el contenido. La caja tiene la proporción del lienzo del telón:
+ancho `min(80vw, 48rem, 52svh × 2778/1533)` (techo de alto al 52 %; `80vw` libera los
+rails en móvil) y subida de `0,2 × (100svh − alto de caja)`, así que los recorridos
+calibrados en % del lienzo siguen valiendo. En táctil la caja sigue capturando toques:
+lo que tapa en móvil está cubierto por arte opaco, y dejar pasar esos toques abriría
+enlaces que no se ven.
+
+**Integración en la escena.** Feather en el perímetro de la caja (máscara), y penumbra
+(negro 0,28) + halo como `box-shadow` de un hueco con la forma del arte: una sombra
+exterior no se pinta bajo su elemento, así que **el telón nunca se oscurece**. Atmósfera
+periférica: 4 regiones con un gradiente negro-burdeos/charcoal cada una, animadas solo
+con `transform` (`@keyframes` en el propio componente), con la misma máscara-hueco. Sin
+canvas, WebGL, RAF ni blur.
+
+**Jerarquía de interacción** — un único estado visual derivado de tres hechos (ratón sobre
+el telón con `(hover: hover) and (pointer: fine)`, ratón sobre ENTRAR, foco
+`:focus-visible` en ENTRAR):
+
+| Estado | Apertura | Penumbra / atmósfera | CTA |
+|---|---|---|---|
+| `idle` | cerrado | presentes | estable |
+| `curtain` (hover del telón) | ±2,7 % | reveladas (≈0) | salto vertical una vez por visita |
+| `cta` (hover o foco de ENTRAR) | ±4,5 % | reveladas, sin nuevo cambio | hover propio del botón |
+| `leaving` (cualquier salida) | según salida | se van | — |
+
+El salto va en el envoltorio del botón (`transform`, `max(4px, 0,9cqw)`, 820 ms) y el
+botón conserva su hover. Se arma al alcanzar `curtain` y solo se desarma al salir del
+telón, así que `curtain → cta → curtain` no lo repite. Sin salto en táctil, con teclado ni
+con movimiento reducido.
 
 **Tres salidas, de un solo sentido** (el estado vive en el `SiteShell` persistente: al
 navegar no vuelve; en una recarga documental sí):
