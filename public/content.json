@@ -1,8 +1,27 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-15T09:32:07.397Z",
-  "publishedAt": "2026-09-15T09:32:07.397Z",
+  "contentVersion": "2026-09-15T09:33:29.567Z",
+  "publishedAt": "2026-09-15T09:33:29.567Z",
   "music": [
+    {
+      "id": "tomando-trago",
+      "title": "Tomando Trago",
+      "release_date": "05-08-2026",
+      "cover_url": null,
+      "youtube_id": "wOtsMOie4bw",
+      "spotify_url": "https://open.spotify.com/track/2uVmWqSks9Cf9ULXYPWJi0",
+      "apple_music_url": "https://music.apple.com/us/album/tomando-trago-single/6795512542",
+      "youtube_music_url": "https://music.youtube.com/watch?v=srpUMwEqviE&si=8PDzu3zR_mMltRMg",
+      "amazon_music_url": "https://music.amazon.es/albums/B0HBRXL3F6?marketplaceId=A1RKKUPIHCS9HS&musicTerritory=ES&ref=dm_sh_zImZZmedrFBn7A4ifHC41XDxN",
+      "deezer_url": null,
+      "tidal_url": null,
+      "soundcloud_url": null,
+      "audiomack_url": "https://audiomack.com/hosman-bravo/song/tomando-trago",
+      "audio_preview_url": null,
+      "preview_video_url": "/videos/previews/tomando-trago.mp4",
+      "preview_start_sec": null,
+      "has_video": true
+    },
     {
       "id": "borracho-todavia",
       "title": "Borracho Todavía",
