@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-15T09:33:29.567Z",
-  "publishedAt": "2026-09-15T09:33:29.567Z",
+  "contentVersion": "2026-09-16T10:57:44.103Z",
+  "publishedAt": "2026-09-16T10:57:44.103Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -156,6 +156,33 @@
       "has_video": true
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "id": "medellin-2026-10-24",
+      "date": "24-10-2026",
+      "time": "20:00",
+      "event_name": "Hosman Bravo en vivo",
+      "city": "Medellín",
+      "venue": "Plaza / recinto por confirmar",
+      "event_type": "concierto",
+      "status": "confirmado",
+      "ticket_url": null,
+      "booking_url": "https://wa.me/34645495696?text=Hola%2C%20quer%C3%ADa%20informaci%C3%B3n%20sobre%20el%20evento%20Hosman%20Bravo%20en%20vivo%20del%2024-10-2026%20en%20Medell%C3%ADn%20(Plaza%20%2F%20recinto%20por%20confirmar).",
+      "country": "Colombia"
+    },
+    {
+      "id": "bogota-2026-11-14",
+      "date": "14-11-2026",
+      "time": "21:00",
+      "event_name": "Hosman Bravo",
+      "city": "Bogotá",
+      "venue": "Recinto por confirmar",
+      "event_type": "show_ecuestre",
+      "status": "cancelado",
+      "ticket_url": null,
+      "booking_url": null,
+      "country": "Colombia"
+    }
+  ],
   "config": {}
 }
