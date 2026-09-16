@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-16T10:57:44.103Z",
-  "publishedAt": "2026-09-16T10:57:44.103Z",
+  "contentVersion": "2026-09-16T11:22:35.834Z",
+  "publishedAt": "2026-09-16T11:22:35.834Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -158,17 +158,30 @@
   ],
   "events": [
     {
-      "id": "medellin-2026-10-24",
-      "date": "24-10-2026",
-      "time": "20:00",
+      "id": "medellin-2026-09-16",
+      "date": "16-09-2026",
+      "time": "13:30",
       "event_name": "Hosman Bravo en vivo",
-      "city": "Medellín",
+      "city": "medellín",
       "venue": "Plaza / recinto por confirmar",
       "event_type": "concierto",
       "status": "confirmado",
       "ticket_url": null,
-      "booking_url": "https://wa.me/34645495696?text=Hola%2C%20quer%C3%ADa%20informaci%C3%B3n%20sobre%20el%20evento%20Hosman%20Bravo%20en%20vivo%20del%2024-10-2026%20en%20Medell%C3%ADn%20(Plaza%20%2F%20recinto%20por%20confirmar).",
+      "booking_url": "https://wa.me/34645495696?text=Hola%2C%20quer%C3%ADa%20informaci%C3%B3n%20sobre%20el%20evento%20Hosman%20Bravo%20en%20vivo%20del%2016-09-2026%20en%20medell%C3%ADn%20(Plaza%20%2F%20recinto%20por%20confirmar).",
       "country": "Colombia"
+    },
+    {
+      "id": "bolivia-2026-10-24",
+      "date": "24-10-2026",
+      "time": "20:00",
+      "event_name": "La chalupa",
+      "city": "Santa cruz de la sierra",
+      "venue": "Plaza  manuela",
+      "event_type": "concierto",
+      "status": "confirmado",
+      "ticket_url": null,
+      "booking_url": "https://wa.me/34645495696?text=Hola%2C%20quer%C3%ADa%20informaci%C3%B3n%20sobre%20el%20evento%20La%20chalupa%20del%2024-10-2026%20en%20Santa%20cruz%20de%20la%20sierra%20(Plaza%20%20manuela).",
+      "country": "Bolivia"
     },
     {
       "id": "bogota-2026-11-14",
