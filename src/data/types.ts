@@ -61,21 +61,45 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'contacto', label: 'CONTACTO', href: '/contacto' }
 ];
 
+/** Estado editorial de un evento. Lista cerrada de `02_EVENTOS`. */
+export type ShowEventStatus = 'confirmado' | 'provisional' | 'agotado' | 'cancelado' | 'privado';
+
+/** Tipo de actuación. Lista cerrada de `02_EVENTOS`. */
+export type ShowEventType = 'concierto' | 'show_ecuestre' | 'festival' | 'evento_privado' | 'otro';
+
 /**
  * Una fecha del bloque PRÓXIMOS SHOWS.
  *
- * `date` en ISO (AAAA-MM-DD): es lo que permitirá descartar fechas pasadas
- * comparando contra `Date.now()` sin cambiar la forma del dato.
- * `ticketUrl` vacío = la entrada no es un enlace y no muestra el indicador de
- * pulsación.
+ * Sale de `events` en el snapshot publicado; la traducción desde la hoja vive
+ * en `src/lib/content-api`. `date` en ISO (AAAA-MM-DD) como fecha de
+ * CALENDARIO: se compara como texto, nunca se convierte a instante UTC.
+ * `ticketUrl` es el enlace PRINCIPAL ya resuelto (`ticket_url` y, si falta,
+ * `booking_url`); vacío = la entrada no es un enlace y no muestra el
+ * indicador de pulsación.
  */
 export interface ShowEvent {
   id: string;
   date: string;
   title: string;
+  /** «Ciudad, País» completo. Es lo que se anuncia siempre por accesibilidad. */
   location: string;
+  /**
+   * «Ciudad, COL» — la misma ubicación con el país en ISO de tres letras, si
+   * existe código para ese país. La entrada la usa SOLO cuando la forma larga
+   * no le cabe de verdad (lo mide ella); no es una decisión de la capa de datos.
+   */
+  locationShort?: string;
   time: string;
   ticketUrl?: string;
+  /**
+   * Reserva o contacto secundario, ya resuelto por el Apps Script (puede ser
+   * el WhatsApp que generó a partir de `prefijo` + `booking_phone`). Se
+   * conserva como acción secundaria; la entrada todavía no la pinta aparte.
+   */
+  bookingUrl?: string;
+  /** Estado editorial: decide el sello AGOTADO/CANCELADO y si hay enlace. */
+  status?: ShowEventStatus;
+  eventType?: ShowEventType;
 }
 
 /** Un caballo del elenco ecuestre. */

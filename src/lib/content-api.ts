@@ -1,4 +1,5 @@
-import type { MusicRelease } from '@/data/types';
+import type { MusicRelease, ShowEvent, ShowEventStatus, ShowEventType } from '@/data/types';
+import contentSnapshot from '../../public/content.json';
 
 /* ---------------------------------------------------------------------------
    FRONTERA CON EL CONTENIDO PUBLICADO.
@@ -317,6 +318,246 @@ function mapRow(
     previewVideoUrl,
     previewStartSec: parseStartSeconds(row.preview_start_sec)
   };
+}
+
+/* --- eventos -------------------------------------------------------------- */
+
+/* PRÓXIMOS SHOWS — `events` del MISMO snapshot, con la misma filosofía:
+   fila inválida fuera sola, campo inválido fuera solo.
+
+   A diferencia de la música, los eventos se leen del `content.json` que se
+   compiló con el despliegue, no con `fetch`. Cada publicación desde la hoja
+   es un commit a `master` y todo commit a `master` redespliega, así que el
+   archivo compilado y el servido son siempre el mismo. A cambio, el bloque
+   vive en el hero —capa persistente, medida por el coordinador de geometría—
+   y así nace con sus entradas en el HTML exportado: sin esqueleto, sin salto
+   de composición al llegar la red y sin fechas de ejemplo que se sustituyen. */
+
+const EVENT_STATUSES: readonly ShowEventStatus[] = [
+  'confirmado', 'provisional', 'agotado', 'cancelado', 'privado'
+];
+const EVENT_TYPES: readonly ShowEventType[] = [
+  'concierto', 'show_ecuestre', 'festival', 'evento_privado', 'otro'
+];
+
+/** Forma que promete cada evento del snapshot. Nada se da por bueno. */
+interface RawEvent {
+  active?: unknown;
+  id?: unknown;
+  date?: unknown;
+  time?: unknown;
+  event_name?: unknown;
+  city?: unknown;
+  venue?: unknown;
+  event_type?: unknown;
+  status?: unknown;
+  ticket_url?: unknown;
+  booking_url?: unknown;
+  country?: unknown;
+}
+
+export interface ShowEventsParseResult {
+  /** Válidos, ordenados por fecha ascendente. SIN filtrar los pasados. */
+  events: ShowEvent[];
+  rejectedRows: RejectionNote[];
+  rejectedFields: RejectionNote[];
+}
+
+/**
+ * Códigos ISO de tres letras para los países que pueden aparecer de verdad en
+ * la agenda. Es una tabla pequeña y explícita a propósito: no compensa una
+ * dependencia para esto, y lo que no esté aquí no tiene forma corta — la
+ * entrada conserva el nombre completo y lo recorta con puntos suspensivos.
+ *
+ * El dato original NUNCA se altera: `country` se publica entero y la forma
+ * larga sigue siendo la que se anuncia a un lector de pantalla.
+ */
+const COUNTRY_CODES: Record<string, string> = {
+  colombia: 'COL', 'españa': 'ESP', espana: 'ESP', 'méxico': 'MEX', mexico: 'MEX',
+  'estados unidos': 'USA', 'perú': 'PER', peru: 'PER', ecuador: 'ECU',
+  venezuela: 'VEN', chile: 'CHL', argentina: 'ARG', 'panamá': 'PAN', panama: 'PAN',
+  'costa rica': 'CRI', guatemala: 'GTM', honduras: 'HND', nicaragua: 'NIC',
+  'el salvador': 'SLV', bolivia: 'BOL', paraguay: 'PRY', uruguay: 'URY',
+  'república dominicana': 'DOM', 'republica dominicana': 'DOM', 'puerto rico': 'PRI',
+  cuba: 'CUB', brasil: 'BRA', portugal: 'PRT', italia: 'ITA', francia: 'FRA',
+  alemania: 'DEU', 'reino unido': 'GBR', suiza: 'CHE', 'canadá': 'CAN', canada: 'CAN'
+};
+
+/**
+ * Versión corta de la ubicación, o `undefined` si no hay código para ese país.
+ *
+ * AQUÍ NO SE DECIDE CUÁL SE USA. Esta capa no sabe nada de anchos: publica las
+ * dos formas y es la entrada quien, midiendo su propio hueco, elige. Antes esto
+ * se resolvía comparando longitudes de cadena, que no equivale al ancho real.
+ */
+function buildShortLocation(city: string, country: string | undefined): string | undefined {
+  if (!country) return undefined;
+
+  const code = COUNTRY_CODES[country.trim().toLowerCase()];
+  return code ? `${city}, ${code}` : undefined;
+}
+
+/**
+ * Enlace principal de la entrada, según el estado editorial:
+ *
+ *   cancelado — ninguno. No se vende ni se reserva algo que no va a ocurrir.
+ *   agotado   — la venta de entradas queda fuera; si hay un canal de contacto
+ *               (`booking_url`, que puede ser el WhatsApp que generó el Apps
+ *               Script), ese sí se mantiene.
+ *   resto     — `ticket_url` manda y `booking_url` es el respaldo.
+ *
+ * Sin ninguno de los dos, la entrada se muestra pero no se convierte en enlace.
+ */
+function primaryEventUrl(
+  status: ShowEventStatus | undefined,
+  ticketUrl: string | undefined,
+  bookingUrl: string | undefined
+): string | undefined {
+  if (status === 'cancelado') return undefined;
+  if (status === 'agotado') return bookingUrl;
+  return ticketUrl ?? bookingUrl;
+}
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : undefined;
+}
+
+/**
+ * Valida y traduce `events` del snapshot. Pura: no mira la fecha de hoy.
+ *
+ * Duplicados de `id`: el Apps Script ya los bloquea, pero si llegaran se
+ * queda el primero, para que un evento no aparezca dos veces.
+ */
+export function parseShowEvents(raw: unknown): ShowEventsParseResult {
+  const events: ShowEvent[] = [];
+  const rejectedRows: RejectionNote[] = [];
+  const rejectedFields: RejectionNote[] = [];
+  if (!Array.isArray(raw)) return { events, rejectedRows, rejectedFields };
+
+  const seen = new Set<string>();
+
+  for (const entry of raw as unknown[]) {
+    if (typeof entry !== 'object' || entry === null) {
+      rejectedRows.push({ id: '(desconocido)', field: '(fila)', reason: 'no es un objeto' });
+      continue;
+    }
+    const row = entry as RawEvent;
+    const id = asTrimmedString(row.id);
+    const reject = (field: string, reason: string) =>
+      rejectedRows.push({ id: id ?? '(sin id)', field, reason });
+
+    // `active` no se publica; si apareciera en falso, manda.
+    if (row.active === false) { reject('active', 'evento inactivo'); continue; }
+    if (!id || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) { reject('id', 'sin id utilizable'); continue; }
+    if (seen.has(id)) { reject('id', 'id duplicado'); continue; }
+
+    const date = parseDdMmYyyy(row.date);
+    if (!date) { reject('date', `fecha no válida (${String(row.date)})`); continue; }
+
+    const title = asTrimmedString(row.event_name);
+    if (!title) { reject('event_name', 'sin nombre'); continue; }
+
+    const city = asTrimmedString(row.city);
+    if (!city) { reject('city', 'sin ciudad'); continue; }
+
+    const field = (name: string, value: unknown, reason: string) => {
+      if (asTrimmedString(value)) rejectedFields.push({ id, field: name, reason });
+    };
+
+    const timeRaw = asTrimmedString(row.time);
+    const time = timeRaw && /^([01]\d|2[0-3]):[0-5]\d$/.test(timeRaw) ? timeRaw : undefined;
+    if (!time) field('time', row.time, `hora no válida: ${String(row.time)}`);
+
+    const status = oneOf(row.status, EVENT_STATUSES);
+    if (!status) field('status', row.status, `estado desconocido: ${String(row.status)}`);
+
+    const eventType = oneOf(row.event_type, EVENT_TYPES);
+    if (!eventType) field('event_type', row.event_type, `tipo desconocido: ${String(row.event_type)}`);
+
+    const ticketUrl = parseHttpUrl(row.ticket_url)?.toString();
+    if (!ticketUrl) field('ticket_url', row.ticket_url, 'URL no válida');
+    const bookingUrl = parseHttpUrl(row.booking_url)?.toString();
+    if (!bookingUrl) field('booking_url', row.booking_url, 'URL no válida');
+
+    const country = asTrimmedString(row.country);
+
+    seen.add(id);
+    events.push({
+      id,
+      date,
+      title,
+      location: country ? `${city}, ${country}` : city,
+      locationShort: buildShortLocation(city, country),
+      // La entrada muestra la hora tal cual la escribió la hoja (hora local del
+      // evento), con el sufijo de siempre. No se convierte a ningún huso.
+      time: time ? `${time} HRS` : '',
+      // Enlace principal según el estado (ver `primaryEventUrl`).
+      ticketUrl: primaryEventUrl(status, ticketUrl, bookingUrl),
+      // Se conserva como acción secundaria; hoy la entrada no la pinta aparte.
+      bookingUrl,
+      status,
+      eventType
+    });
+  }
+
+  // Mismo orden que publica el Apps Script: fecha, hora (`HH:mm HRS`, o vacía
+  // primero) e id para que sea estable.
+  events.sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || a.id.localeCompare(b.id)
+  );
+  return { events, rejectedRows, rejectedFields };
+}
+
+/** Eventos del snapshot compilado con este despliegue, validados una sola vez. */
+let publishedShowEvents: ShowEventsParseResult | null = null;
+
+/** Todos los eventos válidos publicados, en orden. Los pasados los quita quien pinta. */
+export function getPublishedShowEvents(): readonly ShowEvent[] {
+  if (!publishedShowEvents) {
+    // El sobre se valida igual que en la música: con otro esquema, nada.
+    const body = contentSnapshot as { schemaVersion?: unknown; events?: unknown };
+    publishedShowEvents = parseShowEvents(
+      body.schemaVersion === SUPPORTED_SCHEMA_VERSION ? body.events : undefined
+    );
+
+    if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+      for (const r of publishedShowEvents.rejectedRows) {
+        console.warn(`[eventos] fila descartada «${r.id}» (${r.field}): ${r.reason}`);
+      }
+      for (const r of publishedShowEvents.rejectedFields) {
+        console.warn(`[eventos] campo descartado «${r.id}».${r.field}: ${r.reason}`);
+      }
+    }
+  }
+  return publishedShowEvents.events;
+}
+
+/**
+ * Día (AAAA-MM-DD) que sirve de «hoy» al HTML exportado, que no sabe cuándo
+ * se visitará: la víspera, en UTC, de `publishedAt`. Todo evento anterior ya
+ * había pasado en cualquier huso cuando se publicó; restar un día evita
+ * esconder uno que en América todavía es hoy. Sale del snapshot, así que el
+ * servidor y la hidratación calculan exactamente lo mismo.
+ */
+export function getPublishedFloorDay(): string | null {
+  const raw = (contentSnapshot as { publishedAt?: unknown }).publishedAt;
+  const time = typeof raw === 'string' ? Date.parse(raw) : NaN;
+  if (!Number.isFinite(time)) return null;
+  return new Date(time - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Descarta los eventos anteriores a `todayIso` (AAAA-MM-DD). El día del evento
+ * sigue visible entero: la hoja no dice a qué hora termina.
+ */
+export function upcomingShowEvents(
+  events: readonly ShowEvent[],
+  todayIso: string
+): ShowEvent[] {
+  return events.filter((event) => event.date >= todayIso);
 }
 
 /* --- fetch ---------------------------------------------------------------- */

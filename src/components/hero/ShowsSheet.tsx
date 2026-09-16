@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { hosmanData } from '@/data/hosman-data';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useShowEvents } from '@/hooks/useShowEvents';
 import { NextShowTicket } from '../NextShowTicket';
 import { PromoTicket } from '../PromoTicket';
 import type { ShowEvent } from '@/data/types';
@@ -47,7 +47,7 @@ function Chevron({ className }: { className?: string }) {
 }
 
 export function ShowsSheet({
-  events = hosmanData.upcomingShows,
+  events: eventsProp,
   onContact,
   className
 }: {
@@ -55,12 +55,15 @@ export function ShowsSheet({
   onContact: () => void;
   className?: string;
 }) {
+  // Por defecto, los eventos publicados y todavía por venir (`useShowEvents`).
+  const publishedEvents = useShowEvents();
+  const events = eventsProp ?? publishedEvents;
   const [abierto, setAbierto] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const tiradorRef = useRef<HTMLButtonElement>(null);
 
   /* Copia ordenada: `sort` muta el array que recibe, y este viene de
-     `hosmanData` — ordenarlo en sitio alteraría los datos compartidos. */
+     la capa de datos — ordenarlo en sitio alteraría los datos compartidos. */
   const ordenados = [...events].sort((a, b) => a.date.localeCompare(b.date));
 
   useScrollLock(abierto);

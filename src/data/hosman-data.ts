@@ -3,7 +3,7 @@
 //
 // La FORMA de estos datos vive en `./types.ts`, no aquí ni en los componentes.
 
-import type { Horse, ShowEvent } from './types';
+import type { Horse } from './types';
 
 // Prefijo de rutas cuando el sitio se publica en un subdirectorio
 // (ej: stiwi3.github.io/hosman-bravo-web). Vacío en desarrollo local.
@@ -84,33 +84,8 @@ export const hosmanData = {
     }
   },
 
-  // Próximas fechas. `UpcomingShows` ordena una copia por fecha y muestra solo
-  // las dos primeras (protagonista + secundaria); añadir más aquí no rompe el
-  // bloque del hero, simplemente no se pintan. `date` en ISO (AAAA-MM-DD): es
-  // lo que permitirá más adelante descartar fechas pasadas comparando contra
-  // `Date.now()` sin tener que volver a tocar la forma de los datos.
-  //
-  // `ticketUrl` vacío = la entrada no es un enlace y no muestra el indicador
-  // de click. En cuanto se rellene con la URL real de venta, ambas cosas se
-  // activan solas.
-  upcomingShows: [
-    {
-      id: 'feria-san-marcos-2026',
-      date: '2026-11-28',
-      title: 'Feria Nacional de San Marcos',
-      location: 'Aguascalientes, MX',
-      time: '21:00 HRS',
-      ticketUrl: ''
-    },
-    {
-      id: 'palenque-culiacan-2027',
-      date: '2027-02-28',
-      title: 'Palenque de Culiacán',
-      location: 'Culiacán, SIN',
-      time: '20:30 HRS',
-      ticketUrl: ''
-    }
-  ] satisfies readonly ShowEvent[],
+  // Próximas fechas: ya NO viven aquí. Salen de la hoja `02_EVENTOS` a través
+  // del snapshot publicado (`public/content.json` → `useShowEvents`).
 
   // Redes sociales
   socialLinks: {

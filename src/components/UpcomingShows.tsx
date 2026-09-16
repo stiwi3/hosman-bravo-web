@@ -1,9 +1,9 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { hosmanData } from '@/data/hosman-data';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAutoRecoger } from '@/hooks/useAutoRecoger';
+import { useShowEvents } from '@/hooks/useShowEvents';
 import { NextShowTicket } from './NextShowTicket';
 import { PromoTicket } from './PromoTicket';
 import type { ShowEvent } from '@/data/types';
@@ -76,7 +76,7 @@ function ChevronIcon({ open }: { open: boolean }) {
 }
 
 export function UpcomingShows({
-  events = hosmanData.upcomingShows,
+  events: eventsProp,
   onContact,
   variante = 'completa',
   panelAlLado = false
@@ -101,6 +101,10 @@ export function UpcomingShows({
    */
   variante?: 'completa' | 'minima';
 }) {
+  /* Por defecto, los eventos publicados en `content.json` ya sin los pasados
+     (`useShowEvents`). La prop queda para pintar una lista concreta. */
+  const publishedEvents = useShowEvents();
+  const events = eventsProp ?? publishedEvents;
   const [open, setOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const panelId = useId();
@@ -108,8 +112,8 @@ export function UpcomingShows({
   const { handlers, programar, cancelar } = useAutoRecoger(open, setOpen);
 
   /* Copia ordenada: `sort` muta el array que recibe, y este viene de
-     `hosmanData` — ordenarlo en sitio alteraría los datos compartidos para
-     todo lo demás que los consuma. */
+     la capa de datos — ordenarlo en sitio alteraría los datos compartidos
+     para todo lo demás que los consuma. */
   const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
   if (sorted.length === 0) return null;
 

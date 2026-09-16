@@ -584,7 +584,7 @@ Hay **dos** orígenes, y no se mezclan:
 redes, rutas de assets. Lo edita quien toca el código.
 
 **Contenido publicable** — `public/content.json`: lo edita Hosman desde una hoja de
-cálculo y lo publica él mismo. Hoy contiene `music`; `events` y `config` están previstos.
+cálculo y lo publica él mismo. Hoy contiene `music` y `events`; `config` está previsto.
 
 `src/data/types.ts` — **frontera de tipos**: `SectionId`, `NavItem`, `ShowEvent`,
 `MusicRelease` y demás. Ningún componente define la forma de los datos que pinta.
@@ -639,6 +639,70 @@ sangre perderían el título; sin ella, es una VENTANA a la miniatura de YouTube
 sigue exigiendo declarar cada host remoto en `remotePatterns`, y `cover_url` puede apuntar
 a cualquier alojamiento que Hosman decida usar.
 
+### Eventos (`02_EVENTOS` → `events`)
+
+Mismo circuito y misma validación en dos capas que la música. Contrato publicado, por
+evento (snake_case, `active` y `notes` nunca salen):
+
+```
+id · date (DD-MM-YYYY) · time (HH:mm | null) · event_name · city · venue | null
+event_type · status · ticket_url | null · booking_url | null · country | null
+```
+
+La hoja tiene además dos columnas que **nunca se publican**: `prefijo` (prefijo
+telefónico internacional; vacío = `57`, Colombia) y `booking_phone` (teléfono de
+reservas, sin prefijo). De ellas sale el WhatsApp: si la fila no trae `booking_url`
+escrito a mano, el Apps Script arma
+`https://wa.me/<prefijo+teléfono, solo dígitos>?text=<mensaje codificado>` con el
+mensaje del propio evento («Hola, quería información sobre el evento … del … en
+Ciudad (Recinto).»). **La web nunca compone teléfonos ni enlaces**: recibe
+`booking_url` ya resuelto. Un `booking_url` escrito a mano siempre manda sobre el
+generado.
+
+- **Apps Script** (`Events.js`): obligatorios en fila activa `id` (slug, único entre
+  activas), `date`, `event_name`, `city`, `event_type` y `status` (listas cerradas de la
+  pestaña de listas del Sheet); `time` opcional, leído del **texto mostrado** de la celda
+  (una hora de Sheets llega como `Date` de 1899); `prefijo` y `booking_phone` se quedan
+  solo con sus dígitos (`cleanDigits_`) y el teléfono debe tener al menos 6; URLs solo
+  http(s), sin lista de dominios.
+  Cero eventos activos **sí** se publica. Los pasados activos se publican: los quita la web.
+  Se publican ordenados por fecha.
+- **Web** (`parseShowEvents` en `content-api.ts`): revalida todo; fila inválida o
+  duplicada fuera sola, campo inválido fuera solo. Traduce a `ShowEvent`: `location` =
+  «Ciudad, País» completo, `locationShort` = «Ciudad, COL» cuando hay código ISO de tres
+  letras para ese país, `time` con el sufijo «HRS» y tal como se escribió en la hoja,
+  `bookingUrl` como acción secundaria y `ticketUrl` como acción **principal según el estado**.
+- **Cuál de las dos ubicaciones se pinta lo decide la entrada, midiendo.** `LocationText`
+  (en `NextShowTicket.tsx`) lleva una copia del texto largo fuera de flujo e invisible;
+  si su ancho real supera el del hueco, pinta la forma corta, y un `ResizeObserver`
+  vuelve a decidir si cambia el ancho o termina de cargar la tipografía. Se mide siempre
+  la forma LARGA, así que la decisión no oscila, y el hueco es el espacio disponible
+  (`min-w-0 flex-1`), no el ancho del texto pintado. Sin código de país, o si no cabe ni
+  la forma corta, queda el recorte con puntos suspensivos de siempre. **No hay tope de
+  caracteres**: la longitud de una cadena no es su ancho.
+- **El estado manda sobre las acciones** (`primaryEventUrl`): `cancelado` no lleva a
+  ninguna parte; `agotado` no lleva a la venta pero sí al contacto (`booking_url`);
+  el resto usa `ticket_url` y, si falta, `booking_url`. Sin ninguno, la entrada se
+  muestra pero no es un enlace. `agotado` y `cancelado` llevan además un sello rojo
+  atravesado sobre la entrada (`StatusSeal` en `NextShowTicket.tsx`), que es una capa
+  encima del asset: no toca la imagen, las zonas de texto ni el responsive.
+- **`active` es el interruptor maestro**: un evento activo se publica y se muestra
+  aunque esté `cancelado`, `agotado`, `provisional` o `privado`. Publicar uno
+  `provisional` exige confirmarlo en un diálogo (ver `provisionalWarnings_`).
+- **Qué evento es el próximo no se guarda en ningún sitio.** `useShowEvents` descarta los
+  anteriores a **hoy en `America/Bogota`** —la agenda es colombiana, y el día del evento
+  sigue visible entero— y `UpcomingShows`/`ShowsSheet` pintan el primero como protagonista
+  y el segundo en «Ver más fechas». Las fechas se comparan como cadenas ISO; nunca pasan
+  por UTC ni se convierten a la hora del visitante.
+- **Se leen del `content.json` compilado, no con `fetch`.** Toda publicación es un commit a
+  `master` y redespliega, así que el archivo compilado y el servido coinciden. Así el bloque
+  del hero —capa persistente medida por el coordinador— nace con sus entradas en el HTML,
+  sin esqueleto ni salto de composición. Contrapartida: el HTML exportado no sabe qué día
+  se visitará. Filtra con la víspera UTC de `publishedAt` (`getPublishedFloorDay`, igual en
+  servidor e hidratación) y, al hidratar, `useSyncExternalStore` pasa al día real del
+  visitante (se reevalúa cada minuto y al volver a la pestaña). Un evento que pasó
+  **después de la última publicación** puede verse hasta que carga el JavaScript.
+
 ### Patrón obligatorio para nuevas hojas del CMS
 
 Al conectar una hoja nueva (`02_EVENTOS`, `03_CONFIG_GLOBAL`…), replicar lo ya hecho en
@@ -673,13 +737,14 @@ máquina nueva: `npm i -g @google/clasp`, `clasp login`, y `clasp clone-script <
 Script ID está en el Sheet, en *Extensiones → Apps Script → ⚙ Configuración del proyecto*
 (y anotado en `PROGRESS.md`, que es local).
 
-Seis módulos, separados por responsabilidad:
+Siete módulos, separados por responsabilidad:
 
 | Archivo | Qué hace |
 |---|---|
-| `Config.js` | IDs, `MUSIC_HEADERS`, `musicColumn_`. **Única definición del esquema** |
-| `Validation.js` | Limpiadores puros y dominios oficiales por plataforma |
-| `Music.js` | `readMusicSheet_` (una sola lectura) + `validateMusicForPublication_` |
+| `Config.js` | IDs, `MUSIC_HEADERS`, `EVENTS_HEADERS`, listas cerradas. **Única definición del esquema** |
+| `Validation.js` | Limpiadores puros, dominios oficiales, `checkSheetHeaders_` y el WhatsApp de eventos |
+| `Music.js` | `readSheetTable_` (lectura común) + `readMusicSheet_` + `validateMusicForPublication_` |
+| `Events.js` | `readEventsSheet_` + `validateEventsForPublication_` |
 | `GitHub.js` | Configuración de Script Properties y publicador |
 | `Publish.js` | Lógica, resultado y presentación separados |
 | `SheetSetup.js` | Mantenimiento reproducible de la hoja, idempotente |
@@ -705,7 +770,8 @@ Decisiones que no son obvias y conviene no deshacer:
   aplicar un formato de fecha a `release_date`. No molesta: el formato ya es el correcto y
   el validador acepta tanto `Date` como texto `DD-MM-YYYY`.
 
-Hay una suite local de 70 pruebas en `apps-script/tests/`. Se ejecuta con
+Hay una suite local de 187 pruebas en `apps-script/tests/` (incluye las filas reales de
+`02_EVENTOS`). Se ejecuta con
 `node tests/test-cms.js .` desde esa carpeta y **no toca Google**: el validador recibe los
 datos, así que se puede probar entero en local. Ejecutarla antes de cualquier
 `clasp push`.

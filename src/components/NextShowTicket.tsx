@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { hosmanData } from '@/data/hosman-data';
 import type { ShowEvent } from '@/data/types';
@@ -12,10 +13,9 @@ import type { ShowEvent } from '@/data/types';
    `ticket-template.webp`. Aquí NO se recrea nada de eso con CSS: encima de la
    imagen solo se superpone el texto del evento, que es lo único dinámico.
 
-   Los datos van aparte (`hosmanData.upcomingShows`) y entran por props, así
-   que este componente ya puede recibir cualquier array: ordenarlo por fecha,
-   filtrar las pasadas o traerlo de Google Sheets es trabajo de quien lo llame,
-   sin tocar nada de aquí. De momento se pinta solo `events[0]`.
+   Los datos entran por props (`events` + `index`): ordenarlos, quitar los
+   pasados y traerlos del snapshot publicado es trabajo de quien lo llama
+   (`useShowEvents`), sin tocar nada de aquí.
 
    El aspecto de esta pieza está aprobado y no debe rediseñarse. Para la
    entrada secundaria del bloque basta con pasarle un `widthClass` menor: como
@@ -134,6 +134,107 @@ const ZONES_STACK = {
 const CLICK_HINT_SINGLE = { right: '-2cqw', bottom: '-4.5cqw' };
 const CLICK_HINT_STACK = { right: '2cqw', bottom: '-2.2cqw' };
 
+/* ---------------------------------------------------------------------------
+   Sello de estado.
+
+   `agotado` y `cancelado` se siguen mostrando —activarlos en la hoja significa
+   que queremos enseñarlos—, pero con una marca atravesada de lado a lado, en
+   rojo translúcido, para que no se lean como una fecha normal. Es una capa
+   encima del asset: no toca ni la imagen, ni las zonas de texto, ni el
+   responsive. `pointer-events: none` para no robarle el clic al enlace.
+--------------------------------------------------------------------------- */
+const STATUS_SEALS: Record<string, string> = {
+  agotado: 'AGOTADO',
+  cancelado: 'CANCELADO'
+};
+
+function StatusSeal({ label }: { label: string }) {
+  return (
+    <span
+      className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center overflow-hidden"
+      style={{ transform: 'rotate(-13deg)' }}
+    >
+      <span
+        className="whitespace-nowrap font-black uppercase"
+        style={{
+          fontSize: label.length > 8 ? '10cqw' : '12cqw',
+          letterSpacing: '0.1em',
+          color: 'rgba(214, 40, 40, 0.62)',
+          textShadow: '0 1px 2px rgba(0,0,0,0.55)'
+        }}
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Línea de ubicación: «Ciudad, País» mientras quepa.
+
+   POR QUÉ SE MIDE Y NO SE CUENTAN CARACTERES
+   La longitud de una cadena no es su ancho: «MEDELLÍN, COLOMBIA» y
+   «ENVIGADO, COLOMBIA» tienen las mismas letras y no ocupan lo mismo. Antes
+   esto se decidía con un tope de caracteres, que acababa abreviando ciudades
+   que sí cabían.
+
+   CÓMO
+   Una copia del texto largo, fuera de flujo e invisible, mide su ancho real
+   con la tipografía que de verdad se está usando; si no cabe en el hueco, se
+   pinta la forma corta. La copia es `absolute`, así que no ocupa sitio ni
+   cambia la geometría de nada, y un `ResizeObserver` sobre las dos vuelve a
+   decidir si cambia el ancho del ticket o si la fuente termina de cargar.
+   Como se mide SIEMPRE la forma larga —aunque se esté pintando la corta— la
+   decisión no puede oscilar entre las dos.
+
+   El coste es una copia del texto y un observador por entrada (hay dos o tres
+   a la vez), y ninguna medida sale de este componente: no hay estado global ni
+   media queries nuevas. El hueco no cambia de alto, así que no hay salto de
+   composición; en el HTML exportado sale la forma larga y, si no cabe, se
+   sustituye al hidratar.
+--------------------------------------------------------------------------- */
+function LocationText({ full, short }: { full: string; short?: string }) {
+  const [compacto, setCompacto] = useState(false);
+  const huecoRef = useRef<HTMLSpanElement>(null);
+  const medidaRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const hueco = huecoRef.current;
+    const medida = medidaRef.current;
+    if (!short || !hueco || !medida) return;
+
+    const decidir = () => {
+      // Medio píxel de holgura: los anchos son subpíxeles y un redondeo no
+      // debe abreviar un texto que en realidad cabe.
+      setCompacto(
+        medida.getBoundingClientRect().width > hueco.getBoundingClientRect().width + 0.5
+      );
+    };
+
+    const observer = new ResizeObserver(decidir);
+    observer.observe(hueco);
+    observer.observe(medida);
+    return () => observer.disconnect();
+  }, [short, full]);
+
+  return (
+    /* `min-w-0 flex-1`: el hueco tiene que ser el ESPACIO DISPONIBLE, no el
+       ancho del texto que se está pintando. Sin esto, al abreviar la caja se
+       encoge hasta la forma corta y ya nunca vuelve a la larga aunque quepa.
+       Visualmente no cambia nada: el texto sigue alineado tras el icono. */
+    <span ref={huecoRef} className="relative min-w-0 flex-1 truncate">
+      {compacto && short ? short : full}
+      <span
+        ref={medidaRef}
+        aria-hidden="true"
+        className="invisible pointer-events-none absolute left-0 top-0 whitespace-nowrap"
+      >
+        {full}
+      </span>
+    </span>
+  );
+}
+
 const MONTHS_ES = [
   'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
   'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
@@ -242,13 +343,13 @@ export function ClickHint({
 }
 
 export function NextShowTicket({
-  events = hosmanData.upcomingShows,
+  events,
   index = 0,
   widthClass = TICKET_WIDTH_MAIN,
   priority = true,
   stacked
 }: {
-  events?: readonly ShowEvent[];
+  events: readonly ShowEvent[];
   /** Cuál del array se pinta. El bloque usa 0 para la protagonista y 1 para la
    *  secundaria; el orden cronológico lo resuelve quien llama. */
   index?: number;
@@ -376,7 +477,7 @@ export function NextShowTicket({
             className="shrink-0 text-amber-400/80"
             style={{ width: '3.6cqw', height: '3.6cqw' }}
           />
-          <span className="truncate">{event.location}</span>
+          <LocationText full={event.location} short={event.locationShort} />
         </p>
         <p
           className="flex items-center uppercase tracking-wide text-white/70"
@@ -402,18 +503,31 @@ export function NextShowTicket({
     aspectRatio: `${TICKET_NATIVE.w} / ${TICKET_NATIVE.h}`
   };
 
+  const seal = event.status ? STATUS_SEALS[event.status] : undefined;
+
+  /* Cuando el enlace principal ES el de reserva —porque no hay venta, o porque
+     el evento está agotado y solo queda el contacto— el destino no son
+     entradas, y el rótulo del enlace no puede prometerlas. */
+  const esContacto = Boolean(event.ticketUrl) && event.ticketUrl === event.bookingUrl;
+  const cuando = `${event.location}, ${day} de ${month} de ${year}`;
+  const rotulo = esContacto
+    ? `Información y reservas para ${event.title} — ${cuando}`
+    : `Entradas para ${event.title} — ${cuando}`;
+
   /* Sin `ticketUrl` la entrada no es un enlace ni muestra el indicador de
-     pulsación: anunciar un destino que no existe sería peor que no anunciarlo. */
+     pulsación: anunciar un destino que no existe sería peor que no anunciarlo.
+     Un evento `cancelado` nunca lo trae (ver `primaryEventUrl`). */
   return event.ticketUrl ? (
     <a
       href={event.ticketUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Entradas para ${event.title} — ${event.location}, ${day} de ${month} de ${year}`}
+      aria-label={rotulo}
       className={`${shell} transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400/70`}
       style={shellStyle}
     >
       {content}
+      {seal && <StatusSeal label={seal} />}
       <ClickHint
         right={isStacked ? CLICK_HINT_STACK.right : CLICK_HINT_SINGLE.right}
         bottom={isStacked ? CLICK_HINT_STACK.bottom : CLICK_HINT_SINGLE.bottom}
@@ -423,6 +537,7 @@ export function NextShowTicket({
   ) : (
     <div className={shell} style={shellStyle}>
       {content}
+      {seal && <StatusSeal label={seal} />}
     </div>
   );
 }
