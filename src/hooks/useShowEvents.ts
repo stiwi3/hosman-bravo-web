@@ -11,11 +11,12 @@ import type { ShowEvent } from '@/data/types';
 /* ---------------------------------------------------------------------------
    Próximos shows: los eventos publicados que todavía no han pasado, en orden.
 
-   EL «HOY» ES EL DE BOGOTÁ, no el del visitante. La agenda es colombiana: un
-   show del 24 debe seguir a la vista durante todo el 24 en Colombia, lo mire
-   quien lo mire desde donde lo mire. Se obtiene con `Intl` en formato ISO
-   (nunca `toISOString()`, que es UTC y desde las 19:00 en Colombia ya devuelve
-   el día siguiente) y se compara como texto con la fecha del evento.
+   EL RELOJ ES EL DE BOGOTÁ, no el del visitante. La agenda es colombiana: un
+   show de las 20:00 sigue a la vista hasta las 22:00 en Colombia, lo mire quien
+   lo mire desde donde lo mire. La hora se obtiene con `Intl` en formato
+   AAAA-MM-DDTHH:mm (nunca `toISOString()`, que es UTC y desde las 19:00 en
+   Colombia ya devuelve el día siguiente) y se compara como texto con el
+   `visibleUntil` que calculó `content-api`.
 
    La HORA del evento no se toca: se muestra tal como está escrita en la hoja.
 
@@ -31,23 +32,29 @@ import type { ShowEvent } from '@/data/types';
 /** Zona de la agenda y del propio Sheet. Sin zona por evento, todavía. */
 const EVENT_TIME_ZONE = 'America/Bogota';
 
-/* `en-CA` da exactamente AAAA-MM-DD, que es el formato con el que se comparan
-   las fechas. Se crea una sola vez: construir un formateador es caro y esto se
-   consulta en cada render. */
-const bogotaDay = new Intl.DateTimeFormat('en-CA', {
+/* Se crea una sola vez: construir un formateador es caro y esto se consulta en
+   cada render. `hourCycle: 'h23'` evita el «24» de la medianoche, que rompería
+   la comparación de textos. */
+const bogotaMinute = new Intl.DateTimeFormat('en-CA', {
   timeZone: EVENT_TIME_ZONE,
   year: 'numeric',
   month: '2-digit',
-  day: '2-digit'
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23'
 });
 
-function todayIso(): string {
-  return bogotaDay.format(new Date());
+/** «Ahora» en Bogotá como AAAA-MM-DDTHH:mm, el formato de `visibleUntil`. */
+function nowIso(): string {
+  const p: Record<string, string> = {};
+  for (const parte of bogotaMinute.formatToParts(new Date())) p[parte.type] = parte.value;
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-/** Se reevalúa al volver a la pestaña y cada minuto: puede cruzarse la medianoche
- *  con la página a la vista. El valor es una cadena, así que si no cambia el día
- *  React no vuelve a pintar. */
+/** Se reevalúa al volver a la pestaña y cada minuto: un evento caduca dos horas
+ *  después de empezar, y eso puede ocurrir con la página a la vista. El valor es
+ *  una cadena, así que si no cambia el minuto React no vuelve a pintar. */
 function subscribe(onChange: () => void) {
   document.addEventListener('visibilitychange', onChange);
   const timer = window.setInterval(onChange, 60_000);
@@ -58,7 +65,7 @@ function subscribe(onChange: () => void) {
 }
 
 export function useShowEvents(): readonly ShowEvent[] {
-  const today = useSyncExternalStore(subscribe, todayIso, getPublishedFloorDay);
+  const ahora = useSyncExternalStore(subscribe, nowIso, getPublishedFloorDay);
   const events = getPublishedShowEvents();
-  return today === null ? events : upcomingShowEvents(events, today);
+  return ahora === null ? events : upcomingShowEvents(events, ahora);
 }

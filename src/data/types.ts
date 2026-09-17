@@ -90,6 +90,12 @@ export interface ShowEvent {
    */
   locationShort?: string;
   time: string;
+  /**
+   * Hasta cuándo se muestra el evento, en hora de Bogotá y formato
+   * AAAA-MM-DDTHH:mm: dos horas después de empezar, o el final de su día si la
+   * hoja no dio hora. Lo calcula `content-api`; `useShowEvents` solo compara.
+   */
+  visibleUntil: string;
   ticketUrl?: string;
   /**
    * Reserva o contacto secundario, ya resuelto por el Apps Script (puede ser

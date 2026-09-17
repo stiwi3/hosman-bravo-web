@@ -178,59 +178,131 @@ function StatusSeal({ label }: { label: string }) {
    esto se decidía con un tope de caracteres, que acababa abreviando ciudades
    que sí cabían.
 
-   CÓMO
-   Una copia del texto largo, fuera de flujo e invisible, mide su ancho real
-   con la tipografía que de verdad se está usando; si no cabe en el hueco, se
-   pinta la forma corta. La copia es `absolute`, así que no ocupa sitio ni
-   cambia la geometría de nada, y un `ResizeObserver` sobre las dos vuelve a
-   decidir si cambia el ancho del ticket o si la fuente termina de cargar.
-   Como se mide SIEMPRE la forma larga —aunque se esté pintando la corta— la
-   decisión no puede oscilar entre las dos.
+   LA ESCALERA, EN ORDEN
+     1. «Ciudad, País» entero, con salto natural, en DOS líneas como mucho;
+     2. si no cabe, se abrevia solo el país a su código de tres letras;
+     3. si sigue sin caber, la ubicación —y solo ella— baja un punto de tamaño;
+     4. y si aun así no cabe, se recorta con puntos suspensivos.
+   Nunca hay una tercera línea: el recorte a dos está en el CSS, así que ese
+   límite se cumple aunque la medición no llegue a tiempo.
 
-   El coste es una copia del texto y un observador por entrada (hay dos o tres
-   a la vez), y ninguna medida sale de este componente: no hay estado global ni
-   media queries nuevas. El hueco no cambia de alto, así que no hay salto de
-   composición; en el HTML exportado sale la forma larga y, si no cabe, se
+   CÓMO SE DECIDE
+   Un elemento sonda, fuera de flujo e invisible, recibe el ancho real del
+   hueco y va probando cada candidato con la tipografía que de verdad se está
+   usando: se queda con el primero cuya altura no pase de dos líneas. Medir en
+   la sonda y no en el texto pintado es lo que impide que la decisión oscile,
+   porque lo que se mide no depende de lo que se esté mostrando. Un
+   `ResizeObserver` vuelve a recorrer la escalera si cambia el ancho, y
+   `document.fonts.ready` la repite cuando la fuente termina de cargar.
+
+   El coste es una sonda y un observador por entrada (hay dos o tres a la vez),
+   y ninguna medida sale de este componente: no hay estado global ni media
+   queries nuevas. En el HTML exportado sale la forma larga y, si no cabe, se
    sustituye al hidratar.
 --------------------------------------------------------------------------- */
+const LOCATION_MAX_LINES = 2;
+/** Un punto menos, lo justo para ganar una palabra sin romper la jerarquía. */
+const LOCATION_SCALE_DOWN = 0.86;
+
+interface LocationMode {
+  texto: string;
+  escala: number;
+}
+
 function LocationText({ full, short }: { full: string; short?: string }) {
-  const [compacto, setCompacto] = useState(false);
+  const [modo, setModo] = useState<LocationMode>({ texto: full, escala: 1 });
   const huecoRef = useRef<HTMLSpanElement>(null);
-  const medidaRef = useRef<HTMLSpanElement>(null);
+  const sondaRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const hueco = huecoRef.current;
-    const medida = medidaRef.current;
-    if (!short || !hueco || !medida) return;
+    const candidatos: LocationMode[] = [
+      { texto: full, escala: 1 },
+      ...(short ? [{ texto: short, escala: 1 }] : []),
+      { texto: short ?? full, escala: LOCATION_SCALE_DOWN }
+    ];
 
     const decidir = () => {
-      // Medio píxel de holgura: los anchos son subpíxeles y un redondeo no
-      // debe abreviar un texto que en realidad cabe.
-      setCompacto(
-        medida.getBoundingClientRect().width > hueco.getBoundingClientRect().width + 0.5
+      const hueco = huecoRef.current;
+      const sonda = sondaRef.current;
+      if (!hueco || !sonda) return;
+
+      const ancho = hueco.clientWidth;
+      if (ancho <= 0) return;
+      sonda.style.width = `${ancho}px`;
+
+      const cabe = ({ texto, escala }: LocationMode) => {
+        sonda.style.fontSize = escala === 1 ? 'inherit' : `${escala}em`;
+        // Una sola letra da el alto de UNA línea con esta tipografía y este
+        // tamaño, sin tener que leer `line-height` (que puede ser `normal`).
+        sonda.textContent = 'M';
+        const linea = sonda.getBoundingClientRect().height;
+        sonda.textContent = texto;
+        // Medio píxel de holgura: las medidas son subpíxeles y un redondeo no
+        // debe abreviar un texto que en realidad cabe.
+        //
+        // Se comprueban las DOS dimensiones. Con solo el alto, un topónimo sin
+        // espacios («Llanfairpwllgwyngyll…») daba dos líneas y se daba por
+        // bueno mientras se salía por el costado del ticket: no desbordaba
+        // hacia abajo porque lo hacía hacia el lado.
+        return (
+          sonda.getBoundingClientRect().height <= linea * LOCATION_MAX_LINES + 0.5 &&
+          sonda.scrollWidth <= ancho + 0.5
+        );
+      };
+
+      // El último candidato es también el respaldo: si ninguno cabe, se pinta
+      // ese y el recorte del CSS le pone los puntos suspensivos.
+      const elegido = candidatos.find(cabe) ?? candidatos[candidatos.length - 1];
+      sonda.textContent = '';
+
+      setModo((previo) =>
+        previo.texto === elegido.texto && previo.escala === elegido.escala ? previo : elegido
       );
     };
 
     const observer = new ResizeObserver(decidir);
-    observer.observe(hueco);
-    observer.observe(medida);
-    return () => observer.disconnect();
-  }, [short, full]);
+    if (huecoRef.current) observer.observe(huecoRef.current);
+
+    let vivo = true;
+    document.fonts?.ready
+      .then(() => {
+        if (vivo) decidir();
+      })
+      .catch(() => {});
+
+    return () => {
+      vivo = false;
+      observer.disconnect();
+    };
+  }, [full, short]);
+
+  const abreviado = modo.texto !== full;
 
   return (
     /* `min-w-0 flex-1`: el hueco tiene que ser el ESPACIO DISPONIBLE, no el
        ancho del texto que se está pintando. Sin esto, al abreviar la caja se
-       encoge hasta la forma corta y ya nunca vuelve a la larga aunque quepa.
-       Visualmente no cambia nada: el texto sigue alineado tras el icono. */
-    <span ref={huecoRef} className="relative min-w-0 flex-1 truncate">
-      {compacto && short ? short : full}
+       encoge hasta la forma corta y ya nunca vuelve a la larga aunque quepa. */
+    <span ref={huecoRef} className="relative block min-w-0 flex-1">
       <span
-        ref={medidaRef}
-        aria-hidden="true"
-        className="invisible pointer-events-none absolute left-0 top-0 whitespace-nowrap"
+        // `break-words`: una palabra más ancha que el hueco se parte en vez de
+        // salirse. Es lo que permite que el recorte a dos líneas ponga los
+        // puntos suspensivos en lugar de dejar el texto cortado por el borde.
+        className="line-clamp-2 break-words"
+        // Cuando se abrevia, el texto completo sigue disponible para un lector
+        // de pantalla en el `sr-only` de abajo; lo pintado sería ruido.
+        aria-hidden={abreviado || undefined}
+        style={modo.escala === 1 ? undefined : { fontSize: `${modo.escala}em` }}
       >
-        {full}
+        {modo.texto}
       </span>
+      {abreviado && <span className="sr-only">{full}</span>}
+      <span
+        ref={sondaRef}
+        aria-hidden="true"
+        // Mismas reglas de salto que el texto visible: si la sonda partiera las
+        // palabras de otra forma, mediría algo que no es lo que se va a pintar.
+        className="invisible pointer-events-none absolute left-0 top-0 break-words"
+      />
     </span>
   );
 }

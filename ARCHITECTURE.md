@@ -673,13 +673,16 @@ generado.
   letras para ese país, `time` con el sufijo «HRS» y tal como se escribió en la hoja,
   `bookingUrl` como acción secundaria y `ticketUrl` como acción **principal según el estado**.
 - **Cuál de las dos ubicaciones se pinta lo decide la entrada, midiendo.** `LocationText`
-  (en `NextShowTicket.tsx`) lleva una copia del texto largo fuera de flujo e invisible;
-  si su ancho real supera el del hueco, pinta la forma corta, y un `ResizeObserver`
-  vuelve a decidir si cambia el ancho o termina de cargar la tipografía. Se mide siempre
-  la forma LARGA, así que la decisión no oscila, y el hueco es el espacio disponible
-  (`min-w-0 flex-1`), no el ancho del texto pintado. Sin código de país, o si no cabe ni
-  la forma corta, queda el recorte con puntos suspensivos de siempre. **No hay tope de
-  caracteres**: la longitud de una cadena no es su ancho.
+  (en `NextShowTicket.tsx`) recorre una escalera en **dos líneas como máximo**: país
+  entero → país en ISO3 → lo que quepa con la ubicación un punto más pequeña → recorte
+  con puntos suspensivos. Una sonda fuera de flujo e invisible recibe el ancho real del
+  hueco y prueba cada candidato con la tipografía que de verdad se usa, comprobando alto
+  **y** ancho (un topónimo sin espacios desborda de lado, no hacia abajo). Se mide en la
+  sonda y no en el texto pintado, así que la decisión no oscila; el hueco es el espacio
+  disponible (`min-w-0 flex-1`), no el ancho del texto. La tercera línea la impide el CSS
+  (`line-clamp-2`), no la medición. Cuando se abrevia, el nombre completo sigue disponible
+  para lectores de pantalla. **No hay tope de caracteres**: la longitud de una cadena no
+  es su ancho.
 - **El estado manda sobre las acciones** (`primaryEventUrl`): `cancelado` no lleva a
   ninguna parte; `agotado` no lleva a la venta pero sí al contacto (`booking_url`);
   el resto usa `ticket_url` y, si falta, `booking_url`. Sin ninguno, la entrada se
@@ -689,11 +692,15 @@ generado.
 - **`active` es el interruptor maestro**: un evento activo se publica y se muestra
   aunque esté `cancelado`, `agotado`, `provisional` o `privado`. Publicar uno
   `provisional` exige confirmarlo en un diálogo (ver `provisionalWarnings_`).
-- **Qué evento es el próximo no se guarda en ningún sitio.** `useShowEvents` descarta los
-  anteriores a **hoy en `America/Bogota`** —la agenda es colombiana, y el día del evento
-  sigue visible entero— y `UpcomingShows`/`ShowsSheet` pintan el primero como protagonista
-  y el segundo en «Ver más fechas». Las fechas se comparan como cadenas ISO; nunca pasan
-  por UTC ni se convierten a la hora del visitante.
+- **Qué evento es el próximo no se guarda en ningún sitio.** Cada evento trae de
+  `content-api` un `visibleUntil` (AAAA-MM-DDTHH:mm, hora de Bogotá): **dos horas después
+  de empezar**, o el final de su día si la hoja no dio hora. `useShowEvents` compara esa
+  marca con el reloj de **`America/Bogota`** —la agenda es colombiana, no la del
+  visitante— y `UpcomingShows`/`ShowsSheet` pintan el primero que queda como protagonista
+  y el segundo en «Ver más fechas». Todo son comparaciones de texto entre marcas de reloj
+  de pared: nunca pasan por UTC. El HTML exportado usa un suelo más grueso (la víspera de
+  `publishedAt`), porque no sabe a qué hora se visitará; la exactitud de las dos horas es
+  cosa del cliente, que sí lo sabe.
 - **Se leen del `content.json` compilado, no con `fetch`.** Toda publicación es un commit a
   `master` y redespliega, así que el archivo compilado y el servido coinciden. Así el bloque
   del hero —capa persistente medida por el coordinador— nace con sus entradas en el HTML,

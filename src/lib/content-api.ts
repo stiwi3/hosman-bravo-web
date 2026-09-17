@@ -390,6 +390,31 @@ const COUNTRY_CODES: Record<string, string> = {
  * dos formas y es la entrada quien, midiendo su propio hueco, elige. Antes esto
  * se resolvía comparando longitudes de cadena, que no equivale al ancho real.
  */
+/**
+ * Cortesía tras la hora de inicio: un show sigue a la vista mientras está
+ * ocurriendo. La hoja no dice cuánto dura, así que se asume este margen.
+ */
+const EVENT_GRACE_MINUTES = 120;
+
+/**
+ * Momento (AAAA-MM-DDTHH:mm, hora de Bogotá) hasta el que el evento se muestra.
+ *
+ * Con hora, dos horas después de empezar; sin hora, hasta el final de su día.
+ * Es una marca de RELOJ DE PARED, no un instante: se compara como texto con la
+ * hora de Bogotá, así que nunca pasa por UTC ni por el huso del visitante. La
+ * suma se hace con `Date.UTC` precisamente para que sea aritmética de
+ * calendario pura —23:00 + 2 h cae en el día siguiente sin sorpresas de zona.
+ */
+function buildVisibleUntil(dateIso: string, time: string | undefined): string {
+  if (!time) return `${dateIso}T23:59`;
+
+  const [year, month, day] = dateIso.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const fin = Date.UTC(year, month - 1, day, hour, minute) + EVENT_GRACE_MINUTES * 60_000;
+
+  return new Date(fin).toISOString().slice(0, 16);
+}
+
 function buildShortLocation(city: string, country: string | undefined): string | undefined {
   if (!country) return undefined;
 
@@ -493,6 +518,7 @@ export function parseShowEvents(raw: unknown): ShowEventsParseResult {
       // La entrada muestra la hora tal cual la escribió la hoja (hora local del
       // evento), con el sufijo de siempre. No se convierte a ningún huso.
       time: time ? `${time} HRS` : '',
+      visibleUntil: buildVisibleUntil(date, time),
       // Enlace principal según el estado (ver `primaryEventUrl`).
       ticketUrl: primaryEventUrl(status, ticketUrl, bookingUrl),
       // Se conserva como acción secundaria; hoy la entrada no la pinta aparte.
@@ -536,28 +562,32 @@ export function getPublishedShowEvents(): readonly ShowEvent[] {
 }
 
 /**
- * Día (AAAA-MM-DD) que sirve de «hoy» al HTML exportado, que no sabe cuándo
- * se visitará: la víspera, en UTC, de `publishedAt`. Todo evento anterior ya
- * había pasado en cualquier huso cuando se publicó; restar un día evita
- * esconder uno que en América todavía es hoy. Sale del snapshot, así que el
- * servidor y la hidratación calculan exactamente lo mismo.
+ * Momento que sirve de «ahora» al HTML exportado, que no sabe cuándo se
+ * visitará: la medianoche de la víspera, en UTC, de `publishedAt`. Todo evento
+ * anterior ya había pasado en cualquier huso cuando se publicó; restar un día
+ * evita esconder uno que en América todavía está por empezar. Sale del
+ * snapshot, así que el servidor y la hidratación calculan exactamente lo mismo.
+ *
+ * Es deliberadamente GRUESO: la exactitud de las dos horas de cortesía es cosa
+ * del cliente, que sí sabe qué hora es. Aquí solo importa no pintar en el HTML
+ * una agenda ya caducada ni provocar un desajuste al hidratar.
  */
 export function getPublishedFloorDay(): string | null {
   const raw = (contentSnapshot as { publishedAt?: unknown }).publishedAt;
   const time = typeof raw === 'string' ? Date.parse(raw) : NaN;
   if (!Number.isFinite(time)) return null;
-  return new Date(time - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return `${new Date(time - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}T00:00`;
 }
 
 /**
- * Descarta los eventos anteriores a `todayIso` (AAAA-MM-DD). El día del evento
- * sigue visible entero: la hoja no dice a qué hora termina.
+ * Descarta los eventos ya caducados. `nowIso` es la hora de Bogotá en formato
+ * AAAA-MM-DDTHH:mm, que es como se comparan las marcas de `visibleUntil`.
  */
 export function upcomingShowEvents(
   events: readonly ShowEvent[],
-  todayIso: string
+  nowIso: string
 ): ShowEvent[] {
-  return events.filter((event) => event.date >= todayIso);
+  return events.filter((event) => event.visibleUntil >= nowIso);
 }
 
 /* --- fetch ---------------------------------------------------------------- */
