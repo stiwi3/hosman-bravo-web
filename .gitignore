@@ -77,7 +77,7 @@ agent-browser.json
 .agent-browser/
 
 # Documentation (internal only)
-AGENTS.md
+# AGENTS.md NO va aquí: son las instrucciones versionadas para Codex.
 CHANGELOG.md
 GEMINI.md
 docs/
