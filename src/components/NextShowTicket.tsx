@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { hosmanData } from '@/data/hosman-data';
-import type { ShowEvent } from '@/data/types';
+import type { ShowEvent, ShowEventStatus } from '@/data/types';
 
 /* ---------------------------------------------------------------------------
    Entrada de un show.
@@ -143,7 +143,7 @@ const CLICK_HINT_STACK = { right: '2cqw', bottom: '-2.2cqw' };
    encima del asset: no toca ni la imagen, ni las zonas de texto, ni el
    responsive. `pointer-events: none` para no robarle el clic al enlace.
 --------------------------------------------------------------------------- */
-const STATUS_SEALS: Record<string, string> = {
+const STATUS_SEALS: Partial<Record<ShowEventStatus, string>> = {
   agotado: 'AGOTADO',
   cancelado: 'CANCELADO'
 };

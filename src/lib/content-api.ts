@@ -196,7 +196,7 @@ function parseAssetReference(value: unknown, dir: string): string | undefined {
  * Se compara el HOSTNAME completo, nunca `includes()`: `music.apple.com.evil`
  * contiene «music.apple.com» y no es Apple.
  */
-const PLATFORM_HOSTS: Record<string, (host: string) => boolean> = {
+const PLATFORM_HOSTS = {
   spotify: (h) => h === 'open.spotify.com',
   appleMusic: (h) => h === 'music.apple.com',
   youtubeMusic: (h) => h === 'music.youtube.com',
@@ -207,7 +207,7 @@ const PLATFORM_HOSTS: Record<string, (host: string) => boolean> = {
   tidal: (h) => h === 'tidal.com' || h === 'www.tidal.com' || h === 'listen.tidal.com',
   soundcloud: (h) => h === 'soundcloud.com' || h === 'www.soundcloud.com',
   audiomack: (h) => h === 'audiomack.com' || h === 'www.audiomack.com'
-};
+} satisfies Record<string, (host: string) => boolean>;
 
 /** Segundos de arranque de la preview: entero, finito y no negativo. */
 function parseStartSeconds(value: unknown): number | undefined {
