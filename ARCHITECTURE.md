@@ -278,6 +278,23 @@ scroll debe pasar por el mismo hook.
 `HeroScene` reúne las capas de INICIO: fondo, `Hero.mp4` con máscara CSS de cuatro lados,
 `InteractiveSmoke`, rótulo, redes + bocadillo de contratación y bloque de próximos shows.
 
+**Poster del vídeo: `public/images/pre-hero.webp`** (`images.hero` en `hosman-data.ts`).
+Es el poster oficial de `Hero.mp4` y lo que se ve hasta que el vídeo pinta su primer
+fotograma, así que tiene que ser ESE fotograma:
+
+- se genera desde el fotograma 0 (`t = 0`) del vídeo, a su resolución y proporción
+  exactas (hoy 1080×1440, 3:4) y sin recorte ni retoque: el `<video>` lo pinta en la
+  misma caja con el mismo `object-cover`;
+- la extracción respeta la matriz de color del vídeo —hoy BT.709—; con la de por defecto
+  de FFmpeg (BT.601) cambian los rojos y el paso poster → vídeo se nota:
+  `ffmpeg -i public/videos/Hero.mp4 -frames:v 1 -vf "scale=in_color_matrix=bt709:in_range=tv:out_range=pc,format=rgb24" frame0.png`,
+  y después WebP con `sharp` (calidad 92, `smartSubsample`);
+- **si cambia `Hero.mp4`, se regenera `pre-hero.webp`**: nunca se reutiliza el anterior.
+
+Sin `preload`: el atributo `poster` ya está en el HTML estático y el navegador lo pide
+en cuanto lo lee. Mejora futura opcional, solo si el Hero empieza a cambiar a menudo: un
+script de mantenimiento con FFmpeg que regenere el poster.
+
 **INICIO ocupa una pantalla mientras quepa:** si cabecera, suelo del hero y pie no entran
 en `100svh`, la escena crece y el documento se desplaza (§7, «La política»). Las otras
 cinco escenas tienen scroll normal.

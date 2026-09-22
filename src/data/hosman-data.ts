@@ -246,7 +246,9 @@ export const hosmanData = {
       header: `${bp}/images/menu/menu-header.webp`,
       body: `${bp}/images/menu/menu-body.webp`
     },
-    hero: `${bp}/images/show-01.jpg`,
+    // Poster del vídeo del hero: el fotograma 0 de `Hero.mp4` (1080×1440, el
+    // primero que pinta el vídeo), para que el paso imagen → vídeo no se note.
+    hero: `${bp}/images/pre-hero.webp`,
     // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).
     heroLetters: `${bp}/images/Letras sin fondo.png`,
     about: `${bp}/images/hosman-donjuan.jpg`,
