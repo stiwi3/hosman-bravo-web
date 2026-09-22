@@ -576,6 +576,17 @@ body {
 
    El estilo lo desmonta de su apariencia por defecto (caja centrada con
    margen y borde del navegador) y lo vuelve a montar como panel inferior.
+
+   EL MOVIMIENTO LO LLEVA `ShowsSheet`, NO ESTA HOJA DE ESTILOS.
+   Una sola variable, `--hb-hoja-p` (0 cerrada · 1 abierta), mueve el panel y
+   oscurece el fondo a la vez. Durante el arrastre el componente la escribe en
+   cada `pointermove` con `--hb-hoja-t: 0ms` —sin transición que pelee con el
+   dedo—; al soltar, o al pulsar, fija el destino y una duración corta. El
+   diálogo se cierra DESPUÉS de que el panel haya bajado, así que no hace falta
+   mantenerlo pintado con `allow-discrete`.
+
+   El fondo va en el propio `<dialog>` (ocupa toda la pantalla) y no en
+   `::backdrop`, porque este no hereda variables en todos los navegadores.
    ------------------------------------------------------------------------ */
 .hb-hoja {
   position: fixed;
@@ -587,14 +598,15 @@ body {
   margin: 0;
   padding: 0;
   border: 0;
-  background: transparent;
+  background: rgb(5 3 4 / calc(0.74 * var(--hb-hoja-p, 0)));
   color: inherit;
-  overflow: hidden;
-  /* `allow-discrete` mantiene el elemento pintado mientras el panel se va
-     hacia abajo; sin esto el cierre sería instantáneo. */
-  transition:
-    display 320ms allow-discrete,
-    overlay 320ms allow-discrete;
+  /* `clip` y NO `hidden`: con `hidden` el diálogo es un contenedor
+     desplazable, y al abrirse `showModal()` enfoca el asa del panel —todavía
+     abajo, fuera de vista— y el navegador desplaza el contenido para
+     enseñarla. Ese desplazamiento anulaba el `translate`: la hoja aparecía
+     arriba de golpe. `clip` recorta igual sin poder desplazarse. */
+  overflow: clip;
+  transition: background-color var(--hb-hoja-t, 0ms) cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 /* El `display` solo se toca cuando está abierto: cerrado manda la hoja de
@@ -605,7 +617,7 @@ body {
 }
 
 .hb-hoja::backdrop {
-  background: rgba(5, 3, 4, 0.74);
+  background: transparent;
 }
 
 .hb-hoja__panel {
@@ -618,19 +630,20 @@ body {
   border-radius: 1rem 1rem 0 0;
   background: linear-gradient(to bottom, #150b0d 0%, #050304 62%);
   box-shadow: 0 -18px 44px -14px rgba(0, 0, 0, 0.92);
+  /* El recorrido es la altura del propio panel: 100% de sí mismo. */
+  translate: 0 calc((1 - var(--hb-hoja-p, 0)) * 100%);
+  transition: translate var(--hb-hoja-t, 0ms) cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .hb-hoja__panel {
-    transition: translate 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+/* El diálogo sale de `display: none` al abrirse, y un elemento que acaba de
+   tener caja no tiene estilo previo desde el que transicionar: sin esto, abrir
+   con un toque saltaría directamente arriba. Es la posición cerrada. */
+@starting-style {
+  .hb-hoja[open] {
+    background-color: rgb(5 3 4 / 0);
   }
-  .hb-hoja:not([open]) .hb-hoja__panel {
+  .hb-hoja[open] .hb-hoja__panel {
     translate: 0 100%;
-  }
-  @starting-style {
-    .hb-hoja[open] .hb-hoja__panel {
-      translate: 0 100%;
-    }
   }
 }
 
