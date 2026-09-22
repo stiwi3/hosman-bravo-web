@@ -1,10 +1,12 @@
 # ARCHITECTURE.md
 
 Mapa estable de **cómo está construido** hosman-bravo-web. No es una bitácora: si algo
-de aquí cambia con cada sesión, no pertenece a este archivo (va a `PROGRESS.md`).
+de aquí cambia con cada sesión, no pertenece a este archivo (el estado actual va a
+`blueprint.md`; el historial, a `PROGRESS.md`).
 
 > Reparto documental — `CLAUDE.md` reglas para el agente · **`ARCHITECTURE.md` cómo está
-> construido el sistema** · `PROGRESS.md` estado, tareas y decisiones recientes ·
+> construido el sistema** · `AGENTS.md` papel de Codex · `BRAND.md` identidad de marca ·
+> `blueprint.md` estado operativo actual · `PROGRESS.md` historial y checkpoints ·
 > `MEMORY` preferencias de trabajo · `../HOSMAN_BRAVO_PROYECTO_MAESTRO.md` historia,
 > negocio y contenido. No duplicar entre ellos.
 
@@ -276,8 +278,9 @@ scroll debe pasar por el mismo hook.
 `HeroScene` reúne las capas de INICIO: fondo, `Hero.mp4` con máscara CSS de cuatro lados,
 `InteractiveSmoke`, rótulo, redes + bocadillo de contratación y bloque de próximos shows.
 
-**INICIO no tiene scroll:** ocupa `100svh` con `overflow-hidden`. Las otras cinco escenas
-sí tienen scroll normal.
+**INICIO ocupa una pantalla mientras quepa:** si cabecera, suelo del hero y pie no entran
+en `100svh`, la escena crece y el documento se desplaza (§7, «La política»). Las otras
+cinco escenas tienen scroll normal.
 
 Coste asumido de la persistencia: el Hero está montado también en `/contacto`, `/musica`,
 etc. (oculto). Es el precio de que el humo y el vídeo sobrevivan a la navegación.
@@ -294,6 +297,7 @@ humo visible).
 src/components/hero/
   InteractiveSmoke.tsx   ciclo de vida: contexto, tamaño, visibilidad, puntero, limpieza
   fluidSimulation.ts     física (Stable Fluids)
+  fluidShaders.ts        shaders de la simulación
   smokeRenderer.ts       aspecto
   webglUtils.ts          programas, texturas, framebuffers
 ```
@@ -323,7 +327,7 @@ Lo que hay que saber para no romperlo:
 
 La razón: entre los dos monitores de referencia (2048×1023 y 1280×591) el ancho **no**
 cambia de escalón de Tailwind — ambos están en `md:`. Lo que cambia es el **alto** (−42%),
-e INICIO vive encerrado en `100svh`.
+e INICIO parte de `100svh` (solo crece si no cabe; ver «La política», más abajo).
 
 Dos capas en `src/app/globals.css`:
 
@@ -406,7 +410,8 @@ variantes de Tailwind en `globals.css`:
 
 **La base es la compacta, no la de escritorio.** Es la que funciona en cualquier
 geometría, así que el caso difícil es el camino por defecto y el fácil el que se pide
-expresamente.
+expresamente. Las variantes antiguas `escenario`, `movil` y `apaisado` ya no existen: si
+aparecen en algún sitio, es un resto.
 
 **La cabecera compacta no tiene condición propia**: va atada a la composición. En
 `abierta` la cabecera flota sobre el vídeo y no le cuesta alto al hero, así que ahí cabe

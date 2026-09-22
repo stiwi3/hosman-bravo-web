@@ -112,6 +112,8 @@ apps-script/
 CLAUDE.md
 PROGRESS.md
 AUDITORIA_TECNICA.md
+# blueprint.md: foto operativa local de la sesión, no viaja con el repo.
+blueprint.md
 
 # GitHub templates from the original template repo (not needed)
 .github/FUNDING.yml

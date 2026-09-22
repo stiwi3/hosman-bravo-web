@@ -39,7 +39,7 @@ npm run check      # lint + typecheck + build
 
 ## Edición de contenido
 
-Todo el contenido del sitio (textos, biografía, canciones, redes sociales, rutas de imágenes) está centralizado en [`src/data/hosman-data.ts`](src/data/hosman-data.ts). Las imágenes viven en [`public/images/`](public/images/).
+El contenido fijo (textos, biografía, caballos, redes sociales, rutas de imágenes) está en [`src/data/hosman-data.ts`](src/data/hosman-data.ts). La música y los próximos shows se editan en una hoja de cálculo y se publican en [`public/content.json`](public/content.json) mediante un Apps Script; ese archivo no se edita a mano. Las imágenes viven en [`public/images/`](public/images/).
 
 ## Despliegue
 
