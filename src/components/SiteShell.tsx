@@ -103,10 +103,16 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             deriva `--hb-header-h`, que a su vez marca dónde puede empezar el
             contenido de cualquier sección con scroll. Una sola fuente de verdad
             en lugar de un `p-4 md:p-6` aquí y un `pt-32` a mano en cada sección.
-            `ref`: es el elemento que mide el `ResizeObserver` de arriba. */}
+            `ref`: es el elemento que mide el `ResizeObserver` de arriba.
+
+            `pointer-events-none`: la CAJA es tan alta como su flanco más alto
+            (el reproductor) y a todo el ancho; bajo el menú quedaba vacía pero
+            capturaba el puntero, y a 1280×591 tapaba el WhatsApp del rail. Solo
+            recuperan eventos sus piezas reales: menú, nav y las piezas del
+            bloque musical. */}
         <header
           ref={headerRef}
-          className="fixed top-0 left-0 right-0 flex justify-between items-start p-[var(--hb-header-pad)] z-50 bg-gradient-to-b from-black/80 to-transparent"
+          className="pointer-events-none fixed top-0 left-0 right-0 flex justify-between items-start p-[var(--hb-header-pad)] z-50 bg-gradient-to-b from-black/80 to-transparent"
         >
           <LeatherMenuPhoto items={NAV_ITEMS} current={current} />
 
@@ -119,7 +125,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               navegación —las mismas seis entradas están dentro del menú de
               cuero, que es el control principal— y su sitio lo necesita el
               reproductor para caber en la misma fila que el menú. */}
-          <nav className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] hidden text-nav tracking-widest space-x-5 abierta:block">
+          <nav className="pointer-events-auto absolute left-1/2 -translate-x-1/2 top-[calc(var(--hb-header-pad)+0.5rem)] hidden text-nav tracking-widest space-x-5 abierta:block">
             {NAV_ITEMS.map(({ id, label, href }) => (
               <Link
                 key={id}
@@ -138,8 +144,13 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               su propia curva de escalado y el hueco entre ambos crezca o
               encoja por su cuenta sin relación con el resto del módulo (eso
               producía, según el viewport, o demasiado aire entre los dos o las
-              plataformas empujadas hacia abajo). */}
-          <div className="flex min-w-0 flex-1 flex-col items-end gap-[var(--hb-music-gap)]">
+              plataformas empujadas hacia abajo).
+              Es `flex-1` —ocupa del menú al borde derecho—, así que la caja
+              sigue sin capturar el puntero, y tampoco sus hijos: el envoltorio
+              de `MobilePlayer` es `w-full`. Lo recuperan los NIETOS (`>*>*`),
+              que son las piezas reales: la raíz de cada reproductor y los
+              botones de la fila de plataformas. */}
+          <div className="flex min-w-0 flex-1 flex-col items-end gap-[var(--hb-music-gap)] [&>*>*]:pointer-events-auto">
             {/* El reproductor manda sobre el audio global; debajo quedan los
                 accesos a las plataformas.
 

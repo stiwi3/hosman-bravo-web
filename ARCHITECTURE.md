@@ -68,6 +68,14 @@ destruiría el contexto WebGL.
 **El shell no lleva `key`.** Es lo que garantiza que React lo reconcilie como el mismo
 elemento en cada navegación.
 
+**La caja estructural del `<header>` no captura pointer events; únicamente sus piezas
+interactivas reales los recuperan** (`pointer-events-auto` en la raíz de `LeatherMenuPhoto`,
+en la `<nav>` central y en los nietos del bloque musical: raíz de cada reproductor y botones
+de plataformas). La caja es fija, a todo el ancho y tan alta como su flanco más alto (el
+reproductor): capturando, su zona vacía bajo el menú tapaba el WhatsApp del rail a 1280×591.
+Es solo hit-testing: no cambia geometría ni apilado. Una pieza nueva en la cabecera tiene que
+recuperar el puntero por sí misma.
+
 ### Cómo sabe el shell qué escena está activa
 
 `useSelectedLayoutSegment()` de `next/navigation` — devuelve `null` en `/` y el segmento
