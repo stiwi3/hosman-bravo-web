@@ -7,6 +7,7 @@ import {
   TikTokIcon,
   WhatsAppIcon,
 } from './icons/SocialIcons';
+import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailTooltip } from './RailTooltip';
 
 /**
  * WhatsApp va PRIMERO —arriba del rail— a propósito: de él cuelga el bocadillo
@@ -55,14 +56,14 @@ export function SocialLinks() {
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          title={name}
           aria-label={`Hosman Bravo en ${name}`}
-          className={`flex h-[var(--hb-social-btn,var(--hb-control-social))] w-[var(--hb-social-btn,var(--hb-control-social))] items-center justify-center rounded-full border border-amber-200/25 bg-black/50 text-amber-100/70 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:border-amber-400/70 hover:bg-black/70 hover:text-amber-300 hover:shadow-[0_0_14px_-2px_rgba(200,150,60,0.45)] focus-visible:scale-105 focus-visible:border-amber-400/70 focus-visible:text-amber-300 focus-visible:outline-none ${
+          className={`${RAIL_ENLACE_ACTIVO} flex h-[var(--hb-social-btn,var(--hb-control-social))] w-[var(--hb-social-btn,var(--hb-control-social))] items-center justify-center rounded-full border border-amber-200/25 bg-black/50 text-amber-100/70 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:border-amber-400/70 hover:bg-black/70 hover:text-amber-300 hover:shadow-[0_0_14px_-2px_rgba(200,150,60,0.45)] focus-visible:scale-105 focus-visible:border-amber-400/70 focus-visible:text-amber-300 focus-visible:outline-none ${
             name === 'WhatsApp' ? 'mb-[var(--hb-social-cta)]' : ''
           }`}
         >
           {/* El glifo mide el 49% del botón y encoge con él. */}
-          <Icon className="h-[calc(var(--hb-social-btn,var(--hb-control-social))*0.49)] w-[calc(var(--hb-social-btn,var(--hb-control-social))*0.49)] transition-colors duration-300" />
+          <Icon className={`h-[calc(var(--hb-social-btn,var(--hb-control-social))*0.49)] w-[calc(var(--hb-social-btn,var(--hb-control-social))*0.49)] ${RAIL_GLIFO_ACTIVO}`} />
+          <RailTooltip hacia="derecha">{name}</RailTooltip>
         </a>
       ))}
     </div>

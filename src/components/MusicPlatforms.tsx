@@ -18,6 +18,7 @@ import {
   TidalIcon,
   YouTubeMusicIcon,
 } from './icons/PlatformIcons';
+import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailTooltip } from './RailTooltip';
 
 const ICONS = {
   spotify: SpotifyIcon,
@@ -316,15 +317,15 @@ function RailPlataformas() {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              title={name}
               aria-label={`Escuchar a Hosman Bravo en ${name}`}
               // Desplegado, las cuatro principales siguen en SU columna y a
               // su altura —la derecha, la del rail— y las otras cuatro se
               // abren a la izquierda: nada se mueve bajo el dedo.
               style={abierto ? { gridColumn: i < COLLAPSED_COUNT ? 2 : 1, gridRow: (i % COLLAPSED_COUNT) + 1 } : undefined}
-              className={`group ${RAIL_BUTTON_CLASS}`}
+              className={`${RAIL_ENLACE_ACTIVO} ${RAIL_BUTTON_CLASS}`}
             >
-              <Icon className={`${RAIL_ICON_CLASS} transition-colors duration-300`} />
+              <Icon className={`${RAIL_ICON_CLASS} ${RAIL_GLIFO_ACTIVO}`} />
+              <RailTooltip hacia="izquierda">{name}</RailTooltip>
             </a>
           );
         })}
