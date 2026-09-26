@@ -34,9 +34,22 @@ const UMBRAL_VISIBLE = 0.35;
 const CONTROL =
   'flex items-center justify-center rounded-full border border-amber-200/30 bg-black/55 text-amber-100/85 backdrop-blur-sm transition-colors duration-200 hover:border-amber-400/70 hover:text-amber-300 focus-visible:border-amber-400 focus-visible:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60';
 
+/* FLECHAS. Pertenecen a la tarjeta, no a la imagen: salen del vídeo hacia el
+   borde interior de la tarjeta (`--hb-card-pad`, que publica quien la pinta).
+   Salen como mucho su ancho + 6px, y nunca más allá de 2px del borde: con
+   padding amplio quedan casi fuera de la imagen; en una tarjeta estrecha pisan
+   el lateral del vídeo (≈ medio botón) en vez de encoger el vídeo. Sin
+   `--hb-card-pad` se quedan dentro del vídeo, a 2px del canto. El `after:`,
+   centrado e invisible, da al menos 44×44px de zona táctil sin agrandar ni
+   mover el círculo. */
+const FLECHA =
+  'absolute top-1/2 h-[var(--hb-flecha)] w-[var(--hb-flecha)] -translate-y-1/2 after:absolute after:left-1/2 after:top-1/2 after:h-[max(2.75rem,100%)] after:w-[max(2.75rem,100%)] after:-translate-x-1/2 after:-translate-y-1/2 after:content-[""]';
+const SALIDA_FLECHA =
+  'max(calc(-1 * (var(--hb-flecha) + 0.375rem)), calc(0.125rem - var(--hb-card-pad, 0px)))';
+
 function Chevron({ direccion }: { direccion: 'izquierda' | 'derecha' }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[45%] w-[45%]">
       <path
         d={direccion === 'izquierda' ? 'M14.5 5.5 8 12l6.5 6.5' : 'M9.5 5.5 16 12l-6.5 6.5'}
         stroke="currentColor"
@@ -106,49 +119,64 @@ export function HorseVideos({ nombre, videos }: { nombre: string; videos: readon
       aria-roledescription={total > 1 ? 'carrusel' : undefined}
       aria-label={`Vídeos de ${nombre}`}
       onKeyDown={alTeclado}
-      className="mx-auto w-[min(100%,calc(58svh*9/16))]"
+      // Manda el ANCHO de la tarjeta; el tope en `svh` solo actúa en pantallas
+      // bajas, para que el vídeo 9:16 no pase de ~2/3 del alto visible.
+      className="mx-auto w-[min(100%,calc(68svh*9/16))] [--hb-flecha:clamp(1.75rem,2.2cqw,2.25rem)]"
     >
-      <div
-        ref={cajaRef}
-        className="relative aspect-[9/16] w-full overflow-hidden rounded-md bg-black ring-1 ring-white/10"
-      >
+      <div className="relative">
         <div
-          aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            backgroundImage:
-              'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(122,32,38,0.42), rgba(0,0,0,0) 70%), linear-gradient(160deg, #161012 0%, #090607 60%, #050304 100%)',
-          }}
+          ref={cajaRef}
+          className="relative aspect-[9/16] w-full overflow-hidden rounded-md bg-black ring-1 ring-white/10"
         >
-          <Image
-            src={hosmanData.images.logo.isotipoDorado}
-            alt=""
-            width={200}
-            height={200}
-            className="h-auto w-[38%] opacity-[0.35]"
-          />
-        </div>
-
-        {videos.map((video, i) => (
-          <video
-            key={video.id}
-            ref={(el) => {
-              videoRefs.current[i] = el;
-            }}
-            src={video.src}
-            poster={video.poster}
-            muted
-            loop
-            playsInline
-            preload="none"
-            disablePictureInPicture
+          <div
             aria-hidden="true"
-            tabIndex={-1}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-out motion-reduce:transition-none ${
-              i === activo ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        ))}
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              backgroundImage:
+                'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(122,32,38,0.42), rgba(0,0,0,0) 70%), linear-gradient(160deg, #161012 0%, #090607 60%, #050304 100%)',
+            }}
+          >
+            <Image
+              src={hosmanData.images.logo.isotipoDorado}
+              alt=""
+              width={200}
+              height={200}
+              className="h-auto w-[38%] opacity-[0.35]"
+            />
+          </div>
+
+          {videos.map((video, i) => (
+            <video
+              key={video.id}
+              ref={(el) => {
+                videoRefs.current[i] = el;
+              }}
+              src={video.src}
+              poster={video.poster}
+              muted
+              loop
+              playsInline
+              preload="none"
+              disablePictureInPicture
+              aria-hidden="true"
+              tabIndex={-1}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+                i === activo ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setPausaManual(!enPausa)}
+            aria-label={enPausa ? `Reproducir el vídeo de ${nombre}` : `Pausar el vídeo de ${nombre}`}
+            className={`${CONTROL} absolute bottom-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 focus-visible:opacity-100`}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-3.5 w-3.5">
+              {enPausa ? <path d="M8 5.5v13l10.5-6.5z" /> : <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />}
+            </svg>
+          </button>
+        </div>
 
         {total > 1 && (
           <>
@@ -156,7 +184,8 @@ export function HorseVideos({ nombre, videos }: { nombre: string; videos: readon
               type="button"
               onClick={() => ir(activo - 1)}
               aria-label={`Vídeo anterior de ${nombre}`}
-              className={`${CONTROL} absolute left-2 top-1/2 h-9 w-9 -translate-y-1/2`}
+              className={`${CONTROL} ${FLECHA}`}
+              style={{ left: SALIDA_FLECHA }}
             >
               <Chevron direccion="izquierda" />
             </button>
@@ -164,23 +193,13 @@ export function HorseVideos({ nombre, videos }: { nombre: string; videos: readon
               type="button"
               onClick={() => ir(activo + 1)}
               aria-label={`Vídeo siguiente de ${nombre}`}
-              className={`${CONTROL} absolute right-2 top-1/2 h-9 w-9 -translate-y-1/2`}
+              className={`${CONTROL} ${FLECHA}`}
+              style={{ right: SALIDA_FLECHA }}
             >
               <Chevron direccion="derecha" />
             </button>
           </>
         )}
-
-        <button
-          type="button"
-          onClick={() => setPausaManual(!enPausa)}
-          aria-label={enPausa ? `Reproducir el vídeo de ${nombre}` : `Pausar el vídeo de ${nombre}`}
-          className={`${CONTROL} absolute bottom-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 focus-visible:opacity-100`}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-3.5 w-3.5">
-            {enPausa ? <path d="M8 5.5v13l10.5-6.5z" /> : <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />}
-          </svg>
-        </button>
       </div>
 
       {/* La fila existe siempre, vacía con un solo vídeo: así los vídeos de

@@ -55,22 +55,24 @@ export function ShowSection() {
           <h2 className="titulo-editorial tracking-wide mb-block text-center">
             EL <span className="text-amber-400">ELENCO</span> ECUESTRE
           </h2>
-          {/* 1 / 2 / 4 columnas, siempre en múltiplos de 2 para que con cuatro
-              caballos la rejilla quede completa. Como en MÚSICA, los umbrales
-              miden el CONTENEDOR (`@min-*`), no el viewport: 4 columnas mientras
-              cada tarjeta conserve ~200px, que es donde el vídeo vertical y el
-              texto aún se leen. Entre umbrales las columnas son `1fr` y crecen
-              de forma continua. */}
-          <div className="grid gap-[clamp(0.75rem,1.5cqw,1.75rem)] @min-[30rem]:grid-cols-2 @min-[56rem]:grid-cols-4">
+          {/* 2 o 4 columnas, nunca 1: los cuatro caballos se ven siempre de dos
+              en dos, también en el teléfono. Como en MÚSICA, el umbral mide el
+              CONTENEDOR (`@min-*`), no el viewport: 4 columnas mientras cada
+              tarjeta conserve ~200px. Entre umbrales las columnas son `1fr` y
+              crecen de forma continua.
+
+              `--hb-card-pad` es el padding de la tarjeta y lo lee también
+              `HorseVideos` para llevar sus flechas hasta el borde interior. */}
+          <div className="grid grid-cols-2 gap-[clamp(0.75rem,1.5cqw,1.75rem)] @min-[56rem]:grid-cols-4">
             {data.horses.map((horse) => (
               <div
                 key={horse.id}
-                className="flex flex-col border border-white/10 rounded-lg p-[clamp(1rem,1.6cqw,2rem)] text-center hover:border-amber-400/50 transition bg-black/40"
+                className="flex min-w-0 flex-col border border-white/10 rounded-lg [--hb-card-pad:clamp(0.875rem,1.6cqw,2rem)] p-[var(--hb-card-pad)] text-center hover:border-amber-400/50 transition bg-black/40"
               >
                 {/* `flex-1`: el texto absorbe la diferencia de alto entre
                     caballos y los vídeos de una misma fila quedan alineados. */}
                 <div className="flex-1 mb-[clamp(1rem,1.4cqw,1.5rem)]">
-                  <h3 className="text-2xl font-black text-amber-400 mb-2">{horse.name}</h3>
+                  <h3 className="text-[clamp(1.125rem,2.4cqw,1.5rem)] leading-tight font-black text-amber-400 mb-2">{horse.name}</h3>
                   <p className="text-xs tracking-widest text-gray-500 mb-4">{horse.description.toUpperCase()}</p>
                   <p className="text-sm text-gray-400 leading-relaxed">{horse.role}</p>
                 </div>
