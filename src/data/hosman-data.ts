@@ -16,6 +16,14 @@ const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 // El día que el sitio viva en hosmanbravo.com basta con definir la variable.
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://stiwi3.github.io${bp}`;
 
+// Versiones web de `public/videos/caballos/`: `<id>.mp4` y su poster
+// `<id>.webp`. Los masters NO viven en el repo (ver ARCHITECTURE §10).
+const videoCaballo = (id: string) => ({
+  id,
+  src: `${bp}/videos/caballos/${id}.mp4`,
+  poster: `${bp}/videos/caballos/${id}.webp`,
+});
+
 export const hosmanData = {
   // Prefijo de despliegue para assets que no son imágenes (vídeos, descargas).
   // Las rutas de `images` ya lo llevan aplicado.
@@ -47,28 +55,36 @@ export const hosmanData = {
   // Caballos
   horses: [
     {
+      id: 'don-juan',
       name: 'Don Juan',
       description: 'Caballo español',
       role: 'Figura principal del show. Protagonista de la alta escuela en vivo.',
-      color: 'Castaño'
+      color: 'Castaño',
+      videos: [videoCaballo('don-juan'), videoCaballo('don-juan-2')]
     },
     {
+      id: 'bandolero',
       name: 'Bandolero',
       description: 'Caballo blanco',
       role: 'Nuevo integrante. En incorporación al show.',
-      color: 'Blanco'
+      color: 'Blanco',
+      videos: [videoCaballo('bandolero'), videoCaballo('bandolero-2')]
     },
     {
+      id: 'bandido',
       name: 'Bandido',
       description: 'Caballo criollo colombiano',
       role: 'Estilo parqueado. Integrante del elenco ecuestre.',
-      color: 'Criollo'
+      color: 'Criollo',
+      videos: [videoCaballo('bandido'), videoCaballo('bandido-2')]
     },
     {
+      id: 'triunfador',
       name: 'Triunfador',
       description: 'Caballo criollo colombiano',
       role: 'Retirado del show. Vive en retiro digno. Historia emocional poderosa.',
-      color: 'Criollo'
+      color: 'Criollo',
+      videos: [videoCaballo('triunfador')]
     }
   ] satisfies readonly Horse[],
 

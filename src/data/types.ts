@@ -108,12 +108,27 @@ export interface ShowEvent {
   eventType?: ShowEventType;
 }
 
+/**
+ * Vídeo vertical (9:16, sin audio) de un caballo. Serializable a propósito:
+ * hoy sale de `hosman-data.ts` y mañana podrá salir de `content.json`.
+ */
+export interface HorseVideo {
+  /** Estable y único: identifica el vídeo aunque cambie su archivo. */
+  id: string;
+  src: string;
+  /** Opcional: sin él se ve el fondo de marca hasta el primer fotograma. */
+  poster?: string;
+}
+
 /** Un caballo del elenco ecuestre. */
 export interface Horse {
+  id: string;
   name: string;
   description: string;
   role: string;
   color: string;
+  /** El primero es el principal y el que se ve al llegar; el resto, en orden. */
+  videos: readonly HorseVideo[];
 }
 
 /* ---------------------------------------------------------------------------

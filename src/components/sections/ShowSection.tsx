@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { hosmanData } from '@/data/hosman-data';
-import { SCENE, SCENE_CONTENT } from './scene';
+import { HorseVideos } from '@/components/show/HorseVideos';
+import { SCENE, SCENE_CONTENT, SCENE_SHOWCASE } from './scene';
 
 /**
  * EL SHOW — el espectáculo y, debajo, el elenco ecuestre.
@@ -50,22 +51,30 @@ export function ShowSection() {
           No lleva `pt-scene-top`: no arranca bajo la cabecera fija, sino
           a continuación de la sección anterior. */}
       <section className="py-block px-scene-x bg-gradient-to-b from-black via-red-950/20 to-black">
-        <div className={SCENE_CONTENT}>
+        <div className={SCENE_SHOWCASE}>
           <h2 className="titulo-editorial tracking-wide mb-block text-center">
             EL <span className="text-amber-400">ELENCO</span> ECUESTRE
           </h2>
-          {/* 1 / 2 / 4 columnas. Con `md:grid-cols-3` y cuatro caballos el
-              último quedaba solo en una segunda fila, descolgado; en
-              múltiplos de 2 la rejilla queda siempre completa. */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* 1 / 2 / 4 columnas, siempre en múltiplos de 2 para que con cuatro
+              caballos la rejilla quede completa. Como en MÚSICA, los umbrales
+              miden el CONTENEDOR (`@min-*`), no el viewport: 4 columnas mientras
+              cada tarjeta conserve ~200px, que es donde el vídeo vertical y el
+              texto aún se leen. Entre umbrales las columnas son `1fr` y crecen
+              de forma continua. */}
+          <div className="grid gap-[clamp(0.75rem,1.5cqw,1.75rem)] @min-[30rem]:grid-cols-2 @min-[56rem]:grid-cols-4">
             {data.horses.map((horse) => (
               <div
-                key={horse.name}
-                className="border border-white/10 rounded-lg p-8 text-center hover:border-amber-400/50 transition bg-black/40"
+                key={horse.id}
+                className="flex flex-col border border-white/10 rounded-lg p-[clamp(1rem,1.6cqw,2rem)] text-center hover:border-amber-400/50 transition bg-black/40"
               >
-                <h3 className="text-2xl font-black text-amber-400 mb-2">{horse.name}</h3>
-                <p className="text-xs tracking-widest text-gray-500 mb-4">{horse.description.toUpperCase()}</p>
-                <p className="text-sm text-gray-400 leading-relaxed">{horse.role}</p>
+                {/* `flex-1`: el texto absorbe la diferencia de alto entre
+                    caballos y los vídeos de una misma fila quedan alineados. */}
+                <div className="flex-1 mb-[clamp(1rem,1.4cqw,1.5rem)]">
+                  <h3 className="text-2xl font-black text-amber-400 mb-2">{horse.name}</h3>
+                  <p className="text-xs tracking-widest text-gray-500 mb-4">{horse.description.toUpperCase()}</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">{horse.role}</p>
+                </div>
+                <HorseVideos nombre={horse.name} videos={horse.videos} />
               </div>
             ))}
           </div>

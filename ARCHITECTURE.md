@@ -879,6 +879,19 @@ src/
 - Imágenes nuevas: comprimir con `sharp` antes de copiarlas a `public/`.
 - El dev server bloquea los archivos que sirve: para sobrescribir un asset hay que parar
   el servidor primero.
+- **Vídeos de caballos (EL SHOW).** Los masters **no entran en el repo**: viven en
+  `Hosman Bravo - Web/Multimedia/Videos caballos (originales)/` (cámara en la raíz,
+  ediciones de Danny en `editados/`; su `LEEME.txt` dice cuál es el master vigente de
+  cada archivo web). En `public/videos/caballos/` solo van las versiones web `<id>.mp4` y
+  su poster `<id>.webp`. El orden y la asociación se declaran en
+  `hosmanData.horses[].videos` (`{ id, src, poster? }`, el primero es el principal);
+  `HorseVideos` solo recibe ese array, así que la fuente puede pasar a `content.json`
+  sin tocarlo. `poster` es opcional: sin él se ve el fondo de marca hasta el primer
+  fotograma. Conversión: 30 fps, 540×960, H.264 High `-crf 27 -maxrate 3M`, sin audio,
+  BT.709 etiquetado, `+faststart`; **solo si el master es HDR** (HLG de iPhone) se añade
+  antes `zscale` + `tonemap=hable` a 100 nits (sin él el navegador lo pinta lavado; a un
+  SDR no se le aplica). Poster: un fotograma limpio del propio MP4 web (el 0 salvo que
+  sea negro o fundido), WebP calidad 72.
 
 ---
 
