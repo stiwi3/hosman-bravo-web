@@ -255,8 +255,7 @@ export const hosmanData = {
     hero: `${bp}/images/pre-hero.webp`,
     // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).
     heroLetters: `${bp}/images/Letras sin fondo.png`,
-    about: `${bp}/images/hosman-donjuan.jpg`,
-    aboutSecondary: `${bp}/images/hosman-bandolero.jpg`
+    about: `${bp}/images/hosman-donjuan.jpg`
     // Las fotos y vídeos de GALERÍA, EL SHOW y los caballos ya NO viven aquí:
     // salen del CMS (`gallery`, `showMedia`, `horseMedia` en `content.json`).
   }

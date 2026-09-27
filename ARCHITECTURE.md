@@ -643,6 +643,14 @@ paga Hosman una vez al publicar; el visitante siempre ve el último snapshot vá
 **Si la validación falla, no se publica nada** y el snapshot anterior queda intacto. Y
 como cada publicación es un commit, hay historial y se puede volver atrás.
 
+**Mensaje del commit** (`buildCommitMessage_`, `GitHub.js`):
+`CMS · dd-MM-yyyy HH:mm · GALERÍA + EL SHOW`. Nombra los bloques de `content.json` que
+cambian respecto al publicado, en orden fijo (MÚSICA, EVENTOS, GALERÍA, EL SHOW, CABALLOS,
+CONFIG). Sin snapshot remoto, o si solo cambia `schemaVersion`, dice «publicación desde
+Sheet». La hora es la de `publishedAt` (instante UTC) en la zona del **Spreadsheet**
+(`America/Bogota`), no en la del script (`Europe/Madrid`, `appsscript.json`). Solo da
+formato al mensaje: no cambia datos ni la decisión de publicar.
+
 `src/lib/content-api.ts` es la **única** frontera con ese contenido: valida el sobre
 (`schemaVersion === 1`, `music` es array), valida fila a fila, traduce snake_case a
 camelCase y devuelve modelos tipados (`MusicRelease[]`, `ShowEvent[]`, `MediaItem[]`,
@@ -812,6 +820,20 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
   27-09 (`1d9557e`). La guía para Hosman está en `00_LEEME` y en el cuadro de
   ayuda de cada pestaña (`buildMediaHelpRows_`, a la derecha de la tabla, con una columna
   vacía de separación para no entrar nunca en lo que se lee).
+- **Los archivos editoriales son mutables y NUNCA una dependencia (regla del 28-09-2026).**
+  Ninguna foto o vídeo gestionado por `gallery`, `showMedia` o `horseMedia` puede ser
+  dependencia fija del código, de los tests, de la documentación ni del montaje del CMS: se
+  añaden, sustituyen y borran con el flujo de arriba sin tocar Apps Script ni tests. Para
+  quitar uno: se cambia o elimina su referencia en el Sheet → PUBLICAR → después se puede
+  borrar el archivo del repo. En concreto: (a) `setupMediaCms()` **no siembra filas**; una
+  pestaña nueva o vacía recibe solo estructura, y vaciarla a propósito no se deshace al
+  volver a montar; (b) `MEDIA_SEED` (`MediaSeed.js`) es solo el histórico congelado de la
+  migración del 27-09 (lo usa `migrateLegacyMediaSheet_`), no el contenido actual, y sus
+  rutas no se comprueban en disco; (c) los ejemplos de `00_LEEME`, `05_DICCIONARIO`, el
+  cuadro de ayuda y las notas de cabecera (`MEDIA_COLUMNS`) usan nombres inventados, y la
+  suite comprueba que no citan archivos del histórico ni de lo publicado en
+  `content.json`; (d) si el código necesita una imagen, usa **su propia copia** fuera de las
+  rutas del CMS, nunca la misma que publica GALERÍA, EL SHOW o CABALLOS.
 - **Aviso de archivos nuevos al publicar.** Si alguna ruta (archivo o portada) no estaba en
   el `content.json` publicado (`newMediaPaths_`), `publishContentSnapshot()` devuelve
   `media_confirm` ANTES de escribir nada y `publishFromSheet()` pregunta Sí/No («Confirma
