@@ -979,10 +979,11 @@ src/
   BT.709, `-an`, `+faststart`; resultado 2–6 MB para 8–40 s (0,9–2 Mb/s). Más resolución
   no compensa a tamaño de tarjeta (720×1280 casi duplicaba el peso sin ganancia visible).
   Verticales de iPhone: comprobar orientación y HDR (`tonemap` solo si el master es HLG).
-  **Excepción existente:** los dos vídeos del 27-09
-  (`/images/{galeria,el-show}/ejemplo-borrar-posterriormente*.mp4`) funcionan y se quedan
-  como están, aunque no siguen esta receta (1080×1920, bitrate mayor, con audio, sin
-  `faststart`); solo se optimizarán si algún día se sustituyen. No es un pendiente.
+  **Excepción existente:** el vídeo del 27-09 de GALERÍA
+  (`/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4`) funciona y se queda como
+  está, aunque no sigue esta receta (1080×1920, bitrate mayor, con audio, sin
+  `faststart`); solo se optimizará si algún día se sustituye. No es un pendiente. El de EL
+  SHOW se sustituyó el 28-09 por `/images/el-show/video-show-1.mp4`, ya con la receta.
   **Portada (opcional):** WebP del tamaño del vídeo, calidad ~72, ≤ 100 KB; sin portada se
   ve `BrandFallback`. **Rutas — requisito real** (lo único que se valida): lista blanca de
   §8 (`/images/` o `/videos/`, `[A-Za-z0-9._/-]`, sin segmentos vacíos, `.` ni `..`), tipo
