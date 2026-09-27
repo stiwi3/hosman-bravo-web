@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-16T11:22:35.834Z",
-  "publishedAt": "2026-09-16T11:22:35.834Z",
+  "contentVersion": "2026-09-27T14:55:21.471Z",
+  "publishedAt": "2026-09-27T14:55:21.471Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -195,6 +195,212 @@
       "ticket_url": null,
       "booking_url": null,
       "country": "Colombia"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "show-01",
+      "type": "image",
+      "src": "/images/show-01.jpg",
+      "alt": "Hosman Bravo canta montado en un caballo blanco, escenario rojo"
+    },
+    {
+      "id": "show-02",
+      "type": "image",
+      "src": "/images/show-02.jpg",
+      "alt": "Hosman Bravo junto a un caballo blanco durante un concierto en La Chula"
+    },
+    {
+      "id": "show-03",
+      "type": "image",
+      "src": "/images/show-03.jpg",
+      "alt": "Hosman Bravo canta con micrófono sobre un caballo blanco"
+    },
+    {
+      "id": "show-04",
+      "type": "image",
+      "src": "/images/show-04.jpg",
+      "alt": "Hosman Bravo, con camisa estampada, canta a lomos de un caballo blanco"
+    },
+    {
+      "id": "galeria-video-01",
+      "type": "video",
+      "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
+      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
+    },
+    {
+      "id": "galeria-01",
+      "type": "image",
+      "src": "/images/galeria/galeria-01.jpg",
+      "alt": "Plano general del escenario con la banda"
+    },
+    {
+      "id": "galeria-02",
+      "type": "image",
+      "src": "/images/galeria/galeria-02.jpg",
+      "alt": "Hosman Bravo a caballo sobre el escenario con la banda"
+    },
+    {
+      "id": "galeria-03",
+      "type": "image",
+      "src": "/images/galeria/galeria-03.jpg",
+      "alt": "Hosman Bravo a caballo entre el público"
+    },
+    {
+      "id": "galeria-04",
+      "type": "image",
+      "src": "/images/galeria/galeria-04.jpg",
+      "alt": "Escenario iluminado durante el concierto, plano general"
+    },
+    {
+      "id": "galeria-05",
+      "type": "image",
+      "src": "/images/galeria/galeria-05.jpg",
+      "alt": "Una persona del público graba el concierto con el móvil"
+    },
+    {
+      "id": "galeria-06",
+      "type": "image",
+      "src": "/images/galeria/galeria-06.jpg",
+      "alt": "Hosman Bravo a caballo entre las mesas del público"
+    },
+    {
+      "id": "galeria-07",
+      "type": "image",
+      "src": "/images/galeria/galeria-07.jpg",
+      "alt": "Hosman Bravo señala al público desde el escenario"
+    },
+    {
+      "id": "galeria-08",
+      "type": "image",
+      "src": "/images/galeria/galeria-08.jpg",
+      "alt": "Hosman Bravo, con camisa roja, montado en un caballo castaño"
+    },
+    {
+      "id": "galeria-09",
+      "type": "image",
+      "src": "/images/galeria/galeria-09.jpg",
+      "alt": "Retrato de Hosman Bravo con sombrero rojo"
+    },
+    {
+      "id": "galeria-10",
+      "type": "image",
+      "src": "/images/galeria/galeria-10.jpg",
+      "alt": "Hosman Bravo entre un caballo castaño y uno blanco"
+    },
+    {
+      "id": "galeria-11",
+      "type": "image",
+      "src": "/images/galeria/galeria-11.jpg",
+      "alt": "Hosman Bravo, con camisa roja, junto a un caballo castaño"
+    },
+    {
+      "id": "galeria-12",
+      "type": "image",
+      "src": "/images/galeria/galeria-12.jpg",
+      "alt": "Hosman Bravo sobre un caballo blanco encabritado"
+    },
+    {
+      "id": "galeria-13",
+      "type": "image",
+      "src": "/images/galeria/galeria-13.jpg",
+      "alt": "Hosman Bravo junto a un caballo castaño tumbado"
+    },
+    {
+      "id": "galeria-14",
+      "type": "image",
+      "src": "/images/galeria/galeria-14.jpg",
+      "alt": "Caballo blanco encabritado con Hosman Bravo"
+    }
+  ],
+  "showMedia": [
+    {
+      "id": "show-01",
+      "type": "image",
+      "src": "/images/show-01.jpg",
+      "alt": "Hosman Bravo canta montado en un caballo blanco, escenario rojo"
+    },
+    {
+      "id": "show-02",
+      "type": "image",
+      "src": "/images/show-02.jpg",
+      "alt": "Hosman Bravo junto a un caballo blanco durante un concierto en La Chula"
+    },
+    {
+      "id": "show-03",
+      "type": "image",
+      "src": "/images/show-03.jpg",
+      "alt": "Hosman Bravo canta con micrófono sobre un caballo blanco"
+    },
+    {
+      "id": "show-04",
+      "type": "image",
+      "src": "/images/show-04.jpg",
+      "alt": "Hosman Bravo, con camisa estampada, canta a lomos de un caballo blanco"
+    },
+    {
+      "id": "show-video-01",
+      "type": "video",
+      "src": "/images/el-show/ejemplo-borrar-posterriormente.mp4",
+      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
+    }
+  ],
+  "horseMedia": [
+    {
+      "horseId": "don-juan",
+      "id": "don-juan",
+      "type": "video",
+      "src": "/videos/caballos/don-juan.mp4",
+      "poster": "/videos/caballos/don-juan.webp",
+      "alt": "Hosman Bravo, de rojo, monta a Don Juan en una pista de grava al aire libre"
+    },
+    {
+      "horseId": "don-juan",
+      "id": "don-juan-2",
+      "type": "video",
+      "src": "/videos/caballos/don-juan-2.mp4",
+      "poster": "/videos/caballos/don-juan-2.webp",
+      "alt": "Don Juan trabaja con su jinete en un picadero cubierto"
+    },
+    {
+      "horseId": "bandolero",
+      "id": "bandolero",
+      "type": "video",
+      "src": "/videos/caballos/bandolero.mp4",
+      "poster": "/videos/caballos/bandolero.webp",
+      "alt": "Bandolero se levanta sobre las patas traseras con su jinete en un prado"
+    },
+    {
+      "horseId": "bandolero",
+      "id": "bandolero-2",
+      "type": "video",
+      "src": "/videos/caballos/bandolero-2.mp4",
+      "poster": "/videos/caballos/bandolero-2.webp",
+      "alt": "Bandolero trabaja con su jinete en un picadero cubierto"
+    },
+    {
+      "horseId": "bandido",
+      "id": "bandido",
+      "type": "video",
+      "src": "/videos/caballos/bandido.mp4",
+      "poster": "/videos/caballos/bandido.webp",
+      "alt": "Bandido con su jinete en el escenario, junto a un acordeonista"
+    },
+    {
+      "horseId": "bandido",
+      "id": "bandido-2",
+      "type": "video",
+      "src": "/videos/caballos/bandido-2.mp4",
+      "poster": "/videos/caballos/bandido-2.webp",
+      "alt": "Bandido con su jinete, vestido de azul, en el escenario durante un show"
+    },
+    {
+      "horseId": "triunfador",
+      "id": "triunfador",
+      "type": "video",
+      "src": "/videos/caballos/triunfador.mp4",
+      "poster": "/videos/caballos/triunfador.webp",
+      "alt": "Triunfador tumbado en la pista junto a su jinete"
     }
   ],
   "config": {}
