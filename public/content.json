@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-27T21:31:58.690Z",
-  "publishedAt": "2026-09-27T21:31:58.690Z",
+  "contentVersion": "2026-09-27T21:47:44.786Z",
+  "publishedAt": "2026-09-27T21:47:44.786Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -229,12 +229,6 @@
       "alt": "Plano general del escenario con la banda"
     },
     {
-      "id": "galeria-video-01",
-      "type": "video",
-      "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
-      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
-    },
-    {
       "id": "galeria-02",
       "type": "image",
       "src": "/images/galeria/galeria-02.jpg",
@@ -245,6 +239,12 @@
       "type": "image",
       "src": "/images/galeria/galeria-03.jpg",
       "alt": "Hosman Bravo a caballo entre el público"
+    },
+    {
+      "id": "galeria-video-01",
+      "type": "video",
+      "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
+      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
     },
     {
       "id": "galeria-04",
