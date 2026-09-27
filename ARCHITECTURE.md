@@ -796,9 +796,29 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
   IDs duplicados fuera). **Red de seguridad:** si una de las tres claves falta, la build de
   producción ABORTA — una web desplegada antes de publicar el multimedia dejaría GALERÍA y
   EL SHOW vacías, y así Pages conserva el despliegue anterior.
-- **Archivo nuevo = primero en GitHub.** Por la comprobación de existencia, un medio que
-  aún no esté en el repositorio cancela PUBLICAR: se sube el archivo (commit propio) y
-  después se publica. Así entraron los dos vídeos del 27-09 (`1d9557e`).
+- **Flujo oficial V1 — MANUAL (decisión del 27-09-2026).** El CMS administra
+  referencias y contenido, **no los archivos**: no sube, no optimiza, no genera portadas y
+  no borra. Un medio nuevo: (1) se prepara el archivo a mano; (2) se optimiza según §10;
+  (3) se sube a GitHub en un commit propio; (4) su ruta se escribe en el Sheet; (5)
+  PUBLICAR; (6) el CMS comprueba que exista (si falta, cancela sin tocar nada); (7) si la
+  ruta es nueva, recuerda confirmar que está optimizada. Así entraron los dos vídeos del
+  27-09 (`1d9557e`). La guía para Hosman está en `00_LEEME` y en el cuadro de
+  ayuda de cada pestaña (`buildMediaHelpRows_`, a la derecha de la tabla, con una columna
+  vacía de separación para no entrar nunca en lo que se lee).
+- **Aviso de archivos nuevos al publicar.** Si alguna ruta (archivo o portada) no estaba en
+  el `content.json` publicado (`newMediaPaths_`), `publishContentSnapshot()` devuelve
+  `media_confirm` ANTES de escribir nada y `publishFromSheet()` pregunta Sí/No («Confirma
+  que las imágenes y vídeos están optimizados»); Cancelar no toca nada. Mismo patrón que
+  `provisional_confirm`. Es un recordatorio, no una barrera: el CMS no mide el archivo. Si
+  GitHub no responde al leer lo publicado (`fetchPublishedSnapshot_`, solo lectura), no
+  pregunta; si responde pero el JSON no se puede interpretar, trata todas las rutas como
+  nuevas y pregunta (lo prudente).
+- **DESCARTADO por ahora: automatizar la subida** (Drive como bandeja de entrada, cuenta
+  de servicio, GitHub Actions con FFmpeg, colas, portadas automáticas, R2/Cloudinary).
+  Motivos: pocas altas multimedia, complejidad innecesaria, credenciales y permisos nuevos,
+  más superficie de fallo y de seguridad, y un flujo manual suficiente. Queda como mejora
+  futura, **no como plan ni como pendiente activo**: solo se reabre si Danny lo pide
+  expresamente (Obsidian, `Web — decisiones`, 27-09).
 
 ### Patrón obligatorio para nuevas hojas del CMS
 
@@ -942,6 +962,29 @@ src/
   no solo el bbox.
 - Sombras de piezas con asset real en `filter: drop-shadow()`, nunca `box-shadow`.
 - Imágenes nuevas: comprimir con `sharp` antes de copiarlas a `public/`.
+- **Preparar un medio nuevo del CMS (flujo manual V1, ver §8).** Valores medidos en los
+  assets actuales, no teóricos. **Fotos:** entregar WebP (preferido, calidad ~80) o JPG
+  (~82, progresivo); PNG solo para gráficos; HEIC convertido antes. Lado mayor 1600 px
+  (hasta 1920 en las verticales de EL SHOW, como `show-0x.jpg`); las actuales pesan
+  115–421 KB. Rotación EXIF aplicada al píxel y metadatos quitados (GPS). Una foto que ya
+  cumple no se reconvierte. **Vídeos:** la receta de los caballos de abajo — 540×960
+  vertical (960×540 horizontal), 30 fps, H.264 High `-crf 27 -maxrate 3M`, `yuv420p`,
+  BT.709, `-an`, `+faststart`; resultado 2–6 MB para 8–40 s (0,9–2 Mb/s). Más resolución
+  no compensa a tamaño de tarjeta (720×1280 casi duplicaba el peso sin ganancia visible).
+  Verticales de iPhone: comprobar orientación y HDR (`tonemap` solo si el master es HLG).
+  **Excepción existente:** los dos vídeos del 27-09
+  (`/images/{galeria,el-show}/ejemplo-borrar-posterriormente*.mp4`) funcionan y se quedan
+  como están, aunque no siguen esta receta (1080×1920, bitrate mayor, con audio, sin
+  `faststart`); solo se optimizarán si algún día se sustituyen. No es un pendiente.
+  **Portada (opcional):** WebP del tamaño del vídeo, calidad ~72, ≤ 100 KB; sin portada se
+  ve `BrandFallback`. **Rutas — requisito real** (lo único que se valida): lista blanca de
+  §8 (`/images/` o `/videos/`, `[A-Za-z0-9._/-]`, sin segmentos vacíos, `.` ni `..`), tipo
+  admitido por extensión y archivo existente en GitHub. **Convención recomendada para
+  archivos NUEVOS** (no se valida): nombres `[a-z0-9-]` con extensión en minúscula; fotos
+  en `/images/<sección>/`, vídeos en `/videos/<sección>/` y la portada junto a su vídeo con
+  el mismo nombre (`galeria`, `el-show`, `caballos`). Los assets actuales que no la siguen
+  son válidos y no se mueven ni se renombran. Nunca sobrescribir un archivo publicado: el
+  nuevo va con otro nombre.
 - El dev server bloquea los archivos que sirve: para sobrescribir un asset hay que parar
   el servidor primero.
 - **Vídeos de caballos (EL SHOW).** Los masters **no entran en el repo**: viven en
