@@ -1,4 +1,11 @@
-import type { MusicRelease, ShowEvent, ShowEventStatus, ShowEventType } from '@/data/types';
+import type {
+  HorseMediaItem,
+  MediaItem,
+  MusicRelease,
+  ShowEvent,
+  ShowEventStatus,
+  ShowEventType
+} from '@/data/types';
 import contentSnapshot from '../../public/content.json';
 
 /* ---------------------------------------------------------------------------
@@ -539,6 +546,170 @@ export function parseShowEvents(raw: unknown): ShowEventsParseResult {
 
 /** Eventos del snapshot compilado con este despliegue, validados una sola vez. */
 let publishedShowEvents: ShowEventsParseResult | null = null;
+
+/* ---------------------------------------------------------------------------
+   MULTIMEDIA — `gallery`, `showMedia`, `horseMedia`.
+
+   Como los eventos, se leen del snapshot COMPILADO con el despliegue: las
+   fotos salen ya en el HTML, sin parpadeo. Llegan validadas y ORDENADAS por el
+   Apps Script, y aquí se revalida todo igualmente: una fila inválida se
+   descarta sola y un campo inválido se descarta solo.
+
+   El tipo no se cree: se recalcula de la extensión y, si no coincide con el
+   declarado, la fila se descarta. La portada solo vale en vídeos y tiene que
+   ser una imagen. Rutas: solo locales, bajo /images/ o /videos/, con la misma
+   lista blanca que el Apps Script.
+--------------------------------------------------------------------------- */
+
+interface RawMedia {
+  id?: unknown;
+  type?: unknown;
+  src?: unknown;
+  poster?: unknown;
+  alt?: unknown;
+  horseId?: unknown;
+  active?: unknown;
+}
+
+const MEDIA_TYPE_BY_EXTENSION: Readonly<Record<string, MediaItem['type']>> = {
+  jpg: 'image',
+  jpeg: 'image',
+  png: 'image',
+  webp: 'image',
+  mp4: 'video'
+};
+
+const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** Ruta local de un medio → URL con el prefijo de despliegue y su tipo. */
+function parseMediaPath(value: unknown): { src: string; type: MediaItem['type'] } | undefined {
+  const raw = asTrimmedString(value);
+  if (!raw || !/^\/(images|videos)\/[A-Za-z0-9._/-]+$/.test(raw)) return undefined;
+  if (raw.split('/').slice(1).some((s) => s === '' || s === '.' || s === '..')) return undefined;
+
+  const extension = raw.slice(raw.lastIndexOf('.') + 1).toLowerCase();
+  if (!Object.hasOwn(MEDIA_TYPE_BY_EXTENSION, extension)) return undefined;
+
+  return {
+    src: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${raw}`,
+    type: MEDIA_TYPE_BY_EXTENSION[extension]
+  };
+}
+
+export interface MediaParseResult<T> {
+  items: T[];
+  rejectedRows: RejectionNote[];
+  rejectedFields: RejectionNote[];
+}
+
+/** Valida una lista multimedia. Con `withHorse`, cada fila exige `horseId`. */
+export function parseMediaList(raw: unknown, withHorse: true): MediaParseResult<HorseMediaItem>;
+export function parseMediaList(raw: unknown, withHorse?: false): MediaParseResult<MediaItem>;
+export function parseMediaList(
+  raw: unknown,
+  withHorse = false
+): MediaParseResult<MediaItem | HorseMediaItem> {
+  const items: (MediaItem | HorseMediaItem)[] = [];
+  const rejectedRows: RejectionNote[] = [];
+  const rejectedFields: RejectionNote[] = [];
+  if (!Array.isArray(raw)) return { items, rejectedRows, rejectedFields };
+
+  const seen = new Set<string>();
+
+  for (const entry of raw as unknown[]) {
+    if (typeof entry !== 'object' || entry === null) {
+      rejectedRows.push({ id: '(desconocido)', field: '(fila)', reason: 'no es un objeto' });
+      continue;
+    }
+    const row = entry as RawMedia;
+    const id = asTrimmedString(row.id);
+    const reject = (field: string, reason: string) =>
+      rejectedRows.push({ id: id ?? '(sin id)', field, reason });
+
+    if (row.active === false) { reject('active', 'inactivo'); continue; }
+    if (!id || !ID_PATTERN.test(id)) { reject('id', 'sin id utilizable'); continue; }
+    if (seen.has(id)) { reject('id', 'id duplicado'); continue; }
+
+    const media = parseMediaPath(row.src);
+    if (!media) { reject('src', `ruta no válida (${String(row.src)})`); continue; }
+    if (row.type !== media.type) { reject('type', `tipo ${String(row.type)} no coincide con el archivo`); continue; }
+
+    const horseId = asTrimmedString(row.horseId);
+    if (withHorse && (!horseId || !ID_PATTERN.test(horseId))) { reject('horseId', 'sin caballo'); continue; }
+
+    let poster: string | undefined;
+    if (asTrimmedString(row.poster)) {
+      const parsed = parseMediaPath(row.poster);
+      if (media.type === 'video' && parsed?.type === 'image') poster = parsed.src;
+      else rejectedFields.push({ id, field: 'poster', reason: 'portada no válida o en una imagen' });
+    }
+
+    let alt = asTrimmedString(row.alt);
+    if (alt && alt.length > 250) {
+      rejectedFields.push({ id, field: 'alt', reason: 'descripción demasiado larga' });
+      alt = undefined;
+    }
+
+    seen.add(id);
+    const item: MediaItem = { id, type: media.type, src: media.src };
+    if (poster) item.poster = poster;
+    if (alt) item.alt = alt;
+    items.push(withHorse ? { ...item, horseId: horseId as string } : item);
+  }
+
+  return { items, rejectedRows, rejectedFields };
+}
+
+type MediaKey = 'gallery' | 'showMedia' | 'horseMedia';
+const publishedMedia = new Map<MediaKey, MediaParseResult<MediaItem | HorseMediaItem>>();
+
+/** Lista multimedia del snapshot compilado, validada una sola vez. */
+function publishedMediaList(key: MediaKey): MediaParseResult<MediaItem | HorseMediaItem> {
+  let result = publishedMedia.get(key);
+  if (!result) {
+    const body = contentSnapshot as { schemaVersion?: unknown } & Partial<Record<MediaKey, unknown>>;
+    const raw = body.schemaVersion === SUPPORTED_SCHEMA_VERSION ? body[key] : undefined;
+
+    // RED DE SEGURIDAD DEL DESPLIEGUE. Sin la clave, GALERÍA y EL SHOW se
+    // publicarían vacías: pasa si esta web sale antes de que el CMS haya
+    // publicado el multimedia. En la build de producción se aborta —GitHub
+    // Pages conserva el despliegue anterior— en vez de publicar páginas vacías.
+    if (raw === undefined && process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+      throw new Error(
+        `content.json no trae «${key}». Activa y publica el CMS multimedia antes de desplegar esta versión de la web.`
+      );
+    }
+    result = key === 'horseMedia' ? parseMediaList(raw, true) : parseMediaList(raw);
+    publishedMedia.set(key, result);
+
+    if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+      for (const r of result.rejectedRows) {
+        console.warn(`[${key}] fila descartada «${r.id}» (${r.field}): ${r.reason}`);
+      }
+      for (const r of result.rejectedFields) {
+        console.warn(`[${key}] campo descartado «${r.id}».${r.field}: ${r.reason}`);
+      }
+    }
+  }
+  return result;
+}
+
+/** Fotos y vídeos de GALERÍA, en el orden publicado. */
+export function getPublishedGallery(): readonly MediaItem[] {
+  return publishedMediaList('gallery').items;
+}
+
+/** Fotos y vídeos de la fila superior de EL SHOW, en el orden publicado. */
+export function getPublishedShowMedia(): readonly MediaItem[] {
+  return publishedMediaList('showMedia').items;
+}
+
+/** Fotos y vídeos de un caballo (`Horse.id`), en el orden publicado. */
+export function getPublishedHorseMedia(horseId: string): readonly HorseMediaItem[] {
+  return (publishedMediaList('horseMedia').items as HorseMediaItem[]).filter(
+    (item) => item.horseId === horseId
+  );
+}
 
 /** Todos los eventos válidos publicados, en orden. Los pasados los quita quien pinta. */
 export function getPublishedShowEvents(): readonly ShowEvent[] {

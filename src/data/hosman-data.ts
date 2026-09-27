@@ -16,14 +16,6 @@ const bp = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 // El día que el sitio viva en hosmanbravo.com basta con definir la variable.
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://stiwi3.github.io${bp}`;
 
-// Versiones web de `public/videos/caballos/`: `<id>.mp4` y su poster
-// `<id>.webp`. Los masters NO viven en el repo (ver ARCHITECTURE §10).
-const videoCaballo = (id: string) => ({
-  id,
-  src: `${bp}/videos/caballos/${id}.mp4`,
-  poster: `${bp}/videos/caballos/${id}.webp`,
-});
-
 export const hosmanData = {
   // Prefijo de despliegue para assets que no son imágenes (vídeos, descargas).
   // Las rutas de `images` ya lo llevan aplicado.
@@ -59,32 +51,28 @@ export const hosmanData = {
       name: 'Don Juan',
       description: 'Caballo español',
       role: 'Figura principal del show. Protagonista de la alta escuela en vivo.',
-      color: 'Castaño',
-      videos: [videoCaballo('don-juan'), videoCaballo('don-juan-2')]
+      color: 'Castaño'
     },
     {
       id: 'bandolero',
       name: 'Bandolero',
       description: 'Caballo blanco',
       role: 'Nuevo integrante. En incorporación al show.',
-      color: 'Blanco',
-      videos: [videoCaballo('bandolero'), videoCaballo('bandolero-2')]
+      color: 'Blanco'
     },
     {
       id: 'bandido',
       name: 'Bandido',
       description: 'Caballo criollo colombiano',
       role: 'Estilo parqueado. Integrante del elenco ecuestre.',
-      color: 'Criollo',
-      videos: [videoCaballo('bandido'), videoCaballo('bandido-2')]
+      color: 'Criollo'
     },
     {
       id: 'triunfador',
       name: 'Triunfador',
       description: 'Caballo criollo colombiano',
       role: 'Retirado del show. Vive en retiro digno. Historia emocional poderosa.',
-      color: 'Criollo',
-      videos: [videoCaballo('triunfador')]
+      color: 'Criollo'
     }
   ] satisfies readonly Horse[],
 
@@ -268,29 +256,9 @@ export const hosmanData = {
     // Rótulo transparente que se superpone al vídeo del hero (tira 3:1).
     heroLetters: `${bp}/images/Letras sin fondo.png`,
     about: `${bp}/images/hosman-donjuan.jpg`,
-    aboutSecondary: `${bp}/images/hosman-bandolero.jpg`,
-    shows: [
-      `${bp}/images/show-01.jpg`,
-      `${bp}/images/show-02.jpg`,
-      `${bp}/images/show-03.jpg`,
-      `${bp}/images/show-04.jpg`
-    ],
-    galeria: [
-      `${bp}/images/galeria/galeria-01.jpg`,
-      `${bp}/images/galeria/galeria-02.jpg`,
-      `${bp}/images/galeria/galeria-03.jpg`,
-      `${bp}/images/galeria/galeria-04.jpg`,
-      `${bp}/images/galeria/galeria-05.jpg`,
-      `${bp}/images/galeria/galeria-06.jpg`,
-      `${bp}/images/galeria/galeria-07.jpg`,
-      `${bp}/images/galeria/galeria-08.jpg`,
-      `${bp}/images/galeria/galeria-09.jpg`,
-      `${bp}/images/galeria/galeria-10.jpg`,
-      `${bp}/images/galeria/galeria-11.jpg`,
-      `${bp}/images/galeria/galeria-12.jpg`,
-      `${bp}/images/galeria/galeria-13.jpg`,
-      `${bp}/images/galeria/galeria-14.jpg`
-    ]
+    aboutSecondary: `${bp}/images/hosman-bandolero.jpg`
+    // Las fotos y vídeos de GALERÍA, EL SHOW y los caballos ya NO viven aquí:
+    // salen del CMS (`gallery`, `showMedia`, `horseMedia` en `content.json`).
   }
 
   // (Aquí vivía `songs`, la lista de SOBRE MÍ escrita a mano. Ahora sale del

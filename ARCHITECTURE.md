@@ -614,7 +614,8 @@ Hay **dos** orígenes, y no se mezclan:
 redes, rutas de assets. Lo edita quien toca el código.
 
 **Contenido publicable** — `public/content.json`: lo edita Hosman desde una hoja de
-cálculo y lo publica él mismo. Hoy contiene `music` y `events`; `config` está previsto.
+cálculo y lo publica él mismo. Hoy contiene `music`, `events` y la multimedia (`gallery`,
+`showMedia`, `horseMedia`); `config` está previsto.
 
 `src/data/types.ts` — **frontera de tipos**: `SectionId`, `NavItem`, `ShowEvent`,
 `MusicRelease` y demás. Ningún componente define la forma de los datos que pinta.
@@ -638,8 +639,8 @@ como cada publicación es un commit, hay historial y se puede volver atrás.
 
 `src/lib/content-api.ts` es la **única** frontera con ese contenido: valida el sobre
 (`schemaVersion === 1`, `music` es array), valida fila a fila, traduce snake_case a
-camelCase y devuelve `MusicRelease[]`. Nada más en la aplicación sabe de dónde salen los
-datos.
+camelCase y devuelve modelos tipados (`MusicRelease[]`, `ShowEvent[]`, `MediaItem[]`,
+`HorseMediaItem[]`). Nada más en la aplicación sabe de dónde salen los datos.
 
 ⚠️ **El snapshot NO es de fiar por estar en nuestro repositorio.** Lo genera un script a
 partir de lo que alguien escribe en una hoja. La validación de cliente se mantiene entera:
@@ -740,6 +741,65 @@ generado.
   visitante (se reevalúa cada minuto y al volver a la pestaña). Un evento que pasó
   **después de la última publicación** puede verse hasta que carga el JavaScript.
 
+### Multimedia (`04_GALERIA`, `06_EL_SHOW`, `07_CABALLOS` → `gallery`, `showMedia`, `horseMedia`)
+
+**Activo desde el 27-09-2026** (primer snapshot con medios: commit del CMS `4db71b3`).
+Toda la multimedia de GALERÍA, EL SHOW y los caballos sale del Sheet: pestaña → Apps
+Script (valida) → `content.json` → frontend. Ya no hay listas de medios en
+`hosman-data.ts`.
+
+Primeras pestañas **pensadas para Hosman**: cabeceras en español que NO son la clave
+interna. Contrato único en `apps-script/Config.js` (`MEDIA_COLUMNS` = etiqueta + ayuda;
+`MEDIA_SECTIONS` = columnas y orden de cada pestaña); la validación compara etiquetas y el
+código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` (montaje),
+`MediaSeed.js` (migración), `CmsDocs.js` (LEEME y diccionario).
+
+- **Columnas.** GALERÍA y EL SHOW: Activo · ID · Archivo · Portada del vídeo ·
+  Descripción · Orden · Notas internas. CABALLOS añade Caballo tras el ID (desplegable Don
+  Juan/Bandolero/Bandido/Triunfador → `HORSE_IDS`, que la suite obliga a coincidir con
+  `hosmanData.horses[].id`).
+- **Qué se publica.** `{ id, type, src, poster?, alt? }` (+ `horseId` en Caballos), ya
+  ORDENADO (Orden ascendente, vacíos al final, desempate por fila). **`Descripción` →
+  `alt`**: una sola columna, opcional, que sirve a Hosman para reconocer la fila y se
+  publica como texto accesible (imagen: `alt`; vídeo: `aria-label`); nunca se muestra
+  escrita. Sin ella, cada sección pone una reserva genérica de su contexto (`RESERVA` en
+  `GallerySection`/`ShowSection`, `Foto/Vídeo de {caballo}` en `HorseMedia`). No salen
+  `Notas internas`, `Activo` ni `Orden`.
+- **Migración 27-09** (`migrateLegacyMediaSheet_`): el primer montaje tenía además
+  «Descripción accesible». `setupMediaCms()` la detecta por la cabecera exacta, fusiona
+  los textos (`MEDIA_DESCRIPTION_MIGRATION`; una fila editada a mano conserva su texto en
+  Notas), añade los dos vídeos y borra la columna. Cabeceras desconocidas con datos → no
+  toca la pestaña.
+- **ID** visible, obligatorio, único por pestaña (no global: `show-01` existe en GALERÍA y
+  EL SHOW), estable aunque cambie el archivo; editable con un aviso de Google (protección
+  «solo advertencia» sobre los IDs existentes, la repone `setupMediaCms`).
+- **Tipo** deducido de la extensión (`jpg/jpeg/png/webp` → `image`, `mp4` → `video`).
+  Las tres secciones admiten fotos y vídeos; en Caballos se mezclan en el mismo carrusel
+  (`HorseMedia`), aunque hoy las 7 piezas son vídeos. Portada: opcional, solo en vídeos,
+  imagen.
+- **Rutas** solo locales bajo `/images/` o `/videos/`, lista blanca `[A-Za-z0-9._/-]`
+  (fuera `//`, `\`, espacios, `?`, `#`, `%`, `..`). No reutiliza `cleanUrlOrLocalPath`,
+  para no tocar las reglas de MÚSICA.
+- **Existencia.** Antes de publicar, UNA llamada al árbol Git del repo (`listRepoFiles_`)
+  comprueba cada ruta en `public/`. Si falta un archivo, o GitHub no deja comprobarlo,
+  **no hay PUT**: la web conserva la última versión.
+- **Vacíos.** GALERÍA o EL SHOW sin filas activas bloquean la publicación; un caballo sin
+  medios es válido.
+- **Interruptor `MEDIA_PUBLISH_ENABLED`** (`Config.js`, **`true`** desde el 27-09).
+  Encendido, PUBLICAR lee y valida las tres pestañas. Si se apagara, PUBLICAR volvería a
+  ser byte a byte lo de antes (test) y **conservaría** las claves multimedia ya publicadas
+  (`carryOverKeys` en `publishJsonToGitHub_`), así que apagarlo nunca borra la galería.
+- `isSamePublishableContent_` compara también las tres claves: un cambio solo multimedia
+  se publica.
+- **Frontend.** `content-api.ts` las lee del snapshot COMPILADO (como eventos) y las
+  revalida (`parseMediaList`: tipo recalculado desde la extensión, portada solo en vídeos,
+  IDs duplicados fuera). **Red de seguridad:** si una de las tres claves falta, la build de
+  producción ABORTA — una web desplegada antes de publicar el multimedia dejaría GALERÍA y
+  EL SHOW vacías, y así Pages conserva el despliegue anterior.
+- **Archivo nuevo = primero en GitHub.** Por la comprobación de existencia, un medio que
+  aún no esté en el repositorio cancela PUBLICAR: se sube el archivo (commit propio) y
+  después se publica. Así entraron los dos vídeos del 27-09 (`1d9557e`).
+
 ### Patrón obligatorio para nuevas hojas del CMS
 
 Al conectar una hoja nueva (`02_EVENTOS`, `03_CONFIG_GLOBAL`…), replicar lo ya hecho en
@@ -774,7 +834,8 @@ máquina nueva: `npm i -g @google/clasp`, `clasp login`, y `clasp clone-script <
 Script ID está en el Sheet, en *Extensiones → Apps Script → ⚙ Configuración del proyecto*
 (y anotado en `PROGRESS.md`, que es local).
 
-Siete módulos, separados por responsabilidad:
+Once módulos, separados por responsabilidad (los cuatro multimedia se detallan en
+«Multimedia»):
 
 | Archivo | Qué hace |
 |---|---|
@@ -785,6 +846,10 @@ Siete módulos, separados por responsabilidad:
 | `GitHub.js` | Configuración de Script Properties y publicador |
 | `Publish.js` | Lógica, resultado y presentación separados |
 | `SheetSetup.js` | Mantenimiento reproducible de la hoja, idempotente |
+| `Media.js` | Lectura y validación de `04_GALERIA`, `06_EL_SHOW`, `07_CABALLOS`; existencia de archivos |
+| `MediaSetup.js` | `setupMediaCms()`: montaje y migración de las pestañas multimedia, LEEME y diccionario |
+| `MediaSeed.js` | Datos de siembra y tabla de migración |
+| `CmsDocs.js` | Contenido de `00_LEEME` y `05_DICCIONARIO` |
 
 Decisiones que no son obvias y conviene no deshacer:
 
@@ -883,10 +948,11 @@ src/
   `Hosman Bravo - Web/Multimedia/Videos caballos (originales)/` (cámara en la raíz,
   ediciones de Danny en `editados/`; su `LEEME.txt` dice cuál es el master vigente de
   cada archivo web). En `public/videos/caballos/` solo van las versiones web `<id>.mp4` y
-  su poster `<id>.webp`. El orden y la asociación se declaran en
-  `hosmanData.horses[].videos` (`{ id, src, poster? }`, el primero es el principal);
-  `HorseVideos` solo recibe ese array, así que la fuente puede pasar a `content.json`
-  sin tocarlo. `poster` es opcional: sin él se ve el fondo de marca hasta el primer
+  su poster `<id>.webp`. Qué medios tiene cada caballo, y en qué orden, lo decide el CMS
+  (`07_CABALLOS` → `horseMedia`, ver §8); `HorseMedia` solo recibe la lista y admite
+  fotos y vídeos mezclados. Las piezas compartidas con GALERÍA y EL SHOW viven en
+  `src/components/media/` (`MediaVideo`, `MediaTile`, `BrandFallback`, `PauseButton`,
+  `useEnVista`). `poster` es opcional: sin él se ve el fondo de marca hasta el primer
   fotograma. Conversión: 30 fps, 540×960, H.264 High `-crf 27 -maxrate 3M`, sin audio,
   BT.709 etiquetado, `+faststart`; **solo si el master es HDR** (HLG de iPhone) se añade
   antes `zscale` + `tonemap=hable` a 100 nits (sin él el navegador lo pinta lavado; a un

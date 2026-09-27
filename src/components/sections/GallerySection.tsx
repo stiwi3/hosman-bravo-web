@@ -1,11 +1,16 @@
-import Image from 'next/image';
-import { hosmanData } from '@/data/hosman-data';
+import { getPublishedGallery } from '@/lib/content-api';
+import { MediaTile } from '@/components/media/MediaTile';
 import { SCENE_FULL, SCENE_CONTENT } from './scene';
 
-/** GALERÍA — mampostería de dos/tres columnas con las fotos de show y sesión. */
-export function GallerySection() {
-  const data = hosmanData;
+/** Texto accesible si la fila no tiene Descripción. */
+const RESERVA = { image: 'Foto de la galería de Hosman Bravo', video: 'Vídeo de la galería de Hosman Bravo' } as const;
 
+/**
+ * GALERÍA — mampostería de dos/tres columnas. Las fotos y vídeos salen de
+ * `04_GALERIA` (CMS), ya ordenados; un vídeo ocupa su hueco con su propia
+ * proporción, igual que una foto.
+ */
+export function GallerySection() {
   return (
     <section className={SCENE_FULL}>
       <div className={SCENE_CONTENT}>
@@ -16,16 +21,14 @@ export function GallerySection() {
           El show, los caballos y la música de Hosman Bravo.
         </p>
         <div className="columns-2 md:columns-3 gap-3 space-y-3">
-          {[...data.images.shows, ...data.images.galeria].map((src, i) => (
-            <div key={src} className="relative overflow-hidden rounded-lg break-inside-avoid group">
-              <Image
-                src={src}
-                alt={`Hosman Bravo galería ${i + 1}`}
-                width={800}
-                height={1000}
-                className="w-full h-auto object-cover group-hover:scale-105 transition duration-500"
-              />
-            </div>
+          {getPublishedGallery().map((item) => (
+            <MediaTile
+              key={item.id}
+              item={item}
+              reserva={RESERVA}
+              className="break-inside-avoid"
+              sizes="(min-width: 768px) 33vw, 50vw"
+            />
           ))}
         </div>
       </div>

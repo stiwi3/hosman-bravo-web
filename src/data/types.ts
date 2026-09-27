@@ -109,26 +109,36 @@ export interface ShowEvent {
 }
 
 /**
- * Vídeo vertical (9:16, sin audio) de un caballo. Serializable a propósito:
- * hoy sale de `hosman-data.ts` y mañana podrá salir de `content.json`.
+ * Una foto o un vídeo del CMS (Galería, El Show, Caballos). Sale de
+ * `content.json` ya validado y ordenado; quien lo pinta no sabe de dónde viene.
  */
-export interface HorseVideo {
-  /** Estable y único: identifica el vídeo aunque cambie su archivo. */
+export interface MediaItem {
+  /** Estable y único en su sección: no cambia aunque cambie el archivo. */
   id: string;
+  type: 'image' | 'video';
+  /** URL lista para usar (con el prefijo de despliegue aplicado). */
   src: string;
-  /** Opcional: sin él se ve el fondo de marca hasta el primer fotograma. */
+  /** Solo vídeos, opcional: sin él se ve el fondo de marca hasta el primer fotograma. */
   poster?: string;
+  /**
+   * Texto accesible: la `Descripción` del Sheet. Opcional en las tres secciones;
+   * sin ella, quien lo pinta usa un texto genérico de su contexto.
+   */
+  alt?: string;
 }
 
-/** Un caballo del elenco ecuestre. */
+/** Un medio de un caballo: `horseId` es `Horse.id`. */
+export interface HorseMediaItem extends MediaItem {
+  horseId: string;
+}
+
+/** Un caballo del elenco ecuestre. Sus fotos y vídeos vienen del CMS. */
 export interface Horse {
   id: string;
   name: string;
   description: string;
   role: string;
   color: string;
-  /** El primero es el principal y el que se ve al llegar; el resto, en orden. */
-  videos: readonly HorseVideo[];
 }
 
 /* ---------------------------------------------------------------------------
