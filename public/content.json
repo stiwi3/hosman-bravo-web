@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-27T21:47:44.786Z",
-  "publishedAt": "2026-09-27T21:47:44.786Z",
+  "contentVersion": "2026-09-27T22:17:21.110Z",
+  "publishedAt": "2026-09-27T22:17:21.110Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -359,8 +359,8 @@
     {
       "id": "show-video-01",
       "type": "video",
-      "src": "/images/el-show/ejemplo-borrar-posterriormente.mp4",
-      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
+      "src": "/images/el-show/video-show-1.mp4",
+      "alt": "Hosman Bravo en bora bora con bandido"
     }
   ],
   "horseMedia": [
