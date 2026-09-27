@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-27T14:55:21.471Z",
-  "publishedAt": "2026-09-27T14:55:21.471Z",
+  "contentVersion": "2026-09-27T21:31:58.690Z",
+  "publishedAt": "2026-09-27T21:31:58.690Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -223,16 +223,16 @@
       "alt": "Hosman Bravo, con camisa estampada, canta a lomos de un caballo blanco"
     },
     {
-      "id": "galeria-video-01",
-      "type": "video",
-      "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
-      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
-    },
-    {
       "id": "galeria-01",
       "type": "image",
       "src": "/images/galeria/galeria-01.jpg",
       "alt": "Plano general del escenario con la banda"
+    },
+    {
+      "id": "galeria-video-01",
+      "type": "video",
+      "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
+      "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
     },
     {
       "id": "galeria-02",
@@ -311,6 +311,24 @@
       "type": "image",
       "src": "/images/galeria/galeria-14.jpg",
       "alt": "Caballo blanco encabritado con Hosman Bravo"
+    },
+    {
+      "id": "hosman-bandolero",
+      "type": "image",
+      "src": "/images/hosman-bandolero.jpg",
+      "alt": "Hosman Bravo junto a un caballo blanco tumbado"
+    },
+    {
+      "id": "sesion-01",
+      "type": "image",
+      "src": "/images/sesion-01.jpg",
+      "alt": "Hosman Bravo junto a un caballo blanco tumbado"
+    },
+    {
+      "id": "sesion-02",
+      "type": "image",
+      "src": "/images/sesion-02.jpg",
+      "alt": "Hosman Bravo, con camisa roja, junto a un caballo castaño"
     }
   ],
   "showMedia": [
