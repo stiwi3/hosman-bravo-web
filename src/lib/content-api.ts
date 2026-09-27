@@ -6,6 +6,7 @@ import type {
   ShowEventStatus,
   ShowEventType
 } from '@/data/types';
+import { hosmanData } from '@/data/hosman-data';
 import contentSnapshot from '../../public/content.json';
 
 /* ---------------------------------------------------------------------------
@@ -581,13 +582,21 @@ const MEDIA_TYPE_BY_EXTENSION: Readonly<Record<string, MediaItem['type']>> = {
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Ids del elenco ecuestre (`Horse.id`). */
+const HORSE_IDS: ReadonlySet<string> = new Set(hosmanData.horses.map((horse) => horse.id));
+
 /** Ruta local de un medio → URL con el prefijo de despliegue y su tipo. */
 function parseMediaPath(value: unknown): { src: string; type: MediaItem['type'] } | undefined {
   const raw = asTrimmedString(value);
   if (!raw || !/^\/(images|videos)\/[A-Za-z0-9._/-]+$/.test(raw)) return undefined;
-  if (raw.split('/').slice(1).some((s) => s === '' || s === '.' || s === '..')) return undefined;
+  const segments = raw.split('/').slice(1);
+  if (segments.some((s) => s === '' || s === '.' || s === '..')) return undefined;
 
-  const extension = raw.slice(raw.lastIndexOf('.') + 1).toLowerCase();
+  // La extensión es la del NOMBRE del archivo, y exige algo antes del punto:
+  // `/images/.jpg` no vale, igual que en el Apps Script (`cleanMediaPath_`).
+  const fileName = segments[segments.length - 1];
+  const dot = fileName.lastIndexOf('.');
+  const extension = dot > 0 ? fileName.slice(dot + 1).toLowerCase() : '';
   if (!Object.hasOwn(MEDIA_TYPE_BY_EXTENSION, extension)) return undefined;
 
   return {
@@ -635,7 +644,12 @@ export function parseMediaList(
     if (row.type !== media.type) { reject('type', `tipo ${String(row.type)} no coincide con el archivo`); continue; }
 
     const horseId = asTrimmedString(row.horseId);
-    if (withHorse && (!horseId || !ID_PATTERN.test(horseId))) { reject('horseId', 'sin caballo'); continue; }
+    // Solo caballos del elenco: con otro id el medio desaparecería sin aviso al
+    // filtrar por caballo. Es la misma lista que `HORSE_IDS` del Apps Script.
+    if (withHorse && (!horseId || !HORSE_IDS.has(horseId))) {
+      reject('horseId', `caballo desconocido (${String(row.horseId)})`);
+      continue;
+    }
 
     let poster: string | undefined;
     if (asTrimmedString(row.poster)) {

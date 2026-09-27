@@ -47,11 +47,13 @@ export function ShowSection() {
           ))}
         </div>
         <div className="text-center mt-10">
-          {/* Era un `<button>` que cambiaba el estado de página; ahora GALERÍA
-              es una ruta. Mismas clases, mismo aspecto. */}
+          {/* `inline-flex` y NO la clase `inline-` + `block`: por el token
+              `--spacing-block`, Tailwind 4.2 le añade un ancho fijo y el botón
+              se estrecha a ~65px (ARCHITECTURE §7). No escribir aquí esa clase
+              entera: Tailwind lee también los comentarios y la generaría. */}
           <Link
             href="/galeria"
-            className="inline-block border border-amber-400 text-amber-400 px-8 py-3 text-xs font-black tracking-widest hover:bg-amber-400 hover:text-black transition"
+            className="inline-flex border border-amber-400 text-amber-400 px-8 py-3 text-xs font-black tracking-widest hover:bg-amber-400 hover:text-black transition"
           >
             VER GALERÍA COMPLETA
           </Link>

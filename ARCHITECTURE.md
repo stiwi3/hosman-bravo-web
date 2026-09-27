@@ -362,6 +362,12 @@ Dos capas en `src/app/globals.css`:
   `--hb-player-w`, `--hb-music-gap`, `--hb-ticket-w`, `--hb-shows-panel-max`.
 - **`@theme`** — los que deben generar utilidad de Tailwind: `spacing-scene-x/-top/
   -bottom`, `spacing-block`, `container-content/-narrow`, `text-section`, `text-nav`.
+  ⚠️ Un token `spacing-<nombre>` también alimenta las utilidades de tamaño lógico de
+  Tailwind 4.2 (`inline-*`, `block-*`). Por `spacing-block`, la clase de display
+  `inline-` + `block` genera además `inline-size: var(--spacing-block)`. **No usarla**
+  (sirve `inline-flex`), ni poner a un token de espaciado el nombre de un valor de
+  `display`. Tampoco escribirla entera en el código ni en un `.md` versionado:
+  Tailwind escanea comentarios y Markdown, y la generaría igualmente.
 
 **Tipografía.** `layout.tsx` carga con `next/font/google` (autoalojadas en el build) Geist
 y Geist Mono para todo el sitio, y **Cinzel solo en Bold** (`--font-cinzel`). Cinzel entra
@@ -792,8 +798,9 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
 - `isSamePublishableContent_` compara también las tres claves: un cambio solo multimedia
   se publica.
 - **Frontend.** `content-api.ts` las lee del snapshot COMPILADO (como eventos) y las
-  revalida (`parseMediaList`: tipo recalculado desde la extensión, portada solo en vídeos,
-  IDs duplicados fuera). **Red de seguridad:** si una de las tres claves falta, la build de
+  revalida con las mismas reglas que `Media.js` (`parseMediaList`: tipo recalculado desde
+  la extensión del nombre —`/images/.jpg` no vale—, portada solo en vídeos, IDs duplicados
+  fuera, `horseId` solo de `hosmanData.horses`). **Red de seguridad:** si una de las tres claves falta, la build de
   producción ABORTA — una web desplegada antes de publicar el multimedia dejaría GALERÍA y
   EL SHOW vacías, y así Pages conserva el despliegue anterior.
 - **Flujo oficial V1 — MANUAL (decisión del 27-09-2026).** El CMS administra
