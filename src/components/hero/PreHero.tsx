@@ -42,8 +42,9 @@ import { registrarArranqueTelon, useSalidaTelon, type SalidaTelon } from './sali
 
    SONIDO. Con ENTRAR y con el primer Play el vídeo suena con su propia pista
    y la canción global se aparta (`suspend`) mientras suena; se devuelve
-   (`release`) una sola vez al terminar, sea cual sea el final (fin del vídeo,
-   error, vigilante, navegación o desmontaje). Con X/Escape va muteado. Si el
+   (`release` + `play`) una sola vez en el punto de fusión, cuando el audio del
+   Pre-Hero empieza a apagarse, o antes si termina de otro modo (error,
+   vigilante, navegación o desmontaje). Con X/Escape va muteado. Si el
    navegador rechaza el sonido, se reproduce muteado y la canción no se toca.
 --------------------------------------------------------------------------- */
 
@@ -60,6 +61,16 @@ export const FUNDIDO_PRE_HERO_MS = 250;
  * dispara `ended`.
  */
 const SALIDA_ANTES_DEL_FINAL_S = 0.95;
+
+/**
+ * FUSIÓN SONORA, ligada al master actual: su audio se mantiene en torno a
+ * −35 dB hasta ~6,3 s y cae desde ~6,35 s (−39 → −57 dB) hasta el silencio en
+ * ~6,85 s; el archivo acaba en 6,94 s. La canción vuelve cuando empieza esa
+ * caída (0,6 s antes del final): en escritorio entra con el fundido de siempre
+ * de `AudioProvider` mientras la cola del Pre-Hero se apaga, sin hueco. En iOS
+ * (volumen de solo lectura) entra a su volumen, sobre una cola ya casi muda.
+ */
+const FUSION_ANTES_DEL_FINAL_S = 0.6;
 
 /** Si el vídeo no reproduce en este tiempo (red muy lenta, atasco), se salta. */
 const ESPERA_MAX_MS = 2500;
@@ -81,7 +92,7 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
   const segment = useSelectedLayoutSegment();
   const reducedMotion = useReducedMotion();
   const salida = useSalidaTelon();
-  const { suspend, release, isPlaying, isMuted } = useAudio();
+  const { suspend, release, play, isPlaying, isMuted } = useAudio();
 
   /* Solo la carga en `/` tiene Pre-Hero. Se decide una vez: entrar por
      `/musica` y navegar después a INICIO no lo reproduce. */
@@ -92,8 +103,12 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
   /** Reproduce CON sonido de verdad (confirmado por 'playing' sin `muted`). */
   const [sonando, setSonando] = useState(false);
   const [esperandoImagen, setEsperandoImagen] = useState(false);
+  /** Llegó el punto de fusión: la canción vuelve aunque el Pre-Hero siga sonando. */
+  const [fusion, setFusion] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const intentadoRef = useRef(false);
+  /** El usuario tomó el control de la canción desde el reproductor. */
+  const tomadaRef = useRef(false);
 
   /* ARRANQUE. Se llama en el MISMO instante del anuncio de la salida (dentro de
      la activación del usuario, que es lo que permite sonar). Si el navegador
@@ -102,8 +117,10 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
     const video = videoRef.current;
     if (!video || intentadoRef.current) return;
     intentadoRef.current = true;
+    /* Sin `currentTime = 0`: el vídeo nunca se ha reproducido (este arranque es
+       único) y ya está en 0. Asignarlo forzaba un seek que descartaba el
+       fotograma preparado (readyState 4 → 1) y añadía ~80–100 ms de `waiting`. */
     video.muted = !salidaSonora(tipo);
-    video.currentTime = 0;
     video.play().catch(() => {
       // Si mientras tanto se retiró la capa (navegación, vigilante), no se reintenta.
       if (!video.isConnected) return;
@@ -178,17 +195,54 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
     return () => video.removeEventListener('timeupdate', onTime);
   }, [fase]);
 
-  /* LA CANCIÓN GLOBAL SE APARTA mientras suena el Pre-Hero. Un solo efecto
-     empareja `suspend` y `release`: el `release` es su limpieza, así que ocurre
-     exactamente una vez sea cual sea el final (fase `terminado`, desmontaje).
+  /* PUNTO DE FUSIÓN: se mira el tiempo real del vídeo (`timeupdate`, y un
+     temporizador calculado con lo que falta para no depender de su cadencia de
+     ~250 ms). Sigue activo también durante la retirada visual. */
+  useEffect(() => {
+    if (!sonando || fusion || !(fase === 'visible' || fase === 'saliendo')) return;
+    const video = videoRef.current;
+    if (!video) return;
+    let timer = 0;
+    const mirar = () => {
+      if (!Number.isFinite(video.duration)) return;
+      const faltan = video.duration - FUSION_ANTES_DEL_FINAL_S - video.currentTime;
+      window.clearTimeout(timer);
+      if (faltan <= 0) setFusion(true);
+      else if (faltan < 0.4) {
+        // Al vencer se comprueba el tiempo real: si el vídeo se atascó, espera.
+        timer = window.setTimeout(() => {
+          if (video.currentTime >= video.duration - FUSION_ANTES_DEL_FINAL_S - 0.05) setFusion(true);
+        }, (faltan / video.playbackRate) * 1000);
+      }
+    };
+    video.addEventListener('timeupdate', mirar);
+    return () => {
+      video.removeEventListener('timeupdate', mirar);
+      window.clearTimeout(timer);
+    };
+  }, [sonando, fusion, fase]);
+
+  /* LA CANCIÓN GLOBAL SE APARTA mientras suena el Pre-Hero y vuelve en el
+     punto de fusión (o antes, si el Pre-Hero termina de otro modo). Un solo
+     efecto empareja `suspend` y `release`: el `release` es su limpieza, así que
+     ocurre exactamente una vez sea cual sea el final.
      Se aparta al confirmarse el sonido ('playing'), no antes: así no se corta a
-     medias el `play()` que acaba de lanzar `enter()`. */
-  const apartarCancion = sonando && fase !== 'terminado';
+     medias el `play()` que acaba de lanzar `enter()`.
+     ⚠️ iOS: Safari no deja sonar dos medios a la vez, y al arrancar el vídeo
+     audible pausa él mismo la canción ANTES de que `suspend` mire si sonaba;
+     `release` la daría por parada y no la reanudaría. Por eso se reanuda aquí
+     explícitamente (salvo que el usuario haya tomado el control): es el mismo
+     elemento que ya sonó con el gesto de ENTRAR, así que puede volver a sonar. */
+  const apartarCancion = sonando && fase !== 'terminado' && !fusion;
   useEffect(() => {
     if (!apartarCancion) return;
     suspend('pre-hero');
-    return () => release('pre-hero');
-  }, [apartarCancion, suspend, release]);
+    return () => {
+      release('pre-hero');
+      // Con un modal abierto (videoclip) la canción tiene otra suspensión viva.
+      if (!tomadaRef.current && !document.querySelector('dialog[open], [aria-modal="true"]')) void play();
+    };
+  }, [apartarCancion, suspend, release, play]);
 
   /* EL REPRODUCTOR MANDA. `suspend` no impide un Play manual: si mientras suena
      el Pre-Hero el usuario vuelve a arrancar la canción, o silencia el sonido
@@ -203,8 +257,9 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
       return;
     }
     if (!isPlaying) cancionApartadaRef.current = true;
+    if (isPlaying && cancionApartadaRef.current) tomadaRef.current = true;
     const video = videoRef.current;
-    if (video && (isMuted || (isPlaying && cancionApartadaRef.current))) video.muted = true;
+    if (video && (isMuted || tomadaRef.current)) video.muted = true;
   }, [apartarCancion, isPlaying, isMuted]);
 
   /* Si ya está precargado, el fundido de entrada empieza en el MISMO render de
@@ -246,9 +301,17 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
          cortar la cola del audio; muteada se retira al acabar el fundido. */
       onEnded={() => setFase((actual) => (actual === 'visible' ? 'saliendo' : actual === 'saliendo' ? 'terminado' : actual))}
       onError={() => setFase('terminado')}
+      /* iOS pausa el vídeo cuando suena la canción (un solo medio sonando): al
+         volver en la fusión, o por un Play manual con la capa aún visible. Una
+         pausa que no es el final retira la capa con su fundido normal. */
+      onPause={(e) => {
+        if (e.currentTarget.ended) return;
+        if (fase === 'visible') setFase('saliendo');
+        else if (fase === 'saliendo') setFase('terminado');
+      }}
       onTransitionEnd={(e) => {
         // Con sonido espera a `ended`, salvo que el vídeo ya haya terminado.
-        if (e.propertyName === 'opacity' && fase === 'saliendo' && (!sonando || e.currentTarget.ended)) {
+        if (e.propertyName === 'opacity' && fase === 'saliendo' && (!sonando || e.currentTarget.ended || e.currentTarget.paused)) {
           setFase('terminado');
         }
       }}
