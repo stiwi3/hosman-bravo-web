@@ -275,6 +275,30 @@ const HUMO_REVELADO_SCALE = 1.08;
    · Desplazamiento `max(4px, 0,9cqw)`: ~6,9 px en escritorio, 4 px en cajas pequeñas. */
 const CTA_NUDGE = 'hb-cta-nudge 820ms cubic-bezier(0.33, 0, 0.25, 1) 1 both';
 
+/* RECORDATORIO DE ENTRAR — mientras el telón espera y nadie interactúa con él
+   (`idle`), una mano lineal aparece junto a la esquina inferior derecha de
+   ENTRAR, hace un toque y el botón responde con UN salto (el mismo perfil que
+   «SALTO DEL CTA», comprimido dentro del ciclo). Ciclo de 2,5 s, en bucle:
+
+     0 – 1,5 s    mano visible: entra (0–0,3 s), se acerca (→0,66 s), toca
+                  (0,66–0,9 s) y reposa; el botón salta entre ~0,72 y ~1,53 s.
+     1,5 – 2,5 s  mano oculta, botón quieto.
+
+   · Solo CSS: dos animaciones con la MISMA duración que arrancan en el mismo
+     render, así que van sincronizadas sin JS. Solo `transform`/`opacity`.
+   · Prioridad: en `curtain` o `cta` (hover, foco de teclado) no corre; manda
+     el salto o el hover de siempre. Al volver a `idle` el ciclo se reinicia.
+     Al salir el telón (cualquier vía) desaparece con él.
+   · La mano es decoración: `aria-hidden` y `pointer-events: none`, fuera del
+     botón, así que no toca su área táctil ni captura toques.
+   · Movimiento reducido: sin animación (los keyframes ni se emiten); la mano
+     queda quieta junto al botón como pista estática. */
+const CTA_RECORDATORIO_MS = 2500;
+const CTA_RECORDATORIO = `hb-cta-recordatorio ${CTA_RECORDATORIO_MS}ms linear infinite`;
+const MANO_RECORDATORIO = `hb-mano-recordatorio ${CTA_RECORDATORIO_MS}ms linear infinite`;
+/** Inclinación de la mano en reposo: el índice apunta hacia el botón. */
+const MANO_GIRO = 'rotate(-22deg)';
+
 const HUECO_W = `calc(${BOX_WIDTH} * ${1 - (2 * FEATHER_X) / 100})`;
 const HUECO_H = `calc(${BOX_WIDTH} * ${CANVAS.h} / ${CANVAS.w} * ${1 - (2 * FEATHER_Y) / 100})`;
 const HUECO_Y = `calc(50% + (100svh - ${BOX_WIDTH} * ${CANVAS.h} / ${CANVAS.w}) * -0.2)`;
@@ -359,6 +383,21 @@ const HUMO_KEYFRAMES = `
   80% { transform: translate3d(0, calc(-0.22 * max(4px, 0.9cqw)), 0); }
   100% { transform: translate3d(0, 0, 0); }
 }
+@keyframes hb-cta-recordatorio {
+  0%, 28.8% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(0.33, 0, 0.25, 1); }
+  39.6% { transform: translate3d(0, calc(-1 * max(4px, 0.9cqw)), 0); animation-timing-function: cubic-bezier(0.33, 0, 0.25, 1); }
+  49.2% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(0.33, 0, 0.25, 1); }
+  55.2% { transform: translate3d(0, calc(-0.22 * max(4px, 0.9cqw)), 0); animation-timing-function: cubic-bezier(0.33, 0, 0.25, 1); }
+  61.2%, 100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes hb-mano-recordatorio {
+  0% { opacity: 0; transform: translate3d(38%, 38%, 0) ${MANO_GIRO}; animation-timing-function: ease-out; }
+  12% { opacity: 1; transform: translate3d(30%, 30%, 0) ${MANO_GIRO}; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  26.4% { opacity: 1; transform: translate3d(0, 0, 0) ${MANO_GIRO} scale(1); animation-timing-function: ease-in; }
+  31.2% { opacity: 1; transform: translate3d(-5%, -5%, 0) ${MANO_GIRO} scale(0.86); animation-timing-function: ease-out; }
+  36%, 50.4% { opacity: 1; transform: translate3d(0, 0, 0) ${MANO_GIRO} scale(1); animation-timing-function: ease-in; }
+  60%, 100% { opacity: 0; transform: translate3d(8%, 8%, 0) ${MANO_GIRO} scale(1); }
+}
 `;
 
 /** El escenario llena la caja, que ya tiene la proporción del lienzo. */
@@ -429,6 +468,30 @@ function SpeakerIcon({ className }: { className?: string }) {
         strokeWidth="1.6"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+/** Mano lineal que señala ENTRAR (ver «RECORDATORIO DE ENTRAR»). Trazado del
+ *  icono `pointer` de Lucide (licencia ISC), con el trazo algo más fino. */
+function HandIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+      style={style}
+    >
+      <path d="M22 14a8 8 0 0 1-8 8" />
+      <path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+      <path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1" />
+      <path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10" />
+      <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
     </svg>
   );
 }
@@ -612,8 +675,22 @@ export function EntryScreen() {
     transition: `opacity ${penumbraMs}ms ease-out`
   };
   /* Salto del CTA: ver «SALTO DEL CTA». */
+  /* Recordatorio: ver «RECORDATORIO DE ENTRAR». Solo en `idle`; el salto de
+     siempre tiene prioridad (se arma en `curtain`, así que no coinciden). */
+  const recordatorio = visual === 'idle' && !reducedMotion;
   const ctaWrapperStyle: React.CSSProperties | undefined =
-    nudgeArmado && !reducedMotion && !exiting ? { animation: CTA_NUDGE } : undefined;
+    nudgeArmado && !reducedMotion && !exiting
+      ? { animation: CTA_NUDGE }
+      : recordatorio
+        ? { animation: CTA_RECORDATORIO }
+        : undefined;
+  /* La mano: animada en `idle`; quieta y visible con movimiento reducido;
+     oculta mientras mandan el hover o el foco, y al salir. */
+  const manoStyle: React.CSSProperties = recordatorio
+    ? { animation: MANO_RECORDATORIO, opacity: 0 }
+    : reducedMotion && !exiting
+      ? { transform: MANO_GIRO }
+      : { transform: MANO_GIRO, opacity: 0 };
 
   /** Hover sobre el telón: solo ratón en un dispositivo con hover real. */
   const onCurtainEnter = (e: React.PointerEvent) => {
@@ -724,8 +801,11 @@ export function EntryScreen() {
             </p>
             <span className="mt-[2.2cqw] h-px w-[14cqw] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
 
+            {/* Ancla del CTA: sitúa la mano del recordatorio fuera del envoltorio
+                que salta, para que la mano no salte con el botón. */}
+            <span className="relative mt-[4.5cqw] inline-flex">
             {/* Envoltorio: solo lleva el salto (`transform`); el botón, su hover. */}
-            <span className="relative mt-[4.5cqw] inline-flex" style={ctaWrapperStyle}>
+            <span className="relative inline-flex" style={ctaWrapperStyle}>
             <button
               type="button"
               onClick={handleEnter}
@@ -747,6 +827,14 @@ export function EntryScreen() {
             >
               ENTRAR EN LA EXPERIENCIA
             </button>
+            </span>
+            {/* Mano del recordatorio: la yema del índice (arriba a la izquierda
+                del icono) cae sobre el borde inferior derecho del botón, fuera
+                del texto. Sin puntero: nunca intercepta un toque. */}
+            <HandIcon
+              className="pointer-events-none absolute right-[min(-8px,-1.2cqw)] top-[calc(100%-max(6px,1cqw))] h-[max(21px,3.8cqw)] w-[max(21px,3.8cqw)] origin-top-left text-amber-100/85 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
+              style={manoStyle}
+            />
             </span>
 
             {/* Pista de que al entrar sonará música. Decorativa: el botón ya
