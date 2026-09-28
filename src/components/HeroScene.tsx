@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useGeometriaPeriferica } from '@/components/hero/useGeometriaPeriferica';
 import { useRouter } from 'next/navigation';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
+import { PreHero } from '@/components/hero/PreHero';
 import { Branding } from '@/components/hero/Branding';
 import { ShowsSheet } from '@/components/hero/ShowsSheet';
 import { SocialLinks } from '@/components/SocialLinks';
@@ -206,6 +207,10 @@ export function HeroScene() {
               aria-label="Hosman Bravo montado a caballo durante su espectáculo"
               className="h-full w-full object-cover"
             />
+            {/* PRE-HERO (prueba): la introducción que aparece una vez al retirarse
+                el telón. Va DENTRO del mismo marco para heredar caja, máscara y
+                encuadre; mientras no toca es invisible y el Hero no cambia. */}
+            <PreHero />
           </div>
 
           {/* CAPA 4 — rótulo, por delante del humo para que no se vele.

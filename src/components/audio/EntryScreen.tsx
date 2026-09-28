@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAudio } from './AudioProvider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { anunciarSalidaTelon } from '@/components/hero/salidaTelon';
 import { hosmanData } from '@/data/hosman-data';
 
 /** Duración de la salida. Con movimiento reducido se acorta casi a cero. */
@@ -485,6 +486,17 @@ export function EntryScreen() {
   if (visual === 'curtain' && !nudgeArmado) setNudgeArmado(true);
   if (!curtainHover && nudgeArmado) setNudgeArmado(false);
 
+  /** La apertura en curso la pidió ENTRAR (y no la primera reproducción). */
+  const porEntrarRef = useRef(false);
+
+  /* PUNTO COMÚN DE SALIDA: sea cual sea el camino, se anuncia UNA vez cómo se
+     retiró el telón (lo escucha el Pre-Hero de INICIO). No cambia nada de lo
+     que hace cada salida. */
+  useEffect(() => {
+    if (!exiting) return;
+    anunciarSalidaTelon(closing ? 'cerrar' : porEntrarRef.current ? 'entrar' : 'play');
+  }, [exiting, closing]);
+
   useEffect(() => {
     if (!exiting) return;
     const delay = reducedMotion ? 60 : leaving ? EXIT_MS : DISMISS_MS;
@@ -526,6 +538,7 @@ export function EntryScreen() {
     /* Con un modal abierto (videoclip, hoja de shows) no se arranca la canción
        por detrás: `enter()` no consulta las suspensiones de `AudioProvider`. */
     if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
+    porEntrarRef.current = true;
     setLeaving(true);
     // No se espera al audio: si el navegador lo rechaza, el telón se abre igual.
     void enter();
