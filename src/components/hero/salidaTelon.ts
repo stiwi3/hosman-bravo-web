@@ -17,18 +17,34 @@ import { useSyncExternalStore } from 'react';
    · 'play'   — primera reproducción desde el reproductor (el telón se retira
                 solo visualmente; la canción ya suena).
    · 'cerrar' — X o Escape: se entra sin activar sonido.
+
+   ARRANQUE SÍNCRONO. Un vídeo CON sonido solo puede empezar dentro de la
+   activación del usuario (Safari/iOS no la propaga a efectos posteriores ni a
+   `requestAnimationFrame`). Por eso el Pre-Hero registra aquí su función de
+   arranque y `anunciarSalidaTelon` la llama en el mismo instante del anuncio,
+   antes de que React vuelva a renderizar nada.
 --------------------------------------------------------------------------- */
 
 export type SalidaTelon = 'entrar' | 'play' | 'cerrar';
 
 let salida: SalidaTelon | null = null;
+let arranque: ((tipo: SalidaTelon) => void) | null = null;
 const oyentes = new Set<() => void>();
 
 /** Lo llama `EntryScreen` al empezar su salida. Solo cuenta la primera. */
 export function anunciarSalidaTelon(tipo: SalidaTelon) {
   if (salida) return;
   salida = tipo;
+  arranque?.(tipo);
   oyentes.forEach((oyente) => oyente());
+}
+
+/** El Pre-Hero registra cómo arrancar. Devuelve la baja del registro. */
+export function registrarArranqueTelon(fn: (tipo: SalidaTelon) => void) {
+  arranque = fn;
+  return () => {
+    if (arranque === fn) arranque = null;
+  };
 }
 
 function subscribe(oyente: () => void) {

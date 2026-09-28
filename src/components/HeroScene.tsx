@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useGeometriaPeriferica } from '@/components/hero/useGeometriaPeriferica';
 import { useRouter } from 'next/navigation';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
-import { PreHero } from '@/components/hero/PreHero';
+import { PreHero, FUNDIDO_PRE_HERO_MS } from '@/components/hero/PreHero';
 import { Branding } from '@/components/hero/Branding';
 import { ShowsSheet } from '@/components/hero/ShowsSheet';
 import { SocialLinks } from '@/components/SocialLinks';
@@ -101,6 +101,9 @@ const ALTO_EN_RAILS = 'rails:[--hb-hero-alto:max(75cqh,60.75svh)]';
 
 export function HeroScene() {
   const reducedMotion = useReducedMotion();
+  /** El Pre-Hero cubre la caja del vídeo (prueba): el bloque de marca se
+   *  desvanece con él. Fuera del Pre-Hero es siempre `false`. */
+  const [preHeroCubre, setPreHeroCubre] = useState(false);
   const router = useRouter();
   const data = hosmanData;
 
@@ -210,7 +213,7 @@ export function HeroScene() {
             {/* PRE-HERO (prueba): la introducción que aparece una vez al retirarse
                 el telón. Va DENTRO del mismo marco para heredar caja, máscara y
                 encuadre; mientras no toca es invisible y el Hero no cambia. */}
-            <PreHero />
+            <PreHero onCubre={setPreHeroCubre} />
           </div>
 
           {/* CAPA 4 — rótulo, por delante del humo para que no se vele.
@@ -233,8 +236,20 @@ export function HeroScene() {
                 teléfono alto cuelga bajo los pies, en el sobrante del centrado,
                 y el tirador queda debajo con su separación natural.
               Fuera de `rails` nada de esto aplica: el flanco de `abierta` asume
-              el rótulo al 54 %. */}
-          <div data-hb-geo="rotulo" className={`pointer-events-none z-[6] ${CENTRADO} ${ALTO_EN_RAILS}`} style={ENCUADRE}>
+              el rótulo al 54 %.
+              Mientras el Pre-Hero cubre la caja, este bloque se desvanece con su
+              mismo fundido: es el equivalente a quedar DETRÁS de él sin tocar el
+              apilado (subir el Pre-Hero por encima del z-[6] lo sacaría también de
+              debajo del velo y el humo, y cambiaría su aspecto aprobado). */}
+          <div
+            data-hb-geo="rotulo"
+            className={`pointer-events-none z-[6] ${CENTRADO} ${ALTO_EN_RAILS}`}
+            style={{
+              ...ENCUADRE,
+              opacity: preHeroCubre ? 0 : 1,
+              transition: `opacity ${FUNDIDO_PRE_HERO_MS}ms ease-out`
+            }}
+          >
             <Branding className="absolute left-1/2 top-[83%] w-[calc(var(--hb-rotulo-fraccion)*100%)] -translate-x-1/2 rails:top-auto rails:bottom-[calc((100%-100cqh)/2+var(--hb-hero-inset))] rails:w-[min(max(calc(var(--hb-rotulo-fraccion-rails)*100%),var(--hb-rotulo-objetivo)),var(--hb-rotulo-rails-disponible))] rails:[--hb-bajada-tope:4cqw]" />
           </div>
         </div>
