@@ -42,9 +42,9 @@ import { registrarArranqueTelon, useSalidaTelon, type SalidaTelon } from './sali
 
    SONIDO. Con ENTRAR y con el primer Play el vídeo suena con su propia pista
    y la canción global se aparta (`suspend`) mientras suena; se devuelve
-   (`release` + `play`) una sola vez en el punto de fusión, cuando el audio del
-   Pre-Hero empieza a apagarse, o antes si termina de otro modo (error,
-   vigilante, navegación o desmontaje). Con X/Escape va muteado. Si el
+   (`release` + `play`) una sola vez al llegar el vídeo a `INICIO_CANCION_EN_S`
+   (a partir de ahí ambos se solapan hasta que el Pre-Hero acaba), o antes si
+   termina de otro modo (error, vigilante, navegación o desmontaje). Con X/Escape va muteado. Si el
    navegador rechaza el sonido, se reproduce muteado y la canción no se toca.
 --------------------------------------------------------------------------- */
 
@@ -63,14 +63,14 @@ export const FUNDIDO_PRE_HERO_MS = 250;
 const SALIDA_ANTES_DEL_FINAL_S = 0.95;
 
 /**
- * FUSIÓN SONORA, ligada al master actual: su audio se mantiene en torno a
- * −35 dB hasta ~6,3 s y cae desde ~6,35 s (−39 → −57 dB) hasta el silencio en
- * ~6,85 s; el archivo acaba en 6,94 s. La canción vuelve cuando empieza esa
- * caída (0,6 s antes del final): en escritorio entra con el fundido de siempre
- * de `AudioProvider` mientras la cola del Pre-Hero se apaga, sin hueco. En iOS
- * (volumen de solo lectura) entra a su volumen, sobre una cola ya casi muda.
+ * ENTRADA DE LA CANCIÓN, en segundos del tiempo REAL de reproducción del
+ * Pre-Hero (`currentTime`, nunca un reloj: si el vídeo se atasca, la canción
+ * espera). Decisión artística PROVISIONAL, pendiente de valorar por oído: la
+ * canción entra con el fundido de siempre de `AudioProvider` y se solapa a
+ * propósito con el resto del Pre-Hero, que acaba con su caída natural (audio
+ * provisional: calla en ~6,85 s; archivo 6,94 s).
  */
-const FUSION_ANTES_DEL_FINAL_S = 0.6;
+const INICIO_CANCION_EN_S = 4.0;
 
 /** Si el vídeo no reproduce en este tiempo (red muy lenta, atasco), se salta. */
 const ESPERA_MAX_MS = 2500;
@@ -195,35 +195,33 @@ export function PreHero({ onCubre }: { onCubre?: (cubre: boolean) => void }) {
     return () => video.removeEventListener('timeupdate', onTime);
   }, [fase]);
 
-  /* PUNTO DE FUSIÓN: se mira el tiempo real del vídeo (`timeupdate`, y un
-     temporizador calculado con lo que falta para no depender de su cadencia de
-     ~250 ms). Sigue activo también durante la retirada visual. */
+  /* ENTRADA DE LA CANCIÓN: solo con el `currentTime` real del vídeo, sin reloj
+     (un atasco no la adelanta). Se mira cada fotograma presentado
+     (`requestVideoFrameCallback`) y, además, `timeupdate` (donde no exista, o
+     si la capa ya se está retirando). */
   useEffect(() => {
     if (!sonando || fusion || !(fase === 'visible' || fase === 'saliendo')) return;
     const video = videoRef.current;
     if (!video) return;
-    let timer = 0;
     const mirar = () => {
-      if (!Number.isFinite(video.duration)) return;
-      const faltan = video.duration - FUSION_ANTES_DEL_FINAL_S - video.currentTime;
-      window.clearTimeout(timer);
-      if (faltan <= 0) setFusion(true);
-      else if (faltan < 0.4) {
-        // Al vencer se comprueba el tiempo real: si el vídeo se atascó, espera.
-        timer = window.setTimeout(() => {
-          if (video.currentTime >= video.duration - FUSION_ANTES_DEL_FINAL_S - 0.05) setFusion(true);
-        }, (faltan / video.playbackRate) * 1000);
-      }
+      if (video.currentTime >= INICIO_CANCION_EN_S) setFusion(true);
     };
+    let id = 0;
+    const porFotograma = typeof video.requestVideoFrameCallback === 'function';
+    const cadaFotograma = () => {
+      mirar();
+      id = video.requestVideoFrameCallback(cadaFotograma);
+    };
+    if (porFotograma) id = video.requestVideoFrameCallback(cadaFotograma);
     video.addEventListener('timeupdate', mirar);
     return () => {
       video.removeEventListener('timeupdate', mirar);
-      window.clearTimeout(timer);
+      if (porFotograma) video.cancelVideoFrameCallback(id);
     };
   }, [sonando, fusion, fase]);
 
-  /* LA CANCIÓN GLOBAL SE APARTA mientras suena el Pre-Hero y vuelve en el
-     punto de fusión (o antes, si el Pre-Hero termina de otro modo). Un solo
+  /* LA CANCIÓN GLOBAL SE APARTA mientras suena el Pre-Hero y vuelve en
+     `INICIO_CANCION_EN_S` (o antes, si el Pre-Hero termina de otro modo). Un solo
      efecto empareja `suspend` y `release`: el `release` es su limpieza, así que
      ocurre exactamente una vez sea cual sea el final.
      Se aparta al confirmarse el sonido ('playing'), no antes: así no se corta a
