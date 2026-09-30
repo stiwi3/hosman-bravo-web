@@ -1,6 +1,7 @@
 import type {
   HorseMediaItem,
   MediaItem,
+  VideoMediaItem,
   MusicRelease,
   ShowEvent,
   ShowEventStatus,
@@ -560,12 +561,19 @@ let publishedShowEvents: ShowEventsParseResult | null = null;
    declarado, la fila se descarta. La portada solo vale en vídeos y tiene que
    ser una imagen. Rutas: solo locales, bajo /images/ o /videos/, con la misma
    lista blanca que el Apps Script.
+
+   Vídeos (contrato del 30-09-2026): `hasAudio` es OBLIGATORIO y booleano; sin
+   él la fila se descarta (nunca se supone «sin audio»). `previewSrc` es
+   opcional: otro vídeo, distinto de `src`; si no vale se descarta solo el
+   campo y la tarjeta usa `src`. `src` es siempre el medio completo.
 --------------------------------------------------------------------------- */
 
 interface RawMedia {
   id?: unknown;
   type?: unknown;
   src?: unknown;
+  previewSrc?: unknown;
+  hasAudio?: unknown;
   poster?: unknown;
   alt?: unknown;
   horseId?: unknown;
@@ -651,11 +659,24 @@ export function parseMediaList(
       continue;
     }
 
+    // Tiene audio: obligatorio en vídeos. Ausente = dato que falta, no «no».
+    if (media.type === 'video' && typeof row.hasAudio !== 'boolean') {
+      reject('hasAudio', `vídeo sin hasAudio explícito (${String(row.hasAudio)})`);
+      continue;
+    }
+
     let poster: string | undefined;
     if (asTrimmedString(row.poster)) {
       const parsed = parseMediaPath(row.poster);
       if (media.type === 'video' && parsed?.type === 'image') poster = parsed.src;
       else rejectedFields.push({ id, field: 'poster', reason: 'portada no válida o en una imagen' });
+    }
+
+    let previewSrc: string | undefined;
+    if (asTrimmedString(row.previewSrc)) {
+      const parsed = parseMediaPath(row.previewSrc);
+      if (media.type === 'video' && parsed?.type === 'video' && parsed.src !== media.src) previewSrc = parsed.src;
+      else rejectedFields.push({ id, field: 'previewSrc', reason: 'preview no válida, igual a src o en una imagen' });
     }
 
     let alt = asTrimmedString(row.alt);
@@ -665,8 +686,15 @@ export function parseMediaList(
     }
 
     seen.add(id);
-    const item: MediaItem = { id, type: media.type, src: media.src };
-    if (poster) item.poster = poster;
+    let item: MediaItem;
+    if (media.type === 'video') {
+      const video: VideoMediaItem = { id, type: 'video', src: media.src, hasAudio: row.hasAudio as boolean };
+      if (previewSrc) video.previewSrc = previewSrc;
+      if (poster) video.poster = poster;
+      item = video;
+    } else {
+      item = { id, type: 'image', src: media.src };
+    }
     if (alt) item.alt = alt;
     items.push(withHorse ? { ...item, horseId: horseId as string } : item);
   }
@@ -694,6 +722,17 @@ function publishedMediaList(key: MediaKey): MediaParseResult<MediaItem | HorseMe
       );
     }
     result = key === 'horseMedia' ? parseMediaList(raw, true) : parseMediaList(raw);
+
+    // Misma red para el contrato de audio: vídeos sin `hasAudio` desaparecerían
+    // de la página. Pasa si esta web sale antes de publicar el CMS con la
+    // columna «Tiene audio». En producción se aborta la build.
+    const sinAudio = result.rejectedRows.filter((r) => r.field === 'hasAudio');
+    if (sinAudio.length > 0 && process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+      throw new Error(
+        `content.json trae vídeos de «${key}» sin «hasAudio» (${sinAudio.map((r) => r.id).join(', ')}). ` +
+          'Publica el CMS con la columna «Tiene audio» antes de desplegar esta versión de la web.'
+      );
+    }
     publishedMedia.set(key, result);
 
     if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {

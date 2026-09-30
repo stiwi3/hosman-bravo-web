@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useRef, useState } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import type { MediaItem } from '@/data/types';
+import type { MediaItem, VideoMediaItem } from '@/data/types';
 import { BrandFallback } from './BrandFallback';
 import { MediaVideo } from './MediaVideo';
 import { PauseButton } from './PauseButton';
@@ -73,7 +73,7 @@ function VideoTile({
   relleno,
   className,
 }: {
-  item: MediaItem;
+  item: VideoMediaItem;
   etiqueta: string;
   relleno: boolean;
   className: string;
@@ -91,8 +91,9 @@ function VideoTile({
       className={`relative overflow-hidden rounded-lg bg-black ring-1 ring-amber-200/35 ${className}`}
     >
       <BrandFallback />
+      {/* Inline: la preview ligera si la hay; el completo (`src`) es para ampliar. */}
       <MediaVideo
-        src={item.src}
+        src={item.previewSrc ?? item.src}
         poster={item.poster}
         etiqueta={etiqueta}
         reproducir={visible && !enPausa}

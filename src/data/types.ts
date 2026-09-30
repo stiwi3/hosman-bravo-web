@@ -111,15 +111,13 @@ export interface ShowEvent {
 /**
  * Una foto o un vídeo del CMS (Galería, El Show, Caballos). Sale de
  * `content.json` ya validado y ordenado; quien lo pinta no sabe de dónde viene.
+ * Todos son ampliables (visor): `src` es SIEMPRE el medio completo.
  */
-export interface MediaItem {
+interface MediaItemBase {
   /** Estable y único en su sección: no cambia aunque cambie el archivo. */
   id: string;
-  type: 'image' | 'video';
-  /** URL lista para usar (con el prefijo de despliegue aplicado). */
+  /** El medio COMPLETO (`Archivo`), URL lista para usar (con el prefijo de despliegue). */
   src: string;
-  /** Solo vídeos, opcional: sin él se ve el fondo de marca hasta el primer fotograma. */
-  poster?: string;
   /**
    * Texto accesible: la `Descripción` del Sheet. Opcional en las tres secciones;
    * sin ella, quien lo pinta usa un texto genérico de su contexto.
@@ -127,10 +125,28 @@ export interface MediaItem {
   alt?: string;
 }
 
-/** Un medio de un caballo: `horseId` es `Horse.id`. */
-export interface HorseMediaItem extends MediaItem {
-  horseId: string;
+export interface ImageMediaItem extends MediaItemBase {
+  type: 'image';
 }
+
+export interface VideoMediaItem extends MediaItemBase {
+  type: 'video';
+  /**
+   * Opcional (`Preview`): vídeo ligero y mudo para la reproducción INLINE en
+   * lugar de `src`. Es solo una optimización de carga: no decide si el medio
+   * se puede ampliar (lo es siempre) ni si lleva una llamada visual.
+   */
+  previewSrc?: string;
+  /** Si el vídeo COMPLETO (`src`) tiene sonido (`Tiene audio`). Siempre explícito. */
+  hasAudio: boolean;
+  /** Opcional: sin él se ve el fondo de marca hasta el primer fotograma. */
+  poster?: string;
+}
+
+export type MediaItem = ImageMediaItem | VideoMediaItem;
+
+/** Un medio de un caballo: `horseId` es `Horse.id`. */
+export type HorseMediaItem = MediaItem & { horseId: string };
 
 /** Un caballo del elenco ecuestre. Sus fotos y vídeos vienen del CMS. */
 export interface Horse {

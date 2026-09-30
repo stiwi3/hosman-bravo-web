@@ -105,7 +105,7 @@ export function HorseMedia({ nombre, media }: { nombre: string; media: readonly 
             return item.type === 'video' ? (
               <MediaVideo
                 key={item.id}
-                src={item.src}
+                src={item.previewSrc ?? item.src}
                 poster={item.poster}
                 etiqueta={item.alt ?? `Vídeo de ${nombre}`}
                 oculto={!esActivo}

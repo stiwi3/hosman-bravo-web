@@ -768,12 +768,23 @@ interna. Contrato único en `apps-script/Config.js` (`MEDIA_COLUMNS` = etiqueta 
 código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` (montaje),
 `MediaSeed.js` (migración), `CmsDocs.js` (LEEME y diccionario).
 
-- **Columnas.** GALERÍA y EL SHOW: Activo · ID · Archivo · Portada del vídeo ·
-  Descripción · Orden · Notas internas. CABALLOS añade Caballo tras el ID (desplegable Don
-  Juan/Bandolero/Bandido/Triunfador → `HORSE_IDS`, que la suite obliga a coincidir con
-  `hosmanData.horses[].id`).
-- **Qué se publica.** `{ id, type, src, poster?, alt? }` (+ `horseId` en Caballos), ya
-  ORDENADO (Orden ascendente, vacíos al final, desempate por fila). **`Descripción` →
+- **Columnas** (desde el 30-09-2026). GALERÍA y EL SHOW: Activo · ID · Archivo · Preview ·
+  Tiene audio · Portada del vídeo · Descripción · Orden · Notas internas. CABALLOS añade
+  Caballo tras el ID (desplegable Don Juan/Bandolero/Bandido/Triunfador → `HORSE_IDS`, que
+  la suite obliga a coincidir con `hosmanData.horses[].id`). Se leen por POSICIÓN, pero
+  antes `checkSheetHeaders_` exige las etiquetas exactas en su orden: una pestaña
+  desalineada con el código bloquea PUBLICAR con un error, nunca publica en silencio.
+- **`Archivo`** es SIEMPRE el medio COMPLETO (el que se abrirá en grande). **`Preview`**:
+  opcional, solo en vídeos, otro `.mp4` ligero y mudo para la tarjeta, distinto de
+  Archivo; es una optimización de carga, no decide si algo es ampliable (todo lo es) ni
+  si lleva una llamada visual. **`Tiene audio`**: describe el vídeo COMPLETO; desplegable
+  SÍ/NO, **obligatorio en vídeos** (vacío NO es «no»: un vídeo activo sin él cancela
+  PUBLICAR); en fotos no aplica (rellenarlo es error, igual que Preview o Portada).
+- **Qué se publica.** Foto: `{ id, type, src, alt? }`; vídeo: `{ id, type, src,
+  previewSrc?, hasAudio, poster?, alt? }` con `hasAudio` booleano siempre presente (+
+  `horseId` en Caballos). Ya ORDENADO (Orden ascendente, vacíos al final, desempate por
+  fila). La preview entra en la comprobación de existencia y en el aviso de archivos
+  nuevos, como Archivo y Portada. **`Descripción` →
   `alt`**: una sola columna, opcional, que sirve a Hosman para reconocer la fila y se
   publica como texto accesible (imagen: `alt`; vídeo: `aria-label`); nunca se muestra
   escrita. Sin ella, cada sección pone una reserva genérica de su contexto (`RESERVA` en
@@ -784,6 +795,15 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
   los textos (`MEDIA_DESCRIPTION_MIGRATION`; una fila editada a mano conserva su texto en
   Notas), añade los dos vídeos y borra la columna. Cabeceras desconocidas con datos → no
   toca la pestaña.
+- **Migración 30-09** (`migratePreviousMediaSheet_`, encadenada tras la anterior): una
+  pestaña cuya cabecera empieza EXACTAMENTE por la disposición anterior
+  (`MEDIA_SECTIONS[*].previousKeys`) recibe Preview y Tiene audio tras Archivo
+  (`insertColumnsAfter`: Google desplaza validaciones, notas, protecciones y el cuadro de
+  ayuda). Tiene audio se rellena solo en vídeos cuya ruta está en `MEDIA_AUDIO_MIGRATION`
+  (comprobado con `ffprobe`) y `MEDIA_PREVIEW_MIGRATION` corrige, con guarda, la fila
+  `after-movie` (tenía la preview en Archivo). Ambas tablas viven en `MediaSeed.js`:
+  histórico congelado de UNA migración, que PUBLICAR nunca consulta. Un vídeo activo sin
+  dato → aviso, y PUBLICAR lo rechazará. Con fórmulas en los datos no migra.
 - **ID** visible, obligatorio, único por pestaña (no global: `show-01` existe en GALERÍA y
   EL SHOW), estable aunque cambie el archivo; editable con un aviso de Google (protección
   «solo advertencia» sobre los IDs existentes, la repone `setupMediaCms`).
@@ -808,9 +828,16 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
 - **Frontend.** `content-api.ts` las lee del snapshot COMPILADO (como eventos) y las
   revalida con las mismas reglas que `Media.js` (`parseMediaList`: tipo recalculado desde
   la extensión del nombre —`/images/.jpg` no vale—, portada solo en vídeos, IDs duplicados
-  fuera, `horseId` solo de `hosmanData.horses`). **Red de seguridad:** si una de las tres claves falta, la build de
-  producción ABORTA — una web desplegada antes de publicar el multimedia dejaría GALERÍA y
-  EL SHOW vacías, y así Pages conserva el despliegue anterior.
+  fuera, `horseId` solo de `hosmanData.horses`; un vídeo sin `hasAudio` booleano se
+  DESCARTA —nunca se supone «sin audio»—; una `previewSrc` inválida, igual a `src` o en
+  una foto se descarta sola). Tipos: `MediaItem = ImageMediaItem | VideoMediaItem`
+  (`src/data/types.ts`). La tarjeta inline (`MediaTile`, `HorseMedia`) reproduce
+  `previewSrc ?? src`. **Red de seguridad:** si una de las tres claves falta, o llegan
+  vídeos sin `hasAudio`, la build de producción ABORTA — una web desplegada antes de
+  publicar el multimedia (o la columna Tiene audio) dejaría páginas vacías o sin vídeos,
+  y así Pages conserva el despliegue anterior. Por eso, al cambiar el contrato, el orden
+  de CLAUDE.md («Si una tarea cambia a la vez el CMS y la web») es obligatorio: el push de
+  la web va DESPUÉS de PUBLICAR.
 - **Flujo oficial V1 — MANUAL (decisión del 27-09-2026).** El CMS administra
   referencias y contenido, **no los archivos**: no sube, no optimiza, no genera portadas y
   no borra. Un medio nuevo: (1) se prepara el archivo a mano; (2) se optimiza según §10;
@@ -996,10 +1023,17 @@ src/
   (~82, progresivo); PNG solo para gráficos; HEIC convertido antes. Lado mayor 1600 px
   (hasta 1920 en las verticales de EL SHOW, como `show-0x.jpg`); las actuales pesan
   115–421 KB. Rotación EXIF aplicada al píxel y metadatos quitados (GPS). Una foto que ya
-  cumple no se reconvierte. **Vídeos:** la receta de los caballos de abajo — 540×960
-  vertical (960×540 horizontal), 30 fps, H.264 High `-crf 27 -maxrate 3M`, `yuv420p`,
-  BT.709, `-an`, `+faststart`; resultado 2–6 MB para 8–40 s (0,9–2 Mb/s). Más resolución
-  no compensa a tamaño de tarjeta (720×1280 casi duplicaba el peso sin ganancia visible).
+  cumple no se reconvierte. **Vídeos — clips cortos:** la receta de los caballos de abajo
+  — 540×960 vertical (960×540 horizontal), 30 fps, H.264 High `-crf 27 -maxrate 3M`,
+  `yuv420p`, BT.709, `-an`, `+faststart`; resultado 2–6 MB para 8–40 s (0,9–2 Mb/s). Más
+  resolución no compensa a tamaño de tarjeta (720×1280 casi duplicaba el peso sin
+  ganancia visible). **Vídeos largos o con sonido que merezca verse en grande** (30-09,
+  primer caso `after-movie`): `Archivo` = completo, sin upscale, hasta 1080p (H.264 High
+  `-crf 23 -preset slow`, fps original ≤ 30, GOP ~2 s, AAC-LC estéreo 48 kHz ~160 kb/s,
+  `+faststart`); más una `Preview` desde el MÁSTER (no desde el comprimido): primeros ~20 s
+  a 960×540/540×960, CRF 23, `-an`. Si el máster no trae metadatos de color, BT.709 se
+  etiqueta con `setparams` (solo etiqueta; es una normalización, no un dato demostrado).
+  `Tiene audio` se decide con `ffprobe -select_streams a` sobre el archivo completo.
   Verticales de iPhone: comprobar orientación y HDR (`tonemap` solo si el master es HLG).
   **Excepción existente:** el vídeo del 27-09 de GALERÍA
   (`/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4`) funciona y se queda como
