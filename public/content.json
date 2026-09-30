@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-27T23:40:53.380Z",
-  "publishedAt": "2026-09-27T23:40:53.380Z",
+  "contentVersion": "2026-09-30T17:45:03.770Z",
+  "publishedAt": "2026-09-30T17:45:03.770Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -244,6 +244,7 @@
       "id": "galeria-video-01",
       "type": "video",
       "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
+      "hasAudio": true,
       "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
     },
     {
@@ -333,6 +334,14 @@
   ],
   "showMedia": [
     {
+      "id": "after-movie",
+      "type": "video",
+      "src": "/videos/el-show/after-movie.mp4",
+      "previewSrc": "/videos/el-show/after-movie-preview.mp4",
+      "hasAudio": true,
+      "alt": "Evento en bolivia"
+    },
+    {
       "id": "show-01",
       "type": "image",
       "src": "/images/show-01.jpg",
@@ -360,6 +369,7 @@
       "id": "show-video-01",
       "type": "video",
       "src": "/images/el-show/video-show-1.mp4",
+      "hasAudio": false,
       "alt": "Hosman Bravo en bora bora con bandido"
     }
   ],
@@ -369,6 +379,7 @@
       "id": "don-juan",
       "type": "video",
       "src": "/videos/caballos/don-juan.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/don-juan.webp",
       "alt": "Hosman Bravo, de rojo, monta a Don Juan en una pista de grava al aire libre"
     },
@@ -377,6 +388,7 @@
       "id": "don-juan-2",
       "type": "video",
       "src": "/videos/caballos/don-juan-2.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/don-juan-2.webp",
       "alt": "Don Juan trabaja con su jinete en un picadero cubierto"
     },
@@ -385,6 +397,7 @@
       "id": "bandolero",
       "type": "video",
       "src": "/videos/caballos/bandolero.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/bandolero.webp",
       "alt": "Bandolero se levanta sobre las patas traseras con su jinete en un prado"
     },
@@ -393,6 +406,7 @@
       "id": "bandolero-2",
       "type": "video",
       "src": "/videos/caballos/bandolero-2.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/bandolero-2.webp",
       "alt": "Bandolero trabaja con su jinete en un picadero cubierto"
     },
@@ -401,6 +415,7 @@
       "id": "bandido",
       "type": "video",
       "src": "/videos/caballos/bandido.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/bandido.webp",
       "alt": "Bandido con su jinete en el escenario, junto a un acordeonista"
     },
@@ -409,6 +424,7 @@
       "id": "bandido-2",
       "type": "video",
       "src": "/videos/caballos/bandido-2.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/bandido-2.webp",
       "alt": "Bandido con su jinete, vestido de azul, en el escenario durante un show"
     },
@@ -417,6 +433,7 @@
       "id": "triunfador",
       "type": "video",
       "src": "/videos/caballos/triunfador.mp4",
+      "hasAudio": false,
       "poster": "/videos/caballos/triunfador.webp",
       "alt": "Triunfador tumbado en la pista junto a su jinete"
     }
