@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useVisorAbierto } from './visorAbierto';
 
 /**
  * El `<video>` de un medio, controlado desde fuera: reproduce mientras
  * `reproducir` sea verdadero y se pausa en cuanto deja de serlo. No decide
  * CUÁNDO (visibilidad, pausa manual, movimiento reducido, cuál es el activo):
- * eso es de quien lo usa.
+ * eso es de quien lo usa. Única excepción común: con un `MediaViewer` abierto
+ * ningún vídeo inline se reproduce (el visor es la única representación viva).
  *
  * Siempre `muted`, `playsInline`, `loop` y `preload="none"`: hasta que se
  * reproduce solo se descarga la portada.
@@ -31,18 +33,20 @@ export function MediaVideo({
   style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const visorAbierto = useVisorAbierto();
+  const debeReproducir = reproducir && !visorAbierto;
 
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
-    if (reproducir) {
+    if (debeReproducir) {
       video.muted = true;
       // Puede rechazarse (ahorro de datos, pestaña oculta): se queda la portada.
       video.play().catch(() => {});
     } else {
       video.pause();
     }
-  }, [reproducir]);
+  }, [debeReproducir]);
 
   const accesible = Boolean(etiqueta) && !oculto;
 

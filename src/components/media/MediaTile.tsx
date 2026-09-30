@@ -5,20 +5,28 @@ import { useRef, useState } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { MediaItem, VideoMediaItem } from '@/data/types';
 import { BrandFallback } from './BrandFallback';
+import { ManoAmpliar } from './ManoAmpliar';
 import { MediaVideo } from './MediaVideo';
+import { useAbrirMedio } from './MediaViewer';
 import { PauseButton } from './PauseButton';
 import { useEnVista } from './useEnVista';
 
 /**
  * Una pieza de GALERÍA o de EL SHOW: foto o vídeo en el MISMO hueco.
  *
- * `relleno`: la pieza llena la caja que le da la sección (EL SHOW, 3:4). Sin
- * él, la pieza toma su propia altura (GALERÍA, mampostería): la foto por su
+ * `relleno`: la pieza llena la caja que le da la sección (EL SHOW). Sin él,
+ * la pieza toma su propia altura (GALERÍA, mampostería): la foto por su
  * tamaño natural y el vídeo por el de su portada o su primer fotograma
  * (`aspect-ratio: auto 9 / 16` — el 9:16 solo mientras no se conoce).
  *
  * El vídeo se distingue con un borde sutil y lleva la pausa abajo a la
  * derecha; nada más cambia en la composición.
+ *
+ * AMPLIAR. Dentro de un `MediaViewer`, toda la tarjeta abre el medio en grande
+ * con un botón transparente que la cubre. Es HERMANO de la pausa (que queda por
+ * encima), nunca su padre: no hay un botón dentro de otro y pausar no abre el
+ * visor. `mano` pinta la señal de «pulsa para verlo completo»; la decide quien
+ * usa la tarjeta, no el modelo.
  *
  * Texto accesible: la `Descripción` del Sheet (`item.alt`) o, si Hosman la
  * dejó vacía, la `reserva` de la sección para ese tipo — genérica, sin
@@ -28,20 +36,24 @@ export function MediaTile({
   item,
   reserva,
   relleno = false,
+  mano = false,
   className = '',
+  style,
   sizes,
 }: {
   item: MediaItem;
   reserva: Readonly<Record<MediaItem['type'], string>>;
   relleno?: boolean;
+  mano?: boolean;
   className?: string;
+  style?: React.CSSProperties;
   sizes?: string;
 }) {
   const alt = item.alt ?? reserva[item.type];
 
   if (item.type === 'image') {
     return (
-      <div className={`group relative overflow-hidden rounded-lg ${className}`}>
+      <div className={`group relative overflow-hidden rounded-lg ${className}`} style={style}>
         {relleno ? (
           <Image
             src={item.src}
@@ -60,23 +72,42 @@ export function MediaTile({
             className="h-auto w-full object-cover transition duration-500 group-hover:scale-105"
           />
         )}
+        <Ampliar id={item.id} etiqueta={`Ampliar la foto: ${alt}`} />
       </div>
     );
   }
 
-  return <VideoTile item={item} etiqueta={alt} relleno={relleno} className={className} />;
+  return <VideoTile item={item} etiqueta={alt} relleno={relleno} mano={mano} className={className} style={style} />;
+}
+
+/** Botón que cubre la tarjeta y abre el visor. Sin visor alrededor, no existe. */
+function Ampliar({ id, etiqueta }: { id: string; etiqueta: string }) {
+  const abrir = useAbrirMedio();
+  if (!abrir) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => abrir(id, e.currentTarget)}
+      aria-label={etiqueta}
+      className="absolute inset-0 z-[5] cursor-zoom-in rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
+    />
+  );
 }
 
 function VideoTile({
   item,
   etiqueta,
   relleno,
+  mano,
   className,
+  style,
 }: {
   item: VideoMediaItem;
   etiqueta: string;
   relleno: boolean;
+  mano: boolean;
   className: string;
+  style?: React.CSSProperties;
 }) {
   const caja = useRef<HTMLDivElement>(null);
   const visible = useEnVista(caja);
@@ -89,6 +120,7 @@ function VideoTile({
     <div
       ref={caja}
       className={`relative overflow-hidden rounded-lg bg-black ring-1 ring-amber-200/35 ${className}`}
+      style={style}
     >
       <BrandFallback />
       {/* Inline: la preview ligera si la hay; el completo (`src`) es para ampliar. */}
@@ -104,6 +136,11 @@ function VideoTile({
         }
         style={relleno ? undefined : { aspectRatio: 'auto 9 / 16' }}
       />
+      <Ampliar
+        id={item.id}
+        etiqueta={item.previewSrc ? `Ver el vídeo completo: ${etiqueta}` : `Ampliar el vídeo: ${etiqueta}`}
+      />
+      {mano && <ManoAmpliar />}
       <PauseButton
         enPausa={enPausa}
         onToggle={() => setPausaManual(!enPausa)}

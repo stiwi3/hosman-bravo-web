@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { MediaItem } from '@/data/types';
 import { BrandFallback } from '@/components/media/BrandFallback';
+import { Chevron } from '@/components/media/Chevron';
 import { MediaVideo } from '@/components/media/MediaVideo';
+import { MediaViewer, useAbrirMedio } from '@/components/media/MediaViewer';
 import { MEDIA_CONTROL, PauseButton } from '@/components/media/PauseButton';
 import { useEnVista } from '@/components/media/useEnVista';
 
@@ -26,6 +28,10 @@ import { useEnVista } from '@/components/media/useEnVista';
 
    SIN PORTADA. Detrás está el fondo de marca (`BrandFallback`), que se ve
    hasta el primer fotograma. No se sube `preload` para conseguir uno.
+
+   AMPLIAR. Cada caballo es su PROPIA colección del visor (`MediaViewer` con
+   sus `media`, ya filtrados por `horseId`): las flechas del visor nunca pasan
+   al caballo siguiente. Pulsar la caja abre el elemento activo del carrusel.
 --------------------------------------------------------------------------- */
 
 /* FLECHAS. Pertenecen a la tarjeta, no a la imagen: salen de la caja hacia el
@@ -40,21 +46,17 @@ const FLECHA =
 const SALIDA_FLECHA =
   'max(calc(-1 * (var(--hb-flecha) + 0.375rem)), calc(0.125rem - var(--hb-card-pad, 0px)))';
 
-function Chevron({ direccion }: { direccion: 'izquierda' | 'derecha' }) {
+export function HorseMedia({ nombre, media }: { nombre: string; media: readonly MediaItem[] }) {
+  if (media.length === 0) return null;
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[45%] w-[45%]">
-      <path
-        d={direccion === 'izquierda' ? 'M14.5 5.5 8 12l6.5 6.5' : 'M9.5 5.5 16 12l-6.5 6.5'}
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <MediaViewer items={media} nombre={`Fotos y vídeos de ${nombre}`}>
+      <Carrusel nombre={nombre} media={media} />
+    </MediaViewer>
   );
 }
 
-export function HorseMedia({ nombre, media }: { nombre: string; media: readonly MediaItem[] }) {
+function Carrusel({ nombre, media }: { nombre: string; media: readonly MediaItem[] }) {
+  const abrir = useAbrirMedio();
   const reducido = useReducedMotion();
   const cajaRef = useRef<HTMLDivElement>(null);
   const visible = useEnVista(cajaRef);
@@ -124,6 +126,16 @@ export function HorseMedia({ nombre, media }: { nombre: string; media: readonly 
               />
             );
           })}
+
+          {/* Abre el elemento activo. Hermano de la pausa, que queda encima. */}
+          {abrir && (
+            <button
+              type="button"
+              onClick={(e) => abrir(actual.id, e.currentTarget)}
+              aria-label={`Ampliar ${actual.type === 'video' ? 'el vídeo' : 'la foto'} de ${nombre}`}
+              className="absolute inset-0 z-[5] cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
+            />
+          )}
 
           {actual.type === 'video' && (
             <PauseButton

@@ -112,9 +112,10 @@ encima del shell. Crea **un único** elemento `Audio` en un efecto con dependenc
   sin pisar a quien la haya pausado a propósito. Al primer `suspend` se apunta si sonaba
   (`wasPlayingRef`) y se pausa; los `id` activos viven en un `Set`, así que dos avisos de
   suspensión no se pisan entre sí; al último `release` se reanuda **solo si sonaba**.
-  Su único consumidor es `YouTubeModal` (`src/components/music/`), con el id
-  `'youtube-modal'` — las previews muteadas de la cuadrícula NO deben llamarlo: un
-  `<iframe>` muted y el `<audio>` no compiten por nada.
+  Consumidores (verificado el 30-09-2026): `YouTubeModal` (`src/components/music/`, id
+  `'youtube-modal'`), `PreHero` (`'pre-hero'`) y `MediaViewer` (`src/components/media/`,
+  un id por colección, solo con un vídeo `hasAudio` activo). Las previews muteadas NO
+  deben llamarlo: un `<iframe>`/`<video>` muted y el `<audio>` no compiten por nada.
 
 ### ⚠️ El fundido de entrada es un punto único de fallo
 
@@ -209,8 +210,8 @@ Quién reproduce lo decide `MusicSection`, no la tarjeta — es la única forma 
 - con `prefers-reduced-motion` **no hay previews de ninguna clase**.
 
 **Las previews NO tocan `AudioProvider`.** Van mudas, y un `<iframe>`/`<video>` sin sonido
-no compite con el `<audio>`. `suspend`/`release` siguen teniendo un único consumidor: el
-modal.
+no compite con el `<audio>`. Quien sí suspende está listado arriba («Suspensión con
+contador»).
 
 ### EntryScreen
 
@@ -838,6 +839,25 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
   y así Pages conserva el despliegue anterior. Por eso, al cambiar el contrato, el orden
   de CLAUDE.md («Si una tarea cambia a la vez el CMS y la web») es obligatorio: el push de
   la web va DESPUÉS de PUBLICAR.
+- **Visor `MediaViewer`** (`src/components/media/`, desde el 30-09-2026). Envuelve UNA
+  colección y sus tarjetas (`useAbrirMedio`): GALERÍA entera, EL SHOW entero y cada
+  caballo por separado (`HorseMedia` envuelve su carrusel). Todo medio es ampliable; abre
+  SIEMPRE `src` (vídeo desde 0:00), nunca `previewSrc`. `<dialog>.showModal()` (inerte,
+  trampa de foco y Escape nativos; el foco vuelve a la tarjeta), `useScrollLock`, tamaño
+  natural con `max-w/max-h: 100%` (contain, sin superar la resolución del archivo).
+  Relevo en el mismo gesto: el medio nuevo decide el audio (`hasAudio` → `suspend` antes
+  de `play()`; si no, `release`) y audio→audio nunca suelta la suspensión. El `<video>`
+  del visor no tiene `src` hasta abrir y lo pierde al cerrar o al pasar a una foto.
+  `visorAbierto.ts` hace que ningún `MediaVideo` inline se reproduzca mientras hay un
+  visor abierto. El botón de ampliar es HERMANO de la pausa (no hay botones anidados).
+  Fuera: Hero, Pre-Hero, EntryScreen y MÚSICA (`YouTubeModal` sigue a su aire).
+- **Maqueta de EL SHOW** (solo EL SHOW). Columnas base (2; 4 desde `lg`) en `flex-wrap`
+  centrado: foto y vídeo vertical ocupan 1, vídeo horizontal 2, con la proporción real
+  del archivo de la tarjeta leída del MP4 en el SERVIDOR (`src/lib/video-dimensions.ts`):
+  cero descargas en el navegador, `preload="none"` intacto y sin saltos. Si no se puede
+  leer, el hueco 3:4 de siempre. La mano de «ver completo» (`ManoAmpliar`) la decide
+  `ShowSection` (hoy: vídeos cuya tarjeta es una preview); no es regla del modelo ni del
+  visor.
 - **Flujo oficial V1 — MANUAL (decisión del 27-09-2026).** El CMS administra
   referencias y contenido, **no los archivos**: no sube, no optimiza, no genera portadas y
   no borra. Un medio nuevo: (1) se prepara el archivo a mano; (2) se optimiza según §10;

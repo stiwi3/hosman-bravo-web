@@ -1,12 +1,42 @@
 import Link from 'next/link';
 import { hosmanData } from '@/data/hosman-data';
+import type { MediaItem } from '@/data/types';
 import { getPublishedHorseMedia, getPublishedShowMedia } from '@/lib/content-api';
+import { videoDimensions } from '@/lib/video-dimensions';
 import { MediaTile } from '@/components/media/MediaTile';
+import { MediaViewer } from '@/components/media/MediaViewer';
 import { HorseMedia } from '@/components/show/HorseMedia';
 import { SCENE, SCENE_CONTENT, SCENE_SHOWCASE } from './scene';
 
 /** Texto accesible si la fila no tiene Descripción. */
 const RESERVA = { image: 'Foto del show de Hosman Bravo', video: 'Vídeo del show de Hosman Bravo' } as const;
+
+/** Ancho de N columnas base: `--cols` columnas separadas por `--gap`. */
+const UNA_COLUMNA = 'w-[calc((100%_-_(var(--cols)_-_1)_*_var(--gap))_/_var(--cols))]';
+const DOS_COLUMNAS = 'w-[calc((100%_-_(var(--cols)_-_1)_*_var(--gap))_/_var(--cols)_*_2_+_var(--gap))]';
+
+/**
+ * Cómo ocupa la fila una pieza de EL SHOW, según el medio REAL.
+ *
+ * · Foto: 1 columna, hueco 3:4 (como siempre).
+ * · Vídeo: su proporción real, leída del archivo que se ve en la tarjeta
+ *   (`previewSrc ?? src`) al generar la página — sin descargas en el navegador
+ *   ni saltos al cargar. Horizontal → 2 columnas; vertical → 1. Nunca recortado
+ *   ni deformado: la caja tiene la proporción del vídeo.
+ * · Si el archivo no se puede leer, el hueco 3:4 de siempre.
+ */
+function encaje(item: MediaItem): { className: string; style?: React.CSSProperties } {
+  if (item.type === 'video') {
+    const d = videoDimensions(item.previewSrc ?? item.src);
+    if (d) {
+      return {
+        className: d.width > d.height ? DOS_COLUMNAS : UNA_COLUMNA,
+        style: { aspectRatio: `${d.width} / ${d.height}` },
+      };
+    }
+  }
+  return { className: `aspect-[3/4] ${UNA_COLUMNA}` };
+}
 
 /**
  * EL SHOW — el espectáculo y, debajo, el elenco ecuestre.
@@ -27,25 +57,38 @@ export function ShowSection() {
           Música en vivo y caballos de alta escuela en un mismo escenario.
           Un espectáculo único en Colombia que tu público nunca olvidará.
         </p>
-        {/* Fotos y vídeos de `06_EL_SHOW` (CMS). Un vídeo ocupa el mismo hueco
-            3:4 que una foto.
+        {/* Fotos y vídeos de `06_EL_SHOW` (CMS), en columnas base: 2 (4 desde
+            `lg`). Una foto o un vídeo vertical ocupan 1; un vídeo horizontal,
+            2, con su encuadre completo (ver `encaje`).
 
-            Filas de 2 (4 desde `lg`) y la última, si queda incompleta, CENTRADA:
-            flex con salto de línea y cada pieza del ancho exacto de una columna
-            (`--cols` columnas separadas por `--gap`). Funciona con cualquier
-            número de medios; no hay reglas por posición. */}
-        <div className="flex flex-wrap justify-center gap-[var(--gap)] [--cols:2] [--gap:0.75rem] lg:[--cols:4]">
-          {getPublishedShowMedia().map((item) => (
-            <MediaTile
-              key={item.id}
-              item={item}
-              reserva={RESERVA}
-              relleno
-              className="aspect-[3/4] flex-none w-[calc((100%_-_(var(--cols)_-_1)_*_var(--gap))_/_var(--cols))]"
-              sizes="(min-width: 1024px) 25vw, 50vw"
-            />
-          ))}
-        </div>
+            Flex con salto de línea: lo que no cabe en la fila baja solo, y la
+            última, si queda incompleta, sale CENTRADA. Cada pieza mide
+            exactamente N columnas (`--cols` columnas separadas por `--gap`).
+            `items-center`: piezas de distinta altura se alinean al centro de su
+            fila, sin estirarse. Sin reglas por posición ni por nombre.
+
+            Toda EL SHOW es UNA colección del visor. La mano de «ver completo»
+            es decisión de ESTA sección: hoy la llevan los vídeos cuya tarjeta
+            es una preview (no una regla del modelo ni del visor). */}
+        <MediaViewer items={getPublishedShowMedia()} nombre="Fotos y vídeos de El Show">
+          <div className="flex flex-wrap items-center justify-center gap-[var(--gap)] [--cols:2] [--gap:0.75rem] lg:[--cols:4]">
+            {getPublishedShowMedia().map((item) => {
+              const { className, style } = encaje(item);
+              return (
+                <MediaTile
+                  key={item.id}
+                  item={item}
+                  reserva={RESERVA}
+                  relleno
+                  mano={item.type === 'video' && item.previewSrc !== undefined}
+                  className={`flex-none ${className}`}
+                  style={style}
+                  sizes="(min-width: 1024px) 25vw, 50vw"
+                />
+              );
+            })}
+          </div>
+        </MediaViewer>
         <div className="text-center mt-10">
           {/* `inline-flex` y NO la clase `inline-` + `block`: por el token
               `--spacing-block`, Tailwind 4.2 le añade un ancho fijo y el botón
