@@ -106,8 +106,9 @@ encima del shell. Crea **un único** elemento `Audio` en un efecto con dependenc
   necesita reproducir otra pista, se amplía el provider.
 - Silenciar **pausa**: play/pause y sound on/off gobiernan un único estado y no pueden
   contradecirse.
-- Consumidores actuales: `EntryScreen` (`enter` e `isPlaying`) y los reproductores (el
-  resto). `hasEntered` sigue expuesto pero hoy no tiene consumidores.
+- Consumidores actuales: `EntryScreen` (`enter` e `isPlaying`), los reproductores
+  (play/pausa y sonido) y los tres de `suspend`/`release` listados abajo. `hasEntered`
+  sigue expuesto pero hoy no tiene consumidores.
 - **Suspensión con contador:** `suspend(id)` / `release(id)` apartan la canción de fondo
   sin pisar a quien la haya pausado a propósito. Al primer `suspend` se apunta si sonaba
   (`wasPlayingRef`) y se pausa; los `id` activos viven en un `Set`, así que dos avisos de
@@ -588,6 +589,18 @@ congelada y todo el conjunto se mueve junto (ver `useGeometriaPeriferica`).
 (Hasta `fc343e8` iban `fixed` con la variante `rails` y, en escenas móviles muy bajas,
 quedaban ligados al viewport mientras el hero se desplazaba. Ese trade-off ya no existe.)
 
+**Rótulos de los rails** («REDES SOCIALES», «PLATAFORMAS MUSICALES»; `RailRotulo` en
+`RailTooltip.tsx`). Los pinta el GRUPO de cada rail, `absolute` sobre él (`bottom-full`),
+y ⚠️ **nunca deben entrar en el flujo**. El tamaño de los botones reparte `100cqh` de la
+banda, la regla de `RailPlataformas` decide si caben las ocho y `regla-redes` alimenta a
+`useGeometriaPeriferica`: un rótulo en el flujo alteraría las tres cosas. Así ocupan solo
+el aire que ya queda por encima del grupo, y **se ocultan solos** (`visibility: hidden`,
+conservando la caja) cuando asomarían por encima de su BANDA, cuyo borde superior ya
+incluye `--hb-rail-borde` bajo el menú o el reproductor. Pasa en alturas críticas:
+móvil apaisado bajo y `rails` de ~512–520 px de alto. Nunca se les reserva alto ni se
+mueve nada por ellos. No se salen por el borde de la pantalla (`safe center`, con
+`direction: rtl` en el derecho). Son UI funcional (BRAND §2).
+
 ### Hero, rótulo y menú en `rails`
 
 Todo con la variante `rails:`; fuera de ella nada cambia (el flanco de `abierta` asume el
@@ -851,13 +864,22 @@ código trabaja con claves. Módulos: `Media.js` (validación), `MediaSetup.js` 
   `visorAbierto.ts` hace que ningún `MediaVideo` inline se reproduzca mientras hay un
   visor abierto. El botón de ampliar es HERMANO de la pausa (no hay botones anidados).
   Fuera: Hero, Pre-Hero, EntryScreen y MÚSICA (`YouTubeModal` sigue a su aire).
+- **Reparto de responsabilidades (multimedia compartida).** `MediaVideo`: reproducción
+  inline (siempre muted, en bucle, según `useEnVista`, la pausa manual y `visorAbierto`);
+  nunca toca `AudioProvider`. `MediaTile` / `HorseMedia`: pintan la tarjeta
+  (`previewSrc ?? src`) y exponen el botón de ampliar, que llama a `useAbrirMedio`.
+  `MediaViewer`: el único que decide audio (`suspend`/`release`), foco, scroll y el
+  medio completo. Las secciones (`GallerySection`, `ShowSection`): eligen la colección,
+  la maqueta y las señales de UX (la mano). Ninguna pieza conoce IDs, nombres de archivo
+  ni posiciones concretas.
 - **Maqueta de EL SHOW** (solo EL SHOW). Columnas base (2; 4 desde `lg`) en `flex-wrap`
   centrado: foto y vídeo vertical ocupan 1, vídeo horizontal 2, con la proporción real
   del archivo de la tarjeta leída del MP4 en el SERVIDOR (`src/lib/video-dimensions.ts`):
   cero descargas en el navegador, `preload="none"` intacto y sin saltos. Si no se puede
-  leer, el hueco 3:4 de siempre. La mano de «ver completo» (`ManoAmpliar`) la decide
-  `ShowSection` (hoy: vídeos cuya tarjeta es una preview); no es regla del modelo ni del
-  visor.
+  leer, el hueco 3:4 como reserva (ya no es la maqueta uniforme de antes). Sin reglas por
+  ID, nombre ni posición: la orientación la da el archivo. La mano de «ver completo»
+  (`ManoAmpliar`) la decide `ShowSection` (hoy: vídeos cuya tarjeta es una preview); no
+  es regla del modelo ni del visor.
 - **Flujo oficial V1 — MANUAL (decisión del 27-09-2026).** El CMS administra
   referencias y contenido, **no los archivos**: no sube, no optimiza, no genera portadas y
   no borra. Un medio nuevo: (1) se prepara el archivo a mano; (2) se optimiza según §10;
@@ -1079,7 +1101,7 @@ src/
   (`07_CABALLOS` → `horseMedia`, ver §8); `HorseMedia` solo recibe la lista y admite
   fotos y vídeos mezclados. Las piezas compartidas con GALERÍA y EL SHOW viven en
   `src/components/media/` (`MediaVideo`, `MediaTile`, `BrandFallback`, `PauseButton`,
-  `useEnVista`). `poster` es opcional: sin él se ve el fondo de marca hasta el primer
+  `useEnVista`, `MediaViewer`, `visorAbierto`, `Chevron`, `ManoAmpliar`; reparto en §8). `poster` es opcional: sin él se ve el fondo de marca hasta el primer
   fotograma. Conversión: 30 fps, 540×960, H.264 High `-crf 27 -maxrate 3M`, sin audio,
   BT.709 etiquetado, `+faststart`; **solo si el master es HDR** (HLG de iPhone) se añade
   antes `zscale` + `tonemap=hable` a 100 nits (sin él el navegador lo pinta lavado; a un

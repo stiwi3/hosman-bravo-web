@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 
 const sinSuscripcion = () => () => {};
@@ -18,7 +18,7 @@ import {
   TidalIcon,
   YouTubeMusicIcon,
 } from './icons/PlatformIcons';
-import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailTooltip } from './RailTooltip';
+import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailRotulo, RailTooltip } from './RailTooltip';
 
 const ICONS = {
   spotify: SpotifyIcon,
@@ -210,6 +210,7 @@ function RailPlataformas() {
   const reglaRef = useRef<HTMLDivElement>(null);
   const [caben, setCaben] = useState(false);
   const [expandido, setExpandido] = useState(false);
+  const rotuloId = useId();
   const { handlers, programar, cancelar } = useAutoRecoger(!caben && expandido, setExpandido);
 
   /* CÓMO SE SABE SI CABEN. La banda tiene alto propio (la fijan `top` y
@@ -305,10 +306,17 @@ function RailPlataformas() {
       </div>
       <div
         {...handlers}
-        className={`pointer-events-auto grid justify-items-center gap-[var(--hb-plat-hueco)] [--hb-plat-hueco:min(var(--hb-plat-gap),2.5cqh)] [--hb-plat-btn:max(var(--hb-control-min),min(var(--hb-control),calc((100cqh-4*var(--hb-plat-hueco))/4.75)))] ${
+        role="group"
+        aria-labelledby={rotuloId}
+        className={`pointer-events-auto relative grid justify-items-center gap-[var(--hb-plat-hueco)] [--hb-plat-hueco:min(var(--hb-plat-gap),2.5cqh)] [--hb-plat-btn:max(var(--hb-control-min),min(var(--hb-control),calc((100cqh-4*var(--hb-plat-hueco))/4.75)))] ${
           abierto ? 'grid-cols-[repeat(2,var(--hb-plat-btn))]' : 'grid-cols-[var(--hb-plat-btn)]'
         }`}
       >
+        {/* Sobre la columna del rail, que es la derecha también desplegado:
+            el rótulo va anclado al borde derecho del grupo. */}
+        <RailRotulo id={rotuloId} lado="derecha" boton="var(--hb-plat-btn)">
+          Plataformas musicales
+        </RailRotulo>
         {visibles.map(({ name, icon, url }, i) => {
           const Icon = ICONS[icon];
           return (

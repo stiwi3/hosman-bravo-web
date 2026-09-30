@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { hosmanData } from '@/data/hosman-data';
 import {
   FacebookIcon,
@@ -7,7 +8,7 @@ import {
   TikTokIcon,
   WhatsAppIcon,
 } from './icons/SocialIcons';
-import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailTooltip } from './RailTooltip';
+import { RAIL_ENLACE_ACTIVO, RAIL_GLIFO_ACTIVO, RailRotulo, RailTooltip } from './RailTooltip';
 
 /**
  * WhatsApp va PRIMERO —arriba del rail— a propósito: de él cuelga el bocadillo
@@ -48,8 +49,16 @@ export function SocialLinks() {
      `--hb-social-btn` y `--hb-social-hueco` los define el rail que contiene
      este grupo (`HeroScene`) a partir del alto de SU banda: ahí encogen de
      forma fluida cuando falta sitio. Sin rail, valen el tamaño normal. */
+  const rotuloId = useId();
   return (
-    <div className="flex flex-col gap-[var(--hb-social-hueco,var(--hb-social-gap))]">
+    <div
+      role="group"
+      aria-labelledby={rotuloId}
+      className="relative flex flex-col gap-[var(--hb-social-hueco,var(--hb-social-gap))]"
+    >
+      <RailRotulo id={rotuloId} lado="izquierda" boton="var(--hb-social-btn,var(--hb-control-social))">
+        Redes sociales
+      </RailRotulo>
       {NETWORKS.map(({ name, url, Icon }) => (
         <a
           key={name}
