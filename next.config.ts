@@ -7,6 +7,10 @@ const basePath = process.env.BASE_PATH ?? "";
 const nextConfig: NextConfig = {
   output: "export",
   basePath,
+  // Cada ruta se exporta como `<ruta>/index.html`. Un hosting estático (GitHub Pages)
+  // sirve así `/galeria/` y redirige `/galeria` → `/galeria/`; con `galeria.html`
+  // la variante con barra final daba 404.
+  trailingSlash: true,
   env: {
     // Expone el basePath al código cliente para prefijar rutas de imágenes
     NEXT_PUBLIC_BASE_PATH: basePath,

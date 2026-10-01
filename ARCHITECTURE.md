@@ -157,7 +157,10 @@ El dominio es `youtube-nocookie.com`, y el `autoplay=1` de la URL **necesita ade
 
 ⚠️ El reproductor es un documento de otro origen: en cuanto el foco entra en él, ni Escape
 ni la trampa de foco pueden actuar desde dentro. Por eso el botón de cerrar va fuera del
-reproductor, recibe el foco al abrir, y el fondo también cierra.
+reproductor, recibe el foco al abrir, y el fondo también cierra. El modal sí tiene su
+trampa de foco (Tab cicla entre sus enfocables); que no alcance al interior del iframe es
+una **contrapartida aceptada** del `<iframe>` simple, no deuda pendiente (revisado el
+01-10-2026).
 
 ### Previews de MÚSICA
 
@@ -1114,23 +1117,28 @@ src/
 
 **Hoy: GitHub Pages con export estático.**
 
-- `next.config.ts`: `output: "export"`, `images.unoptimized`, y `basePath` desde la
-  variable `BASE_PATH`, que inyecta el workflow (`/hosman-bravo-web`). En local queda
-  vacío.
+- `next.config.ts`: `output: "export"`, `images.unoptimized`, `trailingSlash: true` y
+  `basePath` desde la variable `BASE_PATH`, que inyecta el workflow
+  (`/hosman-bravo-web`). En local queda vacío.
 - `.github/workflows/deploy-pages.yml` construye y sube `out/` en cada push a `master`.
-- Cada ruta genera un `.html` plano (`out/galeria.html`). **Verificado contra el
-  despliegue real** (28 ago 2026): GitHub Pages resuelve rutas sin extensión —`/404`
-  devolvió 200 con el contenido de `404.html`—, así que `/galeria` funciona.
-  `trailingSlash` se queda en su valor por defecto.
-- ⚠️ **`/galeria/` con barra final da 404** (cae en `404.html`). Es la contrapartida
-  aceptada de mantener URLs limpias. Los enlaces del sitio nunca la emiten.
+- **Cada ruta se exporta como directorio** (`out/galeria/index.html`), igual que la
+  raíz. GitHub Pages es un hosting estático sin lógica de Next: sirve el `index.html`
+  de `/galeria/` y redirige `/galeria` → `/galeria/` (301), así que las dos variantes
+  llegan a la misma página. Los enlaces, la canónica y `og:url` llevan barra final;
+  `useSelectedLayoutSegment` no cambia.
+- ⚠️ **No volver a `trailingSlash: false`.** Con el export plano (`out/galeria.html`)
+  Pages servía `/galeria` pero devolvía **404 en `/galeria/`** en todas las secciones
+  (medido en producción el 01-10-2026). En local no se veía: `next dev` es un servidor
+  de Next y redirige solo. Para juzgar URLs, probar el export servido con reglas de Pages
+  o producción, nunca `next dev` ni los archivos abiertos sin servidor.
 
 **Futuro: probablemente Vercel con `hosmanbravo.com`.** Considerado, no implementado. La
 arquitectura no debe crear dependencias de GitHub Pages:
 
 - Nada de rutas de navegación escritas a mano con el `basePath`.
 - `basePath` sale de una variable de entorno, no de una constante.
-- `trailingSlash` es config de Next, portable.
+- `trailingSlash` es config de Next, portable (en un servidor de Next la redirección la
+  hace el propio Next).
 - Migrar consistiría en quitar `output: "export"` y `BASE_PATH`; el código de la app no
   debería necesitar cambios.
 
