@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "2026-09-30T17:45:03.770Z",
-  "publishedAt": "2026-09-30T17:45:03.770Z",
+  "contentVersion": "2026-10-01T13:14:33.172Z",
+  "publishedAt": "2026-10-01T13:14:33.172Z",
   "music": [
     {
       "id": "tomando-trago",
@@ -191,7 +191,7 @@
       "city": "Bogotá",
       "venue": "Recinto por confirmar",
       "event_type": "show_ecuestre",
-      "status": "cancelado",
+      "status": "agotado",
       "ticket_url": null,
       "booking_url": null,
       "country": "Colombia"
@@ -244,7 +244,7 @@
       "id": "galeria-video-01",
       "type": "video",
       "src": "/images/galeria/ejemplo-borrar-posterriormente-galeria.mp4",
-      "hasAudio": true,
+      "hasAudio": false,
       "alt": "Hosman Bravo junto a un caballo blanco sentado en el prado, seguido del logotipo dorado de Hosman Bravo"
     },
     {
