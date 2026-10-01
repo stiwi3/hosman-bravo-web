@@ -6,6 +6,7 @@ import { useGeometriaPeriferica } from '@/components/hero/useGeometriaPeriferica
 import { useRouter } from 'next/navigation';
 import { InteractiveSmoke } from '@/components/hero/InteractiveSmoke';
 import { PreHero, FUNDIDO_PRE_HERO_MS } from '@/components/hero/PreHero';
+import { PortadaEntrada, usePortadaEntrada } from '@/components/hero/PortadaEntrada';
 import { Branding } from '@/components/hero/Branding';
 import { ShowsSheet } from '@/components/hero/ShowsSheet';
 import { SocialLinks } from '@/components/SocialLinks';
@@ -104,6 +105,9 @@ export function HeroScene() {
   /** El Pre-Hero cubre la caja del vídeo (prueba): el bloque de marca se
    *  desvanece con él. Fuera del Pre-Hero es siempre `false`. */
   const [preHeroCubre, setPreHeroCubre] = useState(false);
+  /* NUEVA ENTRADA: portada oscura en el marco hasta que el
+     Pre-Hero lo cubre (ver `PortadaEntrada`). Con el telón no se monta. */
+  const portada = usePortadaEntrada(preHeroCubre);
   const router = useRouter();
   const data = hosmanData;
 
@@ -214,6 +218,9 @@ export function HeroScene() {
                 el telón. Va DENTRO del mismo marco para heredar caja, máscara y
                 encuadre; mientras no toca es invisible y el Hero no cambia. */}
             <PreHero onCubre={setPreHeroCubre} />
+            {portada.activa && (
+              <PortadaEntrada saliendo={portada.saliendo} reducedMotion={portada.reducedMotion} />
+            )}
           </div>
 
           {/* CAPA 4 — rótulo, por delante del humo para que no se vele.
@@ -246,7 +253,7 @@ export function HeroScene() {
             className={`pointer-events-none z-[6] ${CENTRADO} ${ALTO_EN_RAILS}`}
             style={{
               ...ENCUADRE,
-              opacity: preHeroCubre ? 0 : 1,
+              opacity: preHeroCubre || portada.cubre ? 0 : 1,
               transition: `opacity ${FUNDIDO_PRE_HERO_MS}ms ease-out`
             }}
           >

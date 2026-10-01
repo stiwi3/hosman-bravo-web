@@ -41,10 +41,10 @@ Toda pieza visible cae en una sola categoría, y la categoría decide qué regla
 
 | Asset | Origen | Uso actual |
 |---|---|---|
-| `logotipo-dorado.svg` | Derivado del manual (ver abajo) | Firma del telón. Logotipo a cualquier tamaño. |
+| `logotipo-dorado.svg` | Derivado del manual (ver abajo) | Tarjeta de entrada (y firma del telón legacy). Logotipo a cualquier tamaño. |
 | `logotipo-dorado.png` / `-blanco.png` | PNG del diseñador, 758×76 | Pie de página. Solo a tamaño pequeño (§8). |
 | `imagotipo-dorado.png` / `-blanco.png` | PNG del diseñador, 758×796 | Contacto. |
-| `isotipo-dorado.png` / `-blanco.png` | PNG del diseñador, 613×647 | Hero, favicon, reserva de MÚSICA. |
+| `isotipo-dorado.png` / `-blanco.png` | PNG del diseñador, 613×647 | Hero, favicon, reserva de MÚSICA, portada de entrada (sin efectos; máx. 306 px CSS por §8). |
 
 **Procedencia de `logotipo-dorado.svg`.** No lo entregó el diseñador: deriva de los
 contornos vectoriales del logotipo que contiene el propio manual (página 4).

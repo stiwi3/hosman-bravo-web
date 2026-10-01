@@ -5,12 +5,63 @@ import { useAudio } from './AudioProvider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anunciarSalidaTelon } from '@/components/hero/salidaTelon';
 import { hosmanData } from '@/data/hosman-data';
+import { useDisenoEntrada } from './disenoEntrada';
+
+/* ---------------------------------------------------------------------------
+   FRONTERA NUEVA ENTRADA / MINI-TELÓN LEGACY (01-10-2026)
+
+   Este archivo contiene DOS aspectos sobre UNA sola lógica de entrada. La
+   implementación ACTIVA es la tarjeta (rama `diseno === 'portada'`); el telón
+   sigue aquí solo como referencia (`?entrada=telon`) hasta que Danny apruebe su
+   retirada. Checklist de limpieza (única fuente de verdad): Obsidian, `Web —
+   pendientes` § «Retirar el mini-telón legacy».
+
+   · NUEVA ENTRADA — NO es legacy aunque se inspire en el telón: rama de la
+     tarjeta, `TARJETA_*`, `PENUMBRA_ENTRADA*` (penumbra NUEVA, distinta de la
+     del telón), `presentada` (aparición retardada) y `hero/PortadaEntrada.tsx`.
+   · COMÚN — se queda: estados `leaving`/`closing`/`gone`/`ctaHover`/`ctaFocus`,
+     `visual` (sin el valor `curtain`), `handleEnter`, `dismiss`, Escape, Play
+     primero, anuncio de salida, `EXIT_MS` y `DISMISS_MS` (temporizador común),
+     `VUELTA_REPOSO_MS`, `HandIcon`, `SpeakerIcon`, `CTA_RECORDATORIO*`,
+     `MANO_*` y sus `@keyframes`, que hoy viven DENTRO de `HUMO_KEYFRAMES`.
+   · LEGACY DEL TELÓN — todo lo demás: cortinas, recorridos, `CURTAIN_GRADE`,
+     caja, feather, penumbra/halo ANTIGUOS (`PENUMBRA_ALPHA`, `HALO_*`,
+     `HUECO_*`), atmósfera (`HUMO_*`), estado `curtain`, `CTA_NUDGE` y la rama de
+     render final.
+--------------------------------------------------------------------------- */
 
 /** Duración de la salida. Con movimiento reducido se acorta casi a cero. */
 const EXIT_MS = 1600;
 
 /** Duración del cierre discreto (X / Escape): sin apertura, solo se retira. */
 const DISMISS_MS = 280;
+
+/** NUEVA ENTRADA — tarjeta (ver la rama `diseno === 'portada'`). Se va
+ *  antes que la portada del marco, que se abre después al destello del Pre-Hero. */
+const TARJETA_SALIDA_MS = 300;
+/** Aparición: la tarjeta llega a los ~620 ms de la navegación (y nunca antes de
+ *  hidratar), con un fundido de 420 ms. Puramente visual. */
+const TARJETA_APARICION_MS = 620;
+const TARJETA_ENTRADA_MS = 420;
+/**
+ * PENUMBRA DE LA ENTRADA — el concepto de la del telón, reescrito sin su
+ * geometría: un viñeteado a pantalla completa, por debajo de la tarjeta y sin
+ * puntero. El centro queda limpio (portada y tarjeta son el foco) y oscurece
+ * la página hacia los bordes. No depende de ninguna caja ni de las cortinas.
+ */
+const PENUMBRA_ENTRADA =
+  'radial-gradient(ellipse 72% 68% at 50% 50%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.3) 66%, rgba(0,0,0,0.52) 100%), rgba(0,0,0,0.1)';
+/** Lo que queda de la penumbra con hover/foco en ENTRAR. */
+const PENUMBRA_ENTRADA_REVELADA = 0.06;
+/** Al entrar, la penumbra se va mientras arranca el Pre-Hero. */
+const PENUMBRA_SALIDA_MS = 500;
+const TARJETA_STYLE: React.CSSProperties = {
+  background: 'linear-gradient(180deg, rgba(24,14,15,0.94) 0%, rgba(10,6,7,0.96) 100%)',
+  border: '1px solid rgba(214,180,110,0.3)',
+  boxShadow: '0 30px 80px -24px rgba(0,0,0,0.95), 0 0 70px -24px rgba(150,45,30,0.35)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)'
+};
 
 /**
  * Ventana del fundido de salida, en fracción de `EXIT_MS`.
@@ -518,6 +569,8 @@ function HandIcon({ className, style }: { className?: string; style?: React.CSSP
 export function EntryScreen() {
   const { enter, isPlaying } = useAudio();
   const reducedMotion = useReducedMotion();
+  /** INTERRUPTOR TEMPORAL: solo elige el aspecto (tarjeta o telón); la lógica es la misma. */
+  const diseno = useDisenoEntrada();
 
   /** Apertura cinematográfica en curso (ENTRAR o primera reproducción). */
   const [leaving, setLeaving] = useState(false);
@@ -593,6 +646,20 @@ export function EntryScreen() {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [gone, exiting, dismiss]);
+
+  /* NUEVA ENTRADA — APARICIÓN DE LA TARJETA. Primero se ve la página con la portada
+     y después llega la invitación. Se cuenta desde el inicio de la navegación
+     (`performance.now()`) y solo tras hidratar: si la carga es lenta aparece en
+     cuanto ENTRAR puede funcionar, sin espera añadida. Hasta entonces es
+     invisible e inerte (ni foco ni clics). Nada técnico depende de este
+     retraso: el Pre-Hero se coordina por su cuenta con `PortadaEntrada`. */
+  const [presentada, setPresentada] = useState(false);
+  useEffect(() => {
+    if (diseno !== 'portada' || presentada) return;
+    const espera = reducedMotion ? 0 : Math.max(0, TARJETA_APARICION_MS - performance.now());
+    const timer = window.setTimeout(() => setPresentada(true), espera);
+    return () => window.clearTimeout(timer);
+  }, [diseno, presentada, reducedMotion]);
 
   if (gone) return null;
 
@@ -696,6 +763,152 @@ export function EntryScreen() {
   const onCurtainEnter = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && window.matchMedia(HOVER_REAL).matches) setCurtainHover(true);
   };
+
+  /* NUEVA ENTRADA — TARJETA (01-10-2026, implementación activa). Mismo estado, mismas salidas y
+     mismos manejadores que el telón; solo cambia lo que se pinta. En INICIO la
+     acompaña `PortadaEntrada`, en el marco del Hero. Sin `curtain`, el estado
+     visual solo alterna `idle` (recordatorio de la mano) y `cta` (hover/foco). */
+  if (diseno === 'portada') {
+    const tarjetaSalida: React.CSSProperties | undefined = reducedMotion
+      ? exiting
+        ? { opacity: 0, transition: 'opacity 60ms linear' }
+        : undefined
+      : leaving
+        ? {
+            opacity: 0,
+            transform: 'translate3d(0, -6px, 0)',
+            transition: `opacity ${TARJETA_SALIDA_MS}ms ease-out, transform ${TARJETA_SALIDA_MS}ms ease-out`
+          }
+        : closing
+          ? {
+              opacity: 0,
+              transform: 'scale(0.98)',
+              transition: `opacity ${DISMISS_MS}ms ease-out, transform ${DISMISS_MS}ms ease-out`
+            }
+          : undefined;
+
+    /* Aparición (ver «APARICIÓN DE LA TARJETA»): subida mínima y fundido; con
+       movimiento reducido, solo un fundido corto. La salida manda siempre. */
+    const tarjetaEstilo: React.CSSProperties | undefined = exiting
+      ? tarjetaSalida
+      : presentada
+        ? {
+            opacity: 1,
+            transform: 'translate3d(0, 0, 0)',
+            transition: reducedMotion
+              ? 'opacity 200ms linear'
+              : `opacity ${TARJETA_ENTRADA_MS}ms ease-out, transform ${TARJETA_ENTRADA_MS + 120}ms cubic-bezier(0.2, 0.7, 0.2, 1)`
+          }
+        : { opacity: 0, transform: reducedMotion ? undefined : 'translate3d(0, 10px, 0)' };
+    const oculta = exiting || !presentada;
+
+    /* PENUMBRA (ver `PENUMBRA_ENTRADA`): en reposo resta protagonismo a la
+       página; con hover o foco de teclado en ENTRAR (`cta`) se disipa; en
+       cualquier salida se va. Mismo reparto de tiempos que la del telón. */
+    const penumbra = exiting ? 0 : visual === 'cta' ? PENUMBRA_ENTRADA_REVELADA : 1;
+    const penumbraEntradaMs = reducedMotion
+      ? 60
+      : leaving
+        ? PENUMBRA_SALIDA_MS
+        : closing
+          ? DISMISS_MS
+          : visual === 'cta'
+            ? 620
+            : VUELTA_REPOSO_MS;
+
+    return (
+      <div className="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center p-4">
+        {!reducedMotion && <style>{HUMO_KEYFRAMES}</style>}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: PENUMBRA_ENTRADA,
+            opacity: penumbra,
+            transition: `opacity ${penumbraEntradaMs}ms ease-out`
+          }}
+        />
+        <div
+          role="dialog"
+          aria-modal="false"
+          aria-label="Entrada a la experiencia"
+          aria-hidden={oculta || undefined}
+          inert={oculta}
+          /* Ancho: tope de 26rem y, en pantallas estrechas, el hueco que dejan los
+             dos rails de INICIO (margen + botón + aire a cada lado): la tarjeta es
+             opaca y no puede taparlos, como sí podía el borde difuminado del telón. */
+          className={`relative w-[min(26rem,calc(100vw-2*(var(--hb-rail-inset)+var(--hb-control)+0.5rem)))] rounded-[10px] [container-type:inline-size] ${
+            oculta ? 'pointer-events-none' : 'pointer-events-auto'
+          }`}
+          style={{ ...TARJETA_STYLE, ...tarjetaEstilo }}
+        >
+          {/* Filete interior: el segundo hilo dorado, muy tenue. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-[7px] rounded-[6px] border border-amber-200/10"
+          />
+
+          <div className="relative flex flex-col items-center px-[clamp(0.75rem,6cqw,2.5rem)] py-[clamp(1.1rem,5svh,2.4rem)] text-center">
+            <p className="w-[66%]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hosmanData.images.logo.logotipoDoradoSvg}
+                alt="Hosman Bravo"
+                width={236}
+                height={25}
+                className="block h-auto w-full"
+              />
+            </p>
+            <span className="mt-[clamp(0.6rem,2.2svh,1rem)] h-px w-[26%] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+
+            <p className="mt-[clamp(0.7rem,2.6svh,1.25rem)] text-[clamp(10px,3.05cqw,12.5px)] font-semibold leading-snug tracking-[0.2em] text-amber-100/90 [text-wrap:balance]">
+              VIVE LA PASIÓN POR LA MÚSICA Y LOS CABALLOS
+            </p>
+            <p className="mt-[clamp(0.4rem,1.4svh,0.7rem)] max-w-[34ch] text-[clamp(12px,3.5cqw,14px)] leading-relaxed text-stone-300/75">
+              Aquí encontrarás un artista de talla nacional e internacional de música popular, su
+              trayectoria y su familia ecuestre.
+            </p>
+
+            {/* CTA: el mismo botón, la misma mano y el mismo altavoz que en el
+                telón, con medidas a la escala de la tarjeta. */}
+            <span className="relative mt-[clamp(0.9rem,3.4svh,1.6rem)] inline-flex">
+              <span className="relative inline-flex" style={ctaWrapperStyle}>
+                <button
+                  type="button"
+                  onClick={handleEnter}
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'mouse') setCtaHover(true);
+                  }}
+                  onPointerLeave={() => setCtaHover(false)}
+                  onFocus={(e) => setCtaFocus(e.currentTarget.matches(':focus-visible'))}
+                  onBlur={() => setCtaFocus(false)}
+                  className="relative whitespace-nowrap rounded-full border border-amber-200/45 bg-black/60 px-[max(0.8rem,6cqw)] py-[max(0.6rem,2.6cqw)] text-[max(9px,2.85cqw)] font-bold tracking-[min(0.26em,0.75cqw)] text-amber-100/95 shadow-[0_8px_28px_-8px_rgba(0,0,0,0.95)] transition-all duration-300 ease-out hover:scale-[1.03] hover:border-amber-400/80 hover:text-amber-300 hover:shadow-[0_0_26px_-4px_rgba(200,150,60,0.55)] focus-visible:border-amber-400/80 focus-visible:text-amber-300 focus-visible:outline-none"
+                >
+                  ENTRAR EN LA EXPERIENCIA
+                </button>
+              </span>
+              <HandIcon
+                className="pointer-events-none absolute right-[min(-8px,-1.6cqw)] top-[calc(100%-max(6px,1.4cqw))] h-[max(20px,5.2cqw)] w-[max(20px,5.2cqw)] origin-top-left text-amber-100/85 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
+                style={manoStyle}
+              />
+            </span>
+            <SpeakerIcon className="pointer-events-none mt-[clamp(0.55rem,1.8svh,0.9rem)] h-[max(12px,3.2cqw)] w-[max(12px,3.2cqw)] text-amber-100/50" />
+          </div>
+
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Cerrar sin activar la música"
+            className="absolute right-1 top-1 z-10 flex h-11 w-11 items-center justify-center text-amber-100/55 transition-colors duration-200 hover:text-amber-200 focus-visible:text-amber-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-10px] focus-visible:outline-amber-300/60"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[15px] w-[15px]">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     /* Solo centra. `pointer-events-none`: fuera de la caja la página recibe

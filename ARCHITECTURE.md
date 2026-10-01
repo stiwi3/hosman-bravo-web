@@ -50,7 +50,7 @@ de sección y su entrada en `NAV_ITEMS` (`src/data/types.ts`).
 src/app/layout.tsx                  Server Component
 └── <AudioProvider>                 estado global de audio
     └── <SiteShell>                 Client Component · NUNCA se desmonta
-        ├── <EntryScreen />         mini-telón flotante z-80 (no bloquea la página; bajo los modales)
+        ├── <EntryScreen />         entrada flotante z-80 (tarjeta; telón legacy) · no bloquea la página
         ├── <header>                menú de cuero · nav central · TrackPlayer · MusicPlatforms
         ├── <HeroScene />           INICIO · SIEMPRE montado, se oculta con CSS
         ├── {children}              ← lo ÚNICO que cambia al navegar
@@ -219,9 +219,41 @@ contador»).
 
 ### EntryScreen
 
-Mini-telón flotante. No es solo estética: los navegadores no permiten reproducir audio sin
-un gesto del usuario, y el clic en «ENTRAR EN LA EXPERIENCIA» **es** ese gesto (dispara
-`enter()`).
+No es solo estética: los navegadores no permiten reproducir audio sin un gesto del
+usuario, y el clic en «ENTRAR EN LA EXPERIENCIA» **es** ese gesto (dispara `enter()`).
+
+> ⚠️ **En migración (desde el 01-10-2026).** La entrada ACTIVA es la **tarjeta + portada**
+> (abajo, «Nueva entrada»). El mini-telón que describe el resto de esta subsección es
+> **legacy**: sigue en el código solo como referencia (`?entrada=telon`) hasta que Danny
+> apruebe retirarlo. Punto de retorno al telón como entrada principal: `fe4e069`. La
+> checklist de retirada vive en Obsidian (`Web — pendientes` § «Retirar el mini-telón
+> legacy»); la frontera nuevo/común/legacy dentro del archivo, en la cabecera de
+> `EntryScreen.tsx`.
+
+**Nueva entrada.** Los dos aspectos comparten UNA sola lógica: estados, salidas (ENTRAR,
+Play primero, X/Escape), audio y anuncio a `salidaTelon.ts` son los de siempre; el
+interruptor temporal `audio/disenoEntrada.ts` solo elige qué se pinta.
+
+- **Tarjeta** (`EntryScreen`, rama `diseno === 'portada'`): centrada sobre la página,
+  igual en todas las rutas, `z-[80]`. Aparece a ~620 ms de la navegación y nunca antes de
+  hidratar; hasta entonces es invisible E `inert` (el HTML del servidor ya la trae así):
+  nunca hay un control invisible pero activo. Ese retraso es solo visual: nada depende de
+  él. Ancho limitado por el hueco entre los rails de INICIO.
+- **Penumbra nueva**: viñeteado a pantalla completa bajo la tarjeta, `pointer-events:
+  none`. Se disipa con `visual === 'cta'` (hover O foco visible de ENTRAR) y se va en
+  cualquier salida. No tiene nada que ver con la penumbra/halo del telón.
+- **Portada** (`hero/PortadaEntrada.tsx`): solo en INICIO, DENTRO del marco del Hero, por
+  encima del Pre-Hero (misma caja, máscara y responsive, por construcción). Fondo CSS +
+  isotipo oficial. Mientras está montada oculta el rótulo del Hero. Se DESMONTA al
+  retirarse: no confundir con «la portada» de §6/§12, que es la escena INICIO y nunca se
+  desmonta.
+- ⚠️ **La portada se retira por evento, no por reloj.** Espera a `onCubre` del Pre-Hero
+  y empieza su fundido `FUNDIDO_PRE_HERO_MS` después (cuando el Pre-Hero ya es opaco): así
+  nunca son transparentes a la vez y el Hero no asoma. Si el Pre-Hero no llega a cubrir,
+  red de seguridad de 2,5 s (la de su vigilante). Sin Pre-Hero (carga fuera de `/`,
+  movimiento reducido), directa al Hero.
+
+**Mini-telón (legacy).** Lo que sigue describe el telón.
 
 **Cada ruta es su propio destino.** No hay redirección a `/` ni hero forzado detrás del
 telón: quien entra por `/musica` ve MÚSICA desde el primer momento, y por la abertura de
@@ -1151,7 +1183,7 @@ arquitectura no debe crear dependencias de GitHub Pages:
 2. **La regla de que la portada nunca se desmonta.** Desmontarla reinicia el humo (§6).
 3. **El sistema de tokens fluidos.** No introducir `@media` ni px por breakpoint (§7).
 4. **El ciclo de audio.** Un solo elemento `Audio`, y silenciar pausa (§4).
-5. **`EntryScreen`** y las calibraciones del telón (recorridos, `CURTAIN_GRADE`).
+5. **`EntryScreen`**: su lógica de salidas y la coordinación portada → Pre-Hero (§4). Las calibraciones del telón legacy ya no se ajustan: se retiran.
 6. **Assets aprobados** y las zonas medidas sobre ellos (§10).
 7. **Geometría y diseño visibles.** Tamaños, posiciones, responsive y composición están
    aprobados contra 2048×1023 y verificados en 1600×800 y 1280×591.
